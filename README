@@ -1,1 +1,11 @@
 Bee Draw pre-alpha development version
+
+Dependencies:
+python 2.4 or higher
+pyqt (version 4)
+numpy
+make
+
+Running the program:
+First, run make in the designer directory
+then in the main project directory run ./beedraw.py
