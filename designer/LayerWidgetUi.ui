@@ -1,0 +1,137 @@
+<ui version="4.0" >
+ <class>LayerConfigWidget</class>
+ <widget class="QWidget" name="LayerConfigWidget" >
+  <property name="geometry" >
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>331</width>
+    <height>100</height>
+   </rect>
+  </property>
+  <property name="sizePolicy" >
+   <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="windowTitle" >
+   <string>Layers</string>
+  </property>
+  <widget class="QFrame" name="background_frame" >
+   <property name="geometry" >
+    <rect>
+     <x>0</x>
+     <y>-10</y>
+     <width>331</width>
+     <height>111</height>
+    </rect>
+   </property>
+   <property name="frameShape" >
+    <enum>QFrame::StyledPanel</enum>
+   </property>
+   <property name="frameShadow" >
+    <enum>QFrame::Raised</enum>
+   </property>
+   <widget class="QWidget" native="1" name="layerThumb" >
+    <property name="geometry" >
+     <rect>
+      <x>10</x>
+      <y>20</y>
+      <width>71</width>
+      <height>71</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_2" >
+    <property name="geometry" >
+     <rect>
+      <x>90</x>
+      <y>80</y>
+      <width>52</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text" >
+     <string>Opacity:</string>
+    </property>
+   </widget>
+   <widget class="QComboBox" name="blend_mode_box" >
+    <property name="geometry" >
+     <rect>
+      <x>170</x>
+      <y>50</y>
+      <width>141</width>
+      <height>22</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QDoubleSpinBox" name="opacity_box" >
+    <property name="geometry" >
+     <rect>
+      <x>150</x>
+      <y>80</y>
+      <width>51</width>
+      <height>22</height>
+     </rect>
+    </property>
+    <property name="minimum" >
+     <double>0.010000000000000</double>
+    </property>
+    <property name="maximum" >
+     <double>1.000000000000000</double>
+    </property>
+    <property name="singleStep" >
+     <double>0.010000000000000</double>
+    </property>
+    <property name="value" >
+     <double>1.000000000000000</double>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label" >
+    <property name="geometry" >
+     <rect>
+      <x>90</x>
+      <y>50</y>
+      <width>69</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text" >
+     <string>Blend Mode:</string>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="visibility_box" >
+    <property name="geometry" >
+     <rect>
+      <x>220</x>
+      <y>80</y>
+      <width>78</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text" >
+     <string>Visible</string>
+    </property>
+    <property name="checked" >
+     <bool>true</bool>
+    </property>
+   </widget>
+   <widget class="QLabel" name="layer_name_label" >
+    <property name="geometry" >
+     <rect>
+      <x>90</x>
+      <y>20</y>
+      <width>52</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text" >
+     <string>Layer</string>
+    </property>
+   </widget>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
