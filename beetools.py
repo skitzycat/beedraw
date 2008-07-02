@@ -244,6 +244,24 @@ class PaintBrushTool(DrawingTool):
 		self.lastpressure=-1
 		self.compmode=qtgui.QPainter.CompositionMode_SourceOver
 
+	def updateBrushForPressure(self,pressure):
+		# see if we need to update at all
+		if self.lastpressure==pressure:
+			return
+		self.lastpressure=pressure
+
+		# if we can use the full sized brush, then do it
+		if self.options["pressuresize"]==0 or pressure==1:
+			self.brushimage=self.fullsizedbrush
+			return
+
+		# scale the brush to proper size
+		transform=qtgui.QMatrix()
+		transform=transform.scale(pressure,pressure)
+		self.brushimage=self.fullsizedbrush.transformed(transform,qtcore.Qt.SmoothTransformation)
+		# update radius so we know how much area to refresh on the screen
+		self.radius=(self.brushimage.width()+1)/2
+
 	def makeFullSizedBrush(self):
 		self.radius=int(self.options["radius"])
 		blur=self.options["blur"]
