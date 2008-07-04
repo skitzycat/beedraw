@@ -8,24 +8,28 @@ from beeutil import *
 class BeeViewDisplayWidget(qtgui.QWidget):
 	def __init__(self,window):
 		qtgui.QWidget.__init__(self)
+		self.transform=qtgui.QTransform()
 		self.setGeometry(0,0,window.docwidth,window.docheight)
 		self.window=window
 		self.show()
 		self.pendown=False
 
 	def newZoom(self):
-		self.setGeometry(0,0,math.ceil(self.window.docwidth*self.window.zoom),math.ceil(self.window.docheight*self.window.zoom))
+		# set up a transformation to do all the zoomming
+		self.transform=qtgui.QTransform()
+		self.transform=self.transform.scale(self.window.zoom,self.window.zoom)
 
-		self.setFixedSize(math.ceil(self.window.docwidth*self.window.zoom),math.ceil(self.window.docheight*self.window.zoom))
+		oldcorner=qtcore.QPoint(self.window.docwidth,self.window.docheight)
+		newcorner=oldcorner.__mul__(self.transform)
 
+		# update size of widget to be size of zoommed image
+		self.setGeometry(0,0,newcorner.x(),newcorner.y())
+		self.setFixedSize(newcorner.x(),newcorner.y())
 		self.updateGeometry()
 		self.update()
 
 	def paintEvent(self,event):
 		dirtyregion=event.region()
-
-		#visible=self.visibleRegion()
-		#dirtyregion.intersect(visible)
 
 		if dirtyregion.isEmpty():
 			return
@@ -34,31 +38,28 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 
 		# this rectangle region needs to be updated on the display widget
 		widgetrect=dirtyregion.boundingRect()
+
+		# get reverse matrix transform
+		revtransform,isinvertable=self.transform.inverted()
+		if not isinvertable:
+			print "ERROR: can't invert zoom matrix"
+
+		topleft=qtcore.QPointF(widgetrect.x(),widgetrect.y())
+		bottomright=qtcore.QPointF(widgetrect.width(),widgetrect.height())
+
+		# translate rectangle to what part of the image needs to be updated
+		topleft=topleft.__mul__(revtransform)
+		bottomright=bottomright.__mul__(revtransform)
+		imagerect=qtcore.QRectF(topleft.x(),topleft.y(),bottomright.x(),bottomright.y())
+		#imagerect.adjust(-1,-1,2,2)
+
 		#print "got repaint for rect:", rectToTuple(widgetrect);
 		#print "need to update view (", self.window.zoom, ") section:", rectToTuple(widgetrect)
-
-		# align rect to even boundry with image
-		#xadjust=widgetrect.x()%zoom
-		#wadjust=widgetrect.width()%zoom
-
-		#yadjust=widgetrect.y()%zoom
-		#hadjust=widgetrect.height()%zoom
-		#widgetrect=qtcore.QRectF(widgetrect.x()-xadjust,widgetrect.y()-yadjust,widgetrect.width()-wadjust+zoom,widgetrect.height()-hadjust+zoom)
-
-		# calculate actual area of image we see due to current zoom factor
-		# extra math is needed here so rows aren't missed due to rounding
-		imagerect=qtcore.QRectF((widgetrect.x()/zoom)
-													,(widgetrect.y()/zoom)
-													,(widgetrect.width()/zoom)
-													,(widgetrect.height()/zoom))
-
-
-		#print "going from image rect:", rectToTuple(imagerect), "to widget rect:", rectToTuple(widgetrect), "zoom factor is:", zoom
 
 		painter=qtgui.QPainter()
 		painter.begin(self)
 
-		painter.scale(zoom,zoom)
+		painter.setTransform(self.transform)
 
 		# get read lock on the image
 		imagelock=ReadWriteLocker(self.window.imagelock)
@@ -198,20 +199,21 @@ class BeeViewScrollArea(qtgui.QScrollArea):
 
 	def newZoom(self):
 		self.widget().newZoom()
-		#self.ensureWidgetVisible(self.widget())
-		#self.setWidget(BeeViewDisplayWidget(self.window))
 
 	def updateView(self,dirtyrect=None):
 		if not dirtyrect:
 			self.widget().update()
 			return
 
-		zoom=self.window.zoom
+		transform=self.widget().transform
+		
+		topleft=qtcore.QPointF(dirtyrect.x(),dirtyrect.y())
+		bottomright=qtcore.QPointF(dirtyrect.width(),dirtyrect.height())
 
 		# the rectangle needs to be according to the view instead of the image
-		dirtyview=qtcore.QRect(math.floor(dirtyrect.x()*zoom),math.floor(dirtyrect.y()*zoom),math.ceil(dirtyrect.width()*zoom),math.ceil(dirtyrect.height()*zoom))
+		topleft=topleft.__mul__(transform)
+		bottomright=bottomright.__mul__(transform)
 
-		# expand the area a little in case of rounding area during zoom change
-		dirtyrect.adjust(-2,-2,4,4)
+		dirtyview=qtcore.QRectF(topleft.x(),topleft.y(),bottomright.x(),bottomright.y())
 
-		self.widget().update(dirtyview)
+		self.widget().update(dirtyview.toAlignedRect())
