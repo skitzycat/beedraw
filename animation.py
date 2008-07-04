@@ -5,9 +5,11 @@ import time
 from beeglobals import *
 from beetypes import *
 from beeutil import *
+from sketchlog import SketchLogWriter
 
 import PyQt4.QtCore as qtcore
 import PyQt4.QtGui as qtgui
+import PyQt4.QtXml as qtxml
 
 class LogContentHandler(xml.sax.ContentHandler):
 	def __init__(self,window,stepdelay=0,type=LayerTypes.animation):
@@ -175,20 +177,27 @@ class NetworkListenerThread (qtcore.QThread):
 		self.port=port
 
 	def run(self):
+		print "attempting to get socket:"
 		# setup initial connection
 		self.socket,width,height=getServerConnection(self.username,self.password,self.host,self.port)
 
-		self.window.addToQueue
+		#self.window.addToQueue()
 
 		# if is was set up correctly tell window to start the thread that sends out data
 		if self.socket:
-			self.window.sendingthread=NetworkWriterThread(self.window,socket)
-			self.window.sendingthread.exec_()
+			print "got socket connection"
+			sendingthread=NetworkWriterThread(self.window,self.socket)
+			self.window.sendingthread=sendingthread
+			print "created thread, about to start thread"
+			sendingthread.start()
 
 		# if not tell window to exit and end thread
 		else:
+			print "failed to get socket connection"
+			self.window.remotedrawinthread.quit()
 			self.window.remotedrawinthread=None
 			self.window.cleanUp()
+			self.window.destroy()
 			return
 
 		handler=LogContentHandler(self.window)
@@ -211,14 +220,65 @@ class NetworkListenerThread (qtcore.QThread):
 				return
 
 class NetworkWriterThread (qtcore.QThread):
-	def __init__(self,socket,window):
+	def __init__(self,window,socket):
+		qtcore.QThread.__init__(self)
 		self.socket=socket
-		self.gen=qtxml.QXmlStreamWriter(socket)
+		self.gen=SketchLogWriter(self.socket)
 
-		self.gen.writeStartDocument()
 		self.window=window
 		self.queue=window.remoteoutputqueue
 
 	def run(self):
 		while 1:
+			print "attempting to get item from queue"
 			command=self.queue.get()
+			type=command[0]
+
+			if type==DrawingCommandTypes.quit:
+				return
+			elif type==DrawingCommandTypes.nonlayer:
+				self.sendNonLayerCommand(command)
+			elif type==DrawingCommandTypes.layer:
+				self.sendLayerCommand(command)
+			elif type==DrawingCommandTypes.alllayer:
+				self.sendAllLayerCommand(command)
+
+	def sendNonLayerCommand(self,command):
+		pass
+
+	def sendLayerCommand(self,command):
+		subtype=command[1]
+		if subtype==LayerCommandTypes.alpha:
+			pass
+
+		elif subtype==LayerCommandTypes.mode:
+			pass
+
+		elif subtype==LayerCommandTypes.tool:
+			self.gen.logToolEvent(tool)
+
+		elif subtype==LayerCommandTypes.rawevent:
+			pass
+
+		else:
+			print "unknown processLayerCommand subtype:", subtype
+
+	def sendAllLayerCommand(self,command):
+		subtype=command[1]
+		if subtype==AllLayerCommandTypes.resize:
+			pass
+
+		elif subtype==AllLayerCommandTypes.scale:
+			pass
+
+		elif subtype==AllLayerCommandTypes.layerup:
+			self.gen.logLayerMove(command[2],1)
+
+		elif subtype==AllLayerCommandTypes.layerdown:
+			self.gen.logLayerMove(command[2],-1)
+
+		elif subtype==AllLayerCommandTypes.deletelayer:
+			self.gen.logLayerSub(command[2])
+
+		elif subtype==AllLayerCommandTypes.insertlayer:
+			self.gen.logLayerAdd(0,0)

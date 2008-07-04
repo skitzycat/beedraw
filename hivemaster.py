@@ -49,8 +49,6 @@ class HiveMasterWindow(qtgui.QMainWindow):
 		
 		master.serverthread=None
 
-		master.startServer()
-
 	standAloneServer=staticmethod(standAloneServer)
 
 	def registerClient(self):
@@ -70,6 +68,7 @@ class HiveMasterWindow(qtgui.QMainWindow):
 
 		self.stopServer()
 		self.serverthread=HiveServerThread(self)
+		print "starting thread:"
 		self.serverthread.start()
 
 	def stopServer(self):
@@ -77,6 +76,9 @@ class HiveMasterWindow(qtgui.QMainWindow):
 			self.serverthread.terminate()
 			self.serverthread.wait()
 			self.serverthread=None
+
+	def on_actionStart_triggered(self):
+		self.startServer()
 
 # thread to setup connection, authenticate and then
 # listen to a socket and add incomming client commands to queue
@@ -191,6 +193,7 @@ class HiveServerThread(qtcore.QThread):
 	#	qtcore.QThread.finished(self)
 
 	def run(self):
+		print "listening on port ", self.port
 		self.server=qtnet.QTcpServer()
 		ret=self.server.listen(qtnet.QHostAddress("0.0.0.0"),self.port)
 

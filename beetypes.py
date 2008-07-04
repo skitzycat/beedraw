@@ -17,7 +17,7 @@ class NonLayerCommandTypes:
 
 # events that effect only one layer
 class LayerCommandTypes:
-	alpha, mode, pendown, penmotion, penup, rawevent = range(6)
+	alpha, mode, pendown, penmotion, penup, rawevent, tool = range(7)
 
 # events that effect the list of layers or all layers
 class AllLayerCommandTypes:

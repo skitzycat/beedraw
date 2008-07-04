@@ -107,10 +107,11 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 
 	# alternate constructor for joining a network session
 	def startNetworkWindow(parent,username,password,host="localhost",port="8333"):
+		print "running startNetworkWindow"
 		newwin=BeeDrawingWindow(parent,startlayer=False,type=LayerTypes.network)
 
 		newwin.remotedrawingthread=DrawingThread(newwin.remotecommandqueue,newwin,ThreadTypes.remote)
-		newwin.remotedrawingthread.exec_()
+		newwin.remotedrawingthread.start()
 
 		newwin.startNetworkThreads(username,password,host,port)
 
@@ -704,5 +705,7 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 
 	# do what's needed to start up any network threads
 	def startNetworkThreads(self,username,password,host,port):
+		print "running startNetworkThreads"
 		self.listenerthread=NetworkListenerThread(self,username,password,host,port)
-		self.listenerthread.exec_()
+		print "about to start thread"
+		self.listenerthread.start()

@@ -53,8 +53,12 @@ class DrawingThread(qtcore.QThread):
 			pass
 		elif subtype==NonLayerCommandTypes.undo:
 			self.window.undo(subtype[2])
+			if self.type==ThreadTypes.user and self.window.type==WindowTypes.network:
+				self.sendToServer(command)
 		elif subtype==NonLayerCommandTypes.redo:
 			self.window.redo(subtype[2])
+			if self.type==ThreadTypes.user and self.window.type==WindowTypes.network:
+				self.sendToServer(command)
 		else:
 			print "unknown processNonLayerCommand subtype:", subtype
 
@@ -103,6 +107,9 @@ class DrawingThread(qtcore.QThread):
 			if self.inprocesstools.has_key(int(command[2])):
 				tool=self.inprocesstools[int(command[2])]
 				tool.penUp(x,y)
+				# send to server if needed
+				if self.type==ThreadTypes.user and self.window.type==WindowTypes.network:
+					sendToServer((DrawingCommandTypes.layer,LayerCommandTypes.tool,tool))
 				del self.inprocesstools[int(command[2])]
 
 		elif subtype==LayerCommandTypes.rawevent:
@@ -141,6 +148,9 @@ class DrawingThread(qtcore.QThread):
 				self.window.insertLayer(key,index)
 			else:
 				self.window.insertLayer(key,index,LayerTypes.network)
+
+	def requestAllLayerCommand(self,command):
+		self.sendToServer(command)
 
 	def sendToServer(self,command):
 		self.window.remoteoutputqueue.put(command)

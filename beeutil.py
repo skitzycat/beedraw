@@ -173,7 +173,9 @@ def getServerConnection(username,password,host,port):
 	socket=qtnet.QTcpSocket()
 
 	socket.connectToHost(host,port)
+	print "waiting for socket connection:"
 	connected=socket.waitForConnected()
+	print "finished waiting for socket connection"
 
 	# return error if we couldn't get a connection after 30 seconds
 	if not connected:
@@ -181,8 +183,10 @@ def getServerConnection(username,password,host,port):
 		qtgui.QMessageBox(qtgui.QMessageBox.Information,"Connection Error","Failed to connect to server",qtgui.QMessageBox.Ok).exec_()
 		return None, None, None
 
+	authrequest=qtcore.QByteArray()
+	authrequest=authrequest.append("%s\n%s\n%s\n" % (username,password,PROTOCOL_VERSION))
 	# send authtication info
-	socket.write("%s\n%s\n%s\n" % (username,password,PROTOCOL_VERSION))
+	socket.write(authrequest)
 
 	sizestring=qtcore.QString()
 
