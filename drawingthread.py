@@ -40,7 +40,7 @@ class DrawingThread(qtcore.QThread):
 			elif type==DrawingCommandTypes.alllayer:
 				# these commands need to be requested from the server
 				# if part of a network session and sent locally
-				if self.type==ThreadTypes.user and self.window.type==WindowTypes.network:
+				if self.type==ThreadTypes.user and self.window.type==WindowTypes.networkclient:
 					self.requestAllLayerCommand(command)
 				else:
 					self.processAllLayerCommand(command)
@@ -53,11 +53,11 @@ class DrawingThread(qtcore.QThread):
 			pass
 		elif subtype==NonLayerCommandTypes.undo:
 			self.window.undo(subtype[2])
-			if self.type==ThreadTypes.user and self.window.type==WindowTypes.network:
+			if self.type==ThreadTypes.user and self.window.type==WindowTypes.networkclient:
 				self.sendToServer(command)
 		elif subtype==NonLayerCommandTypes.redo:
 			self.window.redo(subtype[2])
-			if self.type==ThreadTypes.user and self.window.type==WindowTypes.network:
+			if self.type==ThreadTypes.user and self.window.type==WindowTypes.networkclient:
 				self.sendToServer(command)
 		else:
 			print "unknown processNonLayerCommand subtype:", subtype
@@ -108,7 +108,7 @@ class DrawingThread(qtcore.QThread):
 				tool=self.inprocesstools[int(command[2])]
 				tool.penUp(x,y)
 				# send to server if needed
-				if self.type==ThreadTypes.user and self.window.type==WindowTypes.network:
+				if self.type==ThreadTypes.user and self.window.type==WindowTypes.networkclient:
 					sendToServer((DrawingCommandTypes.layer,LayerCommandTypes.tool,tool))
 				del self.inprocesstools[int(command[2])]
 

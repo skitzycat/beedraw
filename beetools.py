@@ -11,6 +11,36 @@ from PencilOptionsDialogUi import *
 from BrushOptionsDialogUi import *
 from EraserOptionsDialogUi import *
 
+# Class to manage tools and make instances as needed
+class BeeToolBox:
+	def __init__(self):
+		self.toolslist=[]
+		self.loadDefaultTools()
+		self.curtoolindex=0
+
+	def loadDefaultTools(self):
+		self.toolslist.append(PencilToolDesc())
+		self.toolslist.append(PaintBrushToolDesc())
+		self.toolslist.append(EraserToolDesc())
+		self.toolslist.append(RectSelectionToolDesc())
+
+	def toolNameGenerator(self):
+		for tool in self.toolslist:
+			yield tool.name
+
+	def getCurToolDesc(self):
+		return self.toolslist[self.curtoolindex]
+
+	def setCurToolIndex(self,index):
+		self.curtoolindex=index
+
+	def getToolDescByName(self,name):
+		for tool in self.toolslist:
+			if name==tool.name:
+				return tool
+		print "Error, toolbox couldn't find tool with name:", name
+		return None
+
 # Base class for a class to describe all tools and spawn tool instances
 class AbstractToolDesc:
 	def __init__(self,name):
@@ -189,6 +219,7 @@ class DrawingTool(AbstractTool):
 		# put points in that image
 		painter=qtgui.QPainter()
 		painter.begin(lineimage)
+		painter.setRenderHint(qtgui.QPainter.HighQualityAntialiasing)
 
 		for point in path:
 			lineimgpoint=(point[0]-left-self.radius,point[1]-top-self.radius)
@@ -439,7 +470,6 @@ class SelectionOverlay:
 class SelectionTool(AbstractTool):
 	def __init__(self,options,window):
 		AbstractTool.__init__(self,options,window)
-		#self.shapetype=
 
 	def updateOverlay(self,x,y):
 		oldrect=None

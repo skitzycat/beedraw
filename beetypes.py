@@ -27,10 +27,10 @@ class LayerTypes:
 	user, animation, network = range(3)
 
 class WindowTypes:
-	user, animation, network, server = range(4)
+	singleuser, animation, networkclient, integratedserver, standaloneserver = range(5)
 
 class ThreadTypes:
-	user, remote = range(2)
+	user, animation, network, server = range(4)
 
 # types of ways to modify the current selection
 class SelectionModTypes:

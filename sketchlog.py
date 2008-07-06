@@ -1,6 +1,3 @@
-#from xml.sax.saxutils import XMLGenerator
-#from xml.sax.xmlreader import AttributesNSImpl
-
 import PyQt4.QtCore as qtcore
 import PyQt4.QtXml as qtxml
 

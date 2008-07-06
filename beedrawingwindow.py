@@ -26,7 +26,7 @@ from ImageScaleDialog import Ui_CanvasScaleDialog
 from animation import *
 
 class BeeDrawingWindow(qtgui.QMainWindow):
-	def __init__(self,master,width=600,height=400,startlayer=True,type=LayerTypes.user,host="localhost",port=8333):
+	def __init__(self,master,width=600,height=400,startlayer=True,type=WindowTypes.singleuser,host="localhost",port=8333):
 		qtgui.QMainWindow.__init__(self,master)
 		# save passed values
 		self.master=master
@@ -83,7 +83,8 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 		self.resizeViewToWindow()
 		self.view.setCursor(master.getCurToolDesc().getCursor())
 
-		self.show()
+		if type!=WindowTypes.standaloneserver:
+			self.show()
 
 		# create a backdrop to be put at the bottom of all the layers
 		self.recreateBackdrop()
@@ -108,9 +109,9 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 	# alternate constructor for joining a network session
 	def startNetworkWindow(parent,username,password,host="localhost",port="8333"):
 		print "running startNetworkWindow"
-		newwin=BeeDrawingWindow(parent,startlayer=False,type=LayerTypes.network)
+		newwin=BeeDrawingWindow(parent,startlayer=False,type=WindowTypes.networkclient)
 
-		newwin.remotedrawingthread=DrawingThread(newwin.remotecommandqueue,newwin,ThreadTypes.remote)
+		newwin.remotedrawingthread=DrawingThread(newwin.remotecommandqueue,newwin,ThreadTypes.network)
 		newwin.remotedrawingthread.start()
 
 		newwin.startNetworkThreads(username,password,host,port)
@@ -122,7 +123,7 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 
 	# alternate constructor for starting an animation playback
 	def newAnimationWindow(master,filename):
-		newwin=BeeDrawingWindow(master,600,400,False,LayerTypes.animation)
+		newwin=BeeDrawingWindow(master,600,400,False,WindowTypes.animation)
 		newwin.animationthread=PlayBackAnimation(newwin,filename)
 		return newwin
 
@@ -254,6 +255,7 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.deletelayer,key),source)
 
 	def queueCommand(self,command,source=ThreadTypes.user):
+		print "queueing command:", command
 		if source==ThreadTypes.user:
 			self.localcommandqueue.put(command)
 		else:
@@ -299,7 +301,7 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 
 			# if we are only running locally add command to local history
 			# otherwise do nothing
-			if self.type==LayerTypes.user:
+			if self.type==WindowTypes.singleuser:
 				self.addCommandToHistory(LayerDownCommand(key))
 
 			if self.log:
@@ -322,7 +324,7 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 
 			# if we are only running locally add command to local history
 			# otherwise do nothing
-			if self.type==LayerTypes.user:
+			if self.type==WindowTypes.singleuser:
 				self.addCommandToHistory(LayerUpCommand(key))
 
 			if self.log:
@@ -373,11 +375,14 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 			if self.activated==False:
 				self.activated=True
 				self.reCompositeImage()
-				if self.type!=LayerTypes.user:
-					self.remotedrawingthread=DrawingThread(self.remotecommandqueue,self,ThreadTypes.remote)
+				if self.type==WindowTypes.singleuser:
+					self.remotedrawingthread=None
+				elif self.type==WindowTypes.animation:
+					self.remotedrawingthread=DrawingThread(self.remotecommandqueue,self,ThreadTypes.animation)
 					self.remotedrawingthread.start()
 				else:
-					self.remotedrawingthread=None
+					self.remotedrawingthread=DrawingThread(self.remotecommandqueue,self,ThreadTypes.network)
+					self.remotedrawingthread.start()
 			self.master.takeFocus(self)
 
 		return False
@@ -500,7 +505,7 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 			dialog=qtgui.QDialog()
 			dialog.ui=Ui_CanvasSizeDialog()
 			dialog.ui.setupUi(dialog)
-			if self.type!=LayerTypes.user:
+			if self.type!=WindowTypes.singleuser:
 				dialog.ui.Left_Adjust_Box.setDisabled(True)
 				dialog.ui.Top_Adjust_Box.setDisabled(True)
 
@@ -662,7 +667,7 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 			self.curlayerkey=key
 
 		# only add command to history if we are in a local session
-		if self.type==LayerTypes.user:
+		if self.type==WindowTypes.singleuser:
 			self.addCommandToHistory(AddLayerCommand(layer.key))
 
 		# if there is a log then log it

@@ -6,6 +6,10 @@ import PyQt4.QtGui as qtgui
 import PyQt4.QtNetwork as qtnet
 
 from HiveMasterUi import Ui_HiveMasterSpec
+from beedrawingwindow import BeeDrawingWindow
+from beetypes import *
+from beetools import BeeToolBox
+from animation import XmlToQueueEventsConverter
 
 from Queue import Queue
 import time
@@ -38,6 +42,21 @@ class HiveMasterWindow(qtgui.QMainWindow):
 
 		# this dictionary will be keyed on id and map to the username
 		self.clientnames={}
+
+		self.toolbox=BeeToolBox()
+
+		# drawing window which holds the current state of the network session
+		self.window=BeeDrawingWindow(self,600,400,False,WindowTypes.standaloneserver)
+
+	def getToolClassByName(self,name):
+		self.toolbox.getToolClassByName(name)
+
+	def getCurToolInst(self,window):
+		curtool=self.getCurToolDesc()
+		return curtool.setupTool(window)
+
+	def getCurToolDesc(self):
+		return self.toolbox.getCurToolDesc()
 
 	# alternate constuctor to create a standalone server
 	def standAloneServer(app):
@@ -150,16 +169,17 @@ class HiveClientListener(qtcore.QThread):
 		# pass initial data to client here
 		self.setupNewClient()
 
+		parser=XmlToQueueEventsConverter(None,self.master.window,0,type=ThreadTypes.network)
 		while 1:
-			# wait for data ready to read or an erro
 			if self.socket.waitForReadyRead(-1):
-				curdata=self.socket.readAll()
-				s=qtcore.QString(curdata).toAscii()
-				print "recived data:", s
+				data=self.socket.read(1024)
+				parser.xml.addData(data)
+				parser.read()
 
 			# if error exit
 			else:
 				print "Recieved error:", self.socket.error(), "when reading from socket"
+				#self.socket.write(qtcore.QByteArray("Authentication Failed"))
 				return
 
 # this thread will write to a specific client
@@ -193,6 +213,7 @@ class HiveServerThread(qtcore.QThread):
 	#	qtcore.QThread.finished(self)
 
 	def run(self):
+		id=1
 		print "listening on port ", self.port
 		self.server=qtnet.QTcpServer()
 		ret=self.server.listen(qtnet.QHostAddress("0.0.0.0"),self.port)
@@ -207,6 +228,7 @@ class HiveServerThread(qtcore.QThread):
 
 				# start the listener, that will authenticate client and finish setup
 				newlistener=HiveClientListener(self,newsock,self.master,id)
+				id+=1
 
 				# push responsibility to new thread
 				newsock.setParent(None)

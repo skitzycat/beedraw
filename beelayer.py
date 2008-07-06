@@ -93,6 +93,7 @@ class BeeLayer:
 			painter.setClipPath(clippath)
 		#print "inside compositeFromCorner"
 		painter.setCompositionMode(compmode)
+		#painter.setRenderHint(qtgui.QPainter.HighQualityAntialiasing)
 		painter.drawImage(rect,image)
 		painter.end()
 
