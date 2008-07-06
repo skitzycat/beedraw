@@ -1,6 +1,4 @@
 from base64 import b64decode
-import xml
-from xml.sax import ContentHandler, make_parser
 import time
 from beeglobals import *
 from beetypes import *
@@ -11,64 +9,97 @@ import PyQt4.QtCore as qtcore
 import PyQt4.QtGui as qtgui
 import PyQt4.QtXml as qtxml
 
-class LogContentHandler(xml.sax.ContentHandler):
-	def __init__(self,window,stepdelay=0,type=LayerTypes.animation):
-		self.inrawevent=False
-		self.run=True
-		self.stepdelay=stepdelay
+class XmlToQueueEventsConverter:
+	def __init__(self,device,window,stepdelay,type=ThreadTypes.animation):
+		if device:
+			self.xml=qtxml.QXmlStreamReader(device)
+		else:
+			self.xml=qtxml.QXmlStreamReader()
 		self.window=window
 		self.type=type
-		# keyed on what the layer in in the log is, value is what the key in the document is
+		self.inrawevent=False
+		self.stepdelay=stepdelay
 		self.keymap={}
+		
+		if type==ThreadTypes.animation:
+			self.layertype=LayerTypes.animation
+		else:
+			self.layertype=LayerTypes.network
 
 	def translateKey(self,key):
-		if self.type!=LayerTypes.animation:
+		if self.type!=ThreadTypes.user:
 			return key
 		return self.keymap[key]
 
 	def addKeyTranslation(self,key,dockey):
-		if self.type!=LayerTypes.animation:
+		if self.type!=ThreadTypes.user:
 			self.keymap[key]=key
-			return
-		self.keymap[key]=dockey
+		else:
+			self.keymap[key]=dockey
 
-	def startElement(self, name, attrs):
+	def read(self):
+		while not self.xml.atEnd():
+			tokentype=self.xml.readNext()
+			if tokentype==qtxml.QXmlStreamReader.StartElement:
+				self.processStartElement()
+			elif tokentype==qtxml.QXmlStreamReader.EndElement:
+				self.processEndElement()
+			elif tokentype==qtxml.QXmlStreamReader.Characters:
+				self.processCharacterData()
+
+		if self.xml.hasError():
+			print "error while parsing XML:", self.xml.errorString()
+
+		# set all layers we created to be user layers now that animation is over
+		for key in self.keymap.keys():
+			layer=self.window.getLayerForKey(self.keymap[key])
+			if layer:
+				layer.type=LayerTypes.user
+				layer.changeName("")
+
+	def processStartElement(self):
+		name=self.xml.name()
+		attrs=self.xml.attributes()
+
 		if name == 'createdoc':
-			width=int(attrs.get('width'))
-			height=int(attrs.get('height'))
-			self.window.addSetCanvasSizeRequestToQueue(width,height,ThreadTypes.remote)
+			(width,ok)=attrs.value('width').toString().toInt()
+			(height,ok)=attrs.value('height').toString().toInt()
+			self.window.addSetCanvasSizeRequestToQueue(width,height,type)
 
 		elif name == 'addlayer':
-			pos=int(attrs.get("position"))
-			key=int(attrs.get("key"))
+			(pos,ok)=attrs.value("position").toString().toInt()
+			(key,ok)=attrs.value("key").toString().toInt()
 
-			dockey=self.window.addInsertLayerEventToQueue(pos,LayerTypes.animation,"animation",ThreadTypes.remote)
+			dockey=self.window.addInsertLayerEventToQueue(pos,self.layertype,"animation",self.type)
 			self.addKeyTranslation(key,dockey)
 
 		elif name == 'sublayer':
-			self.window.addRemoveLayerRequestToQueue(int(attrs.get("key")),ThreadTypes.remote)
+			(key,ok)=attrs.value("key").string.toInt()
+			self.window.addRemoveLayerRequestToQueue(key,type)
 
 		elif name == 'movelayer':
-			change=int(attrs.get("change"))
+			(change,ok)=attrs.value("change").toString().toInt()
+			(index,ok)=attrs.value("index").toString().toInt()
 			if change==1:
-				self.window.addLayerUpToQueue(int(attrs.get("index")),ThreadTypes.remote)
+				self.window.addLayerUpToQueue(index,type)
 			else:
-				self.window.addLayerDownToQueue(int(attrs.get("index")),ThreadTypes.remote)
+				self.window.addLayerDownToQueue(index,type)
 
 		elif name == 'layeralpha':
-			self.window.addOpacityChangeToQueue(int(attrs.get("key")),float(attrs.get("alpha")))
+			(key,ok)=attrs.value("key").string.toInt()
+			self.window.addOpacityChangeToQueue(key,attrs.value("alpha").toString().toFloat(),type)
 
 		elif name == 'layermode':
 			time.sleep(self.stepdelay)
-			index=int(attrs.get('index'))
-			mode=BlendTranslations.intToMode(int(attrs.get('mode')))
-			self.window.addBlendModeChangeToQueue(self.translateKey(index),mode,ThreadTypes.remote)
+			(index,ok)=attrs.value('index').toString().toInt()
+			mode=BlendTranslations.intToMode(attrs.value('mode').toString().toInt())
+			self.window.addBlendModeChangeToQueue(self.translateKey(index),mode,type)
 
 		elif name == 'toolevent':
 			self.strokestart=False
-			toolname=attrs.get('name')
-			#self.curlayer=self.keymap[int(attrs.get('layerkey'))]
-			self.curlayer=self.translateKey(int(attrs.get('layerkey')))
+			toolname="%s" % attrs.value('name').toString()
+			(layerkey,ok)=attrs.value('layerkey').toString().toInt()
+			self.curlayer=self.translateKey(layerkey)
 
 			tool=self.window.master.getToolClassByName(toolname.strip())
 
@@ -81,74 +112,89 @@ class LogContentHandler(xml.sax.ContentHandler):
 			self.curtool.layerkey=self.curlayer
 
 		elif name == 'fgcolor':
-			self.curtool.fgcolor=qtgui.QColor(int(attrs.get('r')),int(attrs.get('g')),int(attrs.get('b')))
+			(r,ok)=attrs.value('r').toString().toInt()
+			(g,ok)=attrs.value('g').toString().toInt()
+			(b,ok)=attrs.value('b').toString().toInt()
+			self.curtool.fgcolor=qtgui.QColor(r,g,b)
 		elif name == 'bgcolor':
-			self.curtool.bgcolor=qtgui.QColor(int(attrs.get('r')),int(attrs.get('g')),int(attrs.get('b')))
+			(r,ok)=attrs.value('r').toString().toInt()
+			(g,ok)=attrs.value('g').toString().toInt()
+			(b,ok)=attrs.value('b').toString().toInt()
+			self.curtool.bgcolor=qtgui.QColor(r,g,b)
 		elif name == 'clippath':
 			self.clippoints=[]
 		elif name == 'polypoint':
-			self.clippoints.append(qtcore.QPointF(int(attrs.get('x')),int(attrs.get('y'))))
+			(x,ok)=attrs.value('x').toString().toInt()
+			(y,ok)=attrs.value('y').toString().toInt()
+			self.clippoints.append(qtcore.QPointF(x,y))
 		elif name == 'toolparam':
-			self.curtool.setOption(attrs.get('name'),float(attrs.get('value')))
+			(value,ok)=attrs.value('value').toString().toInt()
+			self.curtool.setOption(attrs.value('name'),value)
 		elif name == 'rawevent':
 			self.inrawevent=True
-			self.rawstring=''
 			self.raweventargs=[]
-			self.x=int(attrs.get('x'))
-			self.y=int(attrs.get('y'))
-			#self.layerkey=self.keymap[int(attrs.get('layerkey'))]
-			self.layerkey=self.translateKey(int(attrs.get('layerkey')))
+			(self.x,ok)=attrs.value('x').toString().toInt()
+			(self.y,ok)=attrs.value('y').toString().toInt()
+			(layerkey,ok)=attrs.value('layerkey').toString().toInt()
+			self.layerkey=self.translateKey(layerkey)
+			self.rawstring=self.xml.readElementText()
 
-		elif name == 'point':
-			time.sleep(self.stepdelay)
-			x=float(attrs.get('x'))
-			y=float(attrs.get('y'))
-			#print "found point element for", x, y
-			self.lastx=x
-			self.lasty=y
-			pressure=float(attrs.get('pressure'))
-			if self.strokestart == False:
-				#print "Adding start tool event to queue on layer", self.curlayer
-				self.window.addPenDownToQueue(x,y,pressure,self.curlayer,self.curtool,ThreadTypes.remote)
-				self.strokestart=True
-			else:
-				#print "Adding tool motion event to queue on layer", self.curlayer
-				self.window.addPenMotionToQueue(x,y,pressure,self.curlayer,ThreadTypes.remote)
-	
-	def endElement(self, name):
-		if name == 'toolevent':
-			#print "Adding end tool event to queue on layer", self.curlayer
-			self.window.addPenUpToQueue(self.curlayer,self.lastx,self.lasty,ThreadTypes.remote)
-			self.curtool=None
-		elif name == 'rawevent':
-			self.inrawevent=False
-
-			# convert data out of base 64 then uncompress
 			data=qtcore.QByteArray()
-			data=data.append(qtcore.QString(self.rawstring))
+			data=data.append(self.rawstring)
 			data=qtcore.QByteArray.fromBase64(data)
 			data=qtcore.qUncompress(data)
 
 			image=qtgui.QImage()
 			image.loadFromData(data,"PNG")
 
-			self.window.addRawEventToQueue(self.layerkey,image,self.x,self.y,None,ThreadTypes.remote)
+			self.window.addRawEventToQueue(self.layerkey,image,self.x,self.y,None,type)
+
+		elif name == 'point':
+			time.sleep(self.stepdelay)
+			(x,ok)=attrs.value('x').toString().toFloat()
+			(y,ok)=attrs.value('y').toString().toFloat()
+			#print "found point element for", x, y
+			self.lastx=x
+			self.lasty=y
+			(pressure,ok)=attrs.value('pressure').toString().toFloat()
+			if self.strokestart == False:
+				#print "Adding start tool event to queue on layer", self.curlayer
+				self.window.addPenDownToQueue(x,y,pressure,self.curlayer,self.curtool,type)
+				self.strokestart=True
+			else:
+				#print "Adding tool motion event to queue on layer", self.curlayer
+				self.window.addPenMotionToQueue(x,y,pressure,self.curlayer,type)
+
+	def processEndElement(self):
+		name=self.xml.name()
+		if name == 'toolevent':
+			#print "Adding end tool event to queue on layer", self.curlayer
+			self.window.addPenUpToQueue(self.curlayer,self.lastx,self.lasty,type)
+			self.curtool=None
+		elif name == 'rawevent':
+			return
+			self.inrawevent=False
+
+			# convert data out of base 64 then uncompress
+			data=qtcore.QByteArray()
+			print "%s" % self.rawstring
+			data=data.append(self.rawstring)
+			data=qtcore.QByteArray.fromBase64(data)
+			data=qtcore.qUncompress(data)
+
+			image=qtgui.QImage()
+			image.loadFromData(data,"PNG")
+
+			self.window.addRawEventToQueue(self.layerkey,image,self.x,self.y,None,type)
 		elif name == 'clippath':
 			poly=qtgui.QPolygonF(self.clippoints)
 			self.curtool.clippath=qtgui.QPainterPath()
 			self.curtool.clippath.addPolygon(poly)
 
-	def characters(self,content):
-		if self.inrawevent:
-			self.rawstring+=content
-
-	def endDocument(self):
-		# set all layers we created to be user layers now that animation is over
-		for key in self.keymap.keys():
-			layer=self.window.getLayerForKey(self.keymap[key])
-			if layer:
-				layer.type=LayerTypes.user
-				layer.changeName("")
+	def processCharacterData(self):
+		pass
+		#if self.inrawevent:
+		#	self.rawstring=self.xml.text()
 
 # thread for playing local animations out of a file
 class PlayBackAnimation (qtcore.QThread):
@@ -159,12 +205,10 @@ class PlayBackAnimation (qtcore.QThread):
 		self.stepdelay=stepdelay
 
 	def run(self):
-		f=file(self.filename)
-		handler=LogContentHandler(self.window,self.stepdelay)
-		parser=xml.sax.make_parser()
-		parser.setFeature(xml.sax.handler.feature_namespaces, 0)
-		parser.setContentHandler(handler)
-		parser.parse(f)
+		f=qtcore.QFile(self.filename)
+		f.open(qtcore.QIODevice.ReadOnly)
+		parser=XmlToQueueEventsConverter(f,self.window,self.stepdelay)
+		parser.read()
 		f.close()
 
 class NetworkListenerThread (qtcore.QThread):
@@ -181,14 +225,12 @@ class NetworkListenerThread (qtcore.QThread):
 		# setup initial connection
 		self.socket,width,height=getServerConnection(self.username,self.password,self.host,self.port)
 
-		#self.window.addToQueue()
-
 		# if is was set up correctly tell window to start the thread that sends out data
 		if self.socket:
 			print "got socket connection"
 			sendingthread=NetworkWriterThread(self.window,self.socket)
 			self.window.sendingthread=sendingthread
-			print "created thread, about to start thread"
+			print "created thread, about to start sending thread"
 			sendingthread.start()
 
 		# if not tell window to exit and end thread
@@ -200,23 +242,19 @@ class NetworkListenerThread (qtcore.QThread):
 			self.window.destroy()
 			return
 
-		handler=LogContentHandler(self.window)
-		parser=xml.sax.make_parser()
-		parser.setFeature(xml.sax.handler.feature_namespaces, 0)
-		parser.setContentHandler(handler)
+		parser=XmlToQueueEventsConverter(None,self.window,0,type=ThreadTypes.network)
 
 		# listen for events and draw them as they come in
 		while 1:
 			if self.socket.waitForReadyRead(-1):
-				curdata=self.socket.readAll()
-				# convert to python string
-				s='%s' % qtcore.QString(curdata).toAscii()
+				data=self.socket.read(1024)
+				parser.xml.feed(data)
+				parser.read()
 
-				parser.feed(s)
-
+			# if error exit
 			else:
-				print "Recieved socket error:", self.socket.error(), "when reading"
-				parser.close()
+				print "Recieved error:", self.socket.error(), "when reading from socket"
+				#self.socket.write(qtcore.QByteArray("Authentication Failed"))
 				return
 
 class NetworkWriterThread (qtcore.QThread):
