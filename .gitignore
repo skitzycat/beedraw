@@ -1,1 +1,3 @@
 designer/*.py
+designer/*.pyc
+*.pyc
