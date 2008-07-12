@@ -300,8 +300,8 @@ class PaintBrushTool(DrawingTool):
 		painter.setTransform(transform)
 		painter.drawImage(qtcore.QPointF(0,0),self.fullsizedbrush)
 
-		print "updating brush for pressure:", pressure
-		printImage(self.brushimage)
+		#print "updating brush for pressure:", pressure
+		#printImage(self.brushimage)
 
 		# update radius so we know how much area to refresh on the screen
 		self.radius=(self.brushimage.width()+1)/2
