@@ -179,9 +179,9 @@ def getServerConnection(username,password,host,port):
 
 	# return error if we couldn't get a connection after 30 seconds
 	if not connected:
-
-		qtgui.QMessageBox(qtgui.QMessageBox.Information,"Connection Error","Failed to connect to server",qtgui.QMessageBox.Ok).exec_()
-		return None, None, None
+		print "Error: could not connect to server"
+		#qtgui.QMessageBox(qtgui.QMessageBox.Information,"Connection Error","Failed to connect to server",qtgui.QMessageBox.Ok).exec_()
+		return None, None, None, None
 
 	authrequest=qtcore.QByteArray()
 	authrequest=authrequest.append("%s\n%s\n%s\n" % (username,password,PROTOCOL_VERSION))
@@ -194,16 +194,18 @@ def getServerConnection(username,password,host,port):
 	while sizestring.count('\n')<2 and len(sizestring)<100:
 		if socket.waitForReadyRead(-1):
 			data=socket.read(100)
+			print "got authentication answer: %s" % qtcore.QString(data)
 			sizestring.append(data)
 
 		# if error exit
 		else:
 			qtgui.QMessageBox(qtgui.QMessageBox.Information,"Authentication Error","Wrong password",qtgui.QMessageBox.Ok).exec_()
-			return None, None, None
+			return None, None, None, None
 
 	# if we get here we have a response that probably wasn't a disconnect
 	sizelist=sizestring.split('\n')
 	width,ok=sizelist[0].toInt()
 	height,ok=sizelist[1].toInt()
+	id,ok=sizelist[2].toInt()
 
-	return socket,width,height
+	return socket,width,height,id

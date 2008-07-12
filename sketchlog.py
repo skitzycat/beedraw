@@ -1,10 +1,10 @@
 import PyQt4.QtCore as qtcore
 import PyQt4.QtXml as qtxml
+from beetypes import *
 
 class SketchLogWriter:
-	def __init__(self, output, encoding='ascii'):
+	def __init__(self, output):
 		self.output=output
-		self.encoding=encoding
 
 		self.log=qtxml.QXmlStreamWriter(output)
 
@@ -16,6 +16,72 @@ class SketchLogWriter:
 		# add parent element
 		self.log.writeStartElement('sketchlog')
 
+	def logCommand(self,command):
+		type=command[0]
+
+		if type==DrawingCommandTypes.nonlayer:
+			self.logNonLayerCommand(command)
+
+		elif type==DrawingCommandTypes.layer:
+			self.logLayerCommand(command)
+
+		elif type==DrawingCommandTypes.alllayer:
+			self.logAllLayerCommand(command)
+
+	def logNonLayerCommand(self,command):
+		subtype=command[1]
+		if subtype==NonLayerCommandTypes.startlog:
+			pass
+
+		elif subtype==NonLayerCommandTypes.endlog:
+			pass
+
+		elif subtype==NonLayerCommandTypes.undo:
+			pass
+
+		elif subtype==NonLayerCommandTypes.redo:
+			pass
+
+	def logLayerCommand(self,command):
+		subtype=command[1]
+		layer=command[2]
+		if subtype==LayerCommandTypes.alpha:
+			self.logLayerAlphaChange(layer,command[3])
+
+		elif subtype==LayerCommandTypes.mode:
+			self.logLayerModeChange(layer,command[3])
+
+		elif subtype==LayerCommandTypes.rawevent:
+			self.logRawEvent(command[3],command[4],layer,command[5],command[6])
+
+		elif subtype==LayerCommandTypes.tool:
+			self.logToolEvent(layer,command[3])
+
+	def logAllLayerCommand(self,command):
+		subtype=command[1]
+		if subtype==AllLayerCommandTypes.resize:
+			pass
+
+		elif subtype==AllLayerCommandTypes.scale:
+			pass
+
+		elif subtype==AllLayerCommandTypes.layerup:
+			self.logLayerMove(command[2],1)
+
+		elif subtype==AllLayerCommandTypes.layerdown:
+			self.logLayerMove(command[2],-1)
+
+		elif subtype==AllLayerCommandTypes.deletelayer:
+			self.logLayerSub(command[2])
+
+		elif subtype==AllLayerCommandTypes.insertlayer:
+			print "turning add layer command into xml:", command
+			self.logLayerAdd(command[3], command[2], command[4])
+
+		elif subtype==AllLayerCommandTypes.resync:
+			if self.type==ThreadTypes.server:
+				pass
+
 	def startEvent(self):
 		self.log.writeStartElement('event')
 
@@ -23,7 +89,7 @@ class SketchLogWriter:
 		self.log.writeEndElement()
 		self.output.flush()
 
-	def logLayerAdd(self, position, key):
+	def logLayerAdd(self, position, key, owner=0):
 		lock=qtcore.QMutexLocker(self.mutex)
 
 		self.startEvent()
@@ -34,7 +100,8 @@ class SketchLogWriter:
 		# start addlayer event
 		self.log.writeStartElement('addlayer')
 		self.log.writeAttribute('position',str(position))
-		self.log.writeAttribute('key',str(position))
+		self.log.writeAttribute('key',str(key))
+		self.log.writeAttribute('owner',str(owner))
 
 		# end addlayer event
 		self.log.writeEndElement()
@@ -191,7 +258,7 @@ class SketchLogWriter:
 		# end createdoc event
 		self.log.writeEndElement()
 
-	def logRawEvent(self,x,y,layerkey,image):
+	def logRawEvent(self,x,y,layerkey,image,path=None):
 		lock=qtcore.QMutexLocker(self.mutex)
 		self.startEvent()
 
@@ -203,6 +270,20 @@ class SketchLogWriter:
 		self.log.writeAttribute('x',x)
 		self.log.writeAttribute('y',y)
 		self.log.writeAttribute('layerkey',layerkey)
+
+		# if there is a clip path for this raw event
+		if path:
+			poly=path.toFillPolygon().toPolygon()
+			self.log.writeStartElement('clippath')
+
+			for p in range(poly.size()):
+				self.log.writeStartElement('polypoint')
+				self.log.writeAttribute('x',str(poly.at(p).x()))
+				self.log.writeAttribute('y',str(poly.at(p).y()))
+				self.log.writeEndElement()
+
+			# end clip path
+			self.log.writeEndElement()
 
 		bytearray=qtcore.QByteArray()
 		buf=qtcore.QBuffer(bytearray)

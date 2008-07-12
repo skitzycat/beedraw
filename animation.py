@@ -10,26 +10,27 @@ import PyQt4.QtGui as qtgui
 import PyQt4.QtXml as qtxml
 
 class XmlToQueueEventsConverter:
-	def __init__(self,device,window,stepdelay,type=ThreadTypes.animation):
+	def __init__(self,device,window,stepdelay,type=ThreadTypes.animation,id=0):
 		if device:
 			self.xml=qtxml.QXmlStreamReader(device)
 		else:
 			self.xml=qtxml.QXmlStreamReader()
+		self.id=id
 		self.window=window
 		self.type=type
 		self.inrawevent=False
 		self.stepdelay=stepdelay
 		self.keymap={}
-		
+
 		if type==ThreadTypes.animation:
 			self.layertype=LayerTypes.animation
 		else:
 			self.layertype=LayerTypes.network
 
 	def translateKey(self,key):
-		if self.type!=ThreadTypes.user:
-			return key
 		return self.keymap[key]
+#		if self.type!=ThreadTypes.user:
+#			return key
 
 	def addKeyTranslation(self,key,dockey):
 		if self.type!=ThreadTypes.user:
@@ -69,12 +70,16 @@ class XmlToQueueEventsConverter:
 		elif name == 'addlayer':
 			(pos,ok)=attrs.value("position").toString().toInt()
 			(key,ok)=attrs.value("key").toString().toInt()
+			(owner,ok)=attrs.value("owner").toString().toInt()
+			print "got owner from xml as:", owner
 
-			dockey=self.window.addInsertLayerEventToQueue(pos,self.layertype,"animation",self.type)
+			dockey=self.window.nextLayerKey()
+
+			self.window.addInsertLayerEventToQueue(pos,dockey,"animation",self.type,owner=owner)
 			self.addKeyTranslation(key,dockey)
 
 		elif name == 'sublayer':
-			(key,ok)=attrs.value("key").string.toInt()
+			(key,ok)=attrs.value("index").toString().toInt()
 			self.window.addRemoveLayerRequestToQueue(key,type)
 
 		elif name == 'movelayer':
@@ -193,12 +198,10 @@ class XmlToQueueEventsConverter:
 
 	def processCharacterData(self):
 		pass
-		#if self.inrawevent:
-		#	self.rawstring=self.xml.text()
 
 # thread for playing local animations out of a file
 class PlayBackAnimation (qtcore.QThread):
-	def __init__(self,window,filename,stepdelay=.05):
+	def __init__(self,window,filename,stepdelay=.25):
 		qtcore.QThread.__init__(self)
 		self.window=window
 		self.filename=filename
@@ -223,11 +226,12 @@ class NetworkListenerThread (qtcore.QThread):
 	def run(self):
 		print "attempting to get socket:"
 		# setup initial connection
-		self.socket,width,height=getServerConnection(self.username,self.password,self.host,self.port)
+		self.socket,width,height,id=getServerConnection(self.username,self.password,self.host,self.port)
 
 		# if is was set up correctly tell window to start the thread that sends out data
 		if self.socket:
 			print "got socket connection"
+			self.window.remoteid=id
 			sendingthread=NetworkWriterThread(self.window,self.socket)
 			self.window.sendingthread=sendingthread
 			print "created thread, about to start sending thread"
@@ -236,8 +240,6 @@ class NetworkListenerThread (qtcore.QThread):
 		# if not tell window to exit and end thread
 		else:
 			print "failed to get socket connection"
-			self.window.remotedrawinthread.quit()
-			self.window.remotedrawinthread=None
 			self.window.cleanUp()
 			self.window.destroy()
 			return
@@ -248,7 +250,8 @@ class NetworkListenerThread (qtcore.QThread):
 		while 1:
 			if self.socket.waitForReadyRead(-1):
 				data=self.socket.read(1024)
-				parser.xml.feed(data)
+				print "got animation data from socket: %s" % qtcore.QString(data)
+				parser.xml.addData(data)
 				parser.read()
 
 			# if error exit
@@ -270,53 +273,6 @@ class NetworkWriterThread (qtcore.QThread):
 		while 1:
 			print "attempting to get item from queue"
 			command=self.queue.get()
-			type=command[0]
-
-			if type==DrawingCommandTypes.quit:
+			if command[0]==DrawingCommandTypes.quit:
 				return
-			elif type==DrawingCommandTypes.nonlayer:
-				self.sendNonLayerCommand(command)
-			elif type==DrawingCommandTypes.layer:
-				self.sendLayerCommand(command)
-			elif type==DrawingCommandTypes.alllayer:
-				self.sendAllLayerCommand(command)
-
-	def sendNonLayerCommand(self,command):
-		pass
-
-	def sendLayerCommand(self,command):
-		subtype=command[1]
-		if subtype==LayerCommandTypes.alpha:
-			pass
-
-		elif subtype==LayerCommandTypes.mode:
-			pass
-
-		elif subtype==LayerCommandTypes.tool:
-			self.gen.logToolEvent(tool)
-
-		elif subtype==LayerCommandTypes.rawevent:
-			pass
-
-		else:
-			print "unknown processLayerCommand subtype:", subtype
-
-	def sendAllLayerCommand(self,command):
-		subtype=command[1]
-		if subtype==AllLayerCommandTypes.resize:
-			pass
-
-		elif subtype==AllLayerCommandTypes.scale:
-			pass
-
-		elif subtype==AllLayerCommandTypes.layerup:
-			self.gen.logLayerMove(command[2],1)
-
-		elif subtype==AllLayerCommandTypes.layerdown:
-			self.gen.logLayerMove(command[2],-1)
-
-		elif subtype==AllLayerCommandTypes.deletelayer:
-			self.gen.logLayerSub(command[2])
-
-		elif subtype==AllLayerCommandTypes.insertlayer:
-			self.gen.logLayerAdd(0,0)
+			self.gen.logCommand(command)

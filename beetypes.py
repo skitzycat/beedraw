@@ -21,7 +21,7 @@ class LayerCommandTypes:
 
 # events that effect the list of layers or all layers
 class AllLayerCommandTypes:
-	scale, resize, layerup, layerdown, createlayer, deletelayer, insertlayer = range(7)
+	scale, resize, layerup, layerdown, createlayer, deletelayer, insertlayer, resync = range(8)
 
 class LayerTypes:
 	user, animation, network = range(3)

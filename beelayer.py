@@ -13,10 +13,12 @@ from LayerWidgetUi import Ui_LayerConfigWidget
 from LayersWindowUi import Ui_LayersWindow
 
 class BeeLayer:
-	def __init__(self,window,type,key,image=None,opacity=None,visible=None,compmode=None):
+	def __init__(self,window,type,key,image=None,opacity=None,visible=None,compmode=None,owner=0):
 		self.window=window
 		self.key=key
+		self.owner=0
 
+		#print "creating layer with type:", type
 		# this is a lock for locking access to the layer image when needed
 		self.imagelock=qtcore.QReadWriteLock()
 
@@ -141,16 +143,12 @@ class BeeLayer:
 	def setOptions(self,opacity=None,visibility=None,compmode=None):
 		if opacity!=None:
 			self.opacity=opacity
-			if self.window.log:
-				self.window.log.logLayerAlphaChange(self.key,opacity)
 
 		if visibility!=None:
 			self.visibility=visibility
 
 		if compmode!=None:
 			self.compmode=compmode
-			if self.window.log:
-				self.window.log.logLayerModeChange(self.key,compmode)
 
 		if self.configwidget:
 			self.configwidget.updateValuesFromLayer()
@@ -383,8 +381,9 @@ class BeeLayersWindow(qtgui.QMainWindow):
 			if self.master.curwindow:
 				self.master.curwindow.addLayerDownToQueue(self.master.curwindow.curlayerkey)
 
-	def hideEvent(self,event):
-		self.master.ui.actionLayers.setChecked(False)
+	#def hideEvent(self,event):
+	#	self.master.ui.actionLayers.setChecked(False)
+	#	return False
 
 # custom widget for the thumbnail view of a layer
 class LayerPreviewWidget(qtgui.QWidget):

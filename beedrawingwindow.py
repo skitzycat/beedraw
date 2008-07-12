@@ -60,10 +60,15 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 		self.remoteoutputqueue=Queue(0)
 
 		# initiate drawing thread
-		self.localdrawingthread=DrawingThread(self.localcommandqueue,self)
+		if type==WindowTypes.standaloneserver:
+			self.localdrawingthread=DrawingThread(self.remotecommandqueue,self,type=ThreadTypes.server)
+		else:
+			self.localdrawingthread=DrawingThread(self.localcommandqueue,self)
+
 		self.localdrawingthread.start()
 
 		self.remotedrawingthread=None
+		self.remoteid=0
 
 		# for sending events to server so they don't slow us down locally
 		self.sendtoserverqueue=None
@@ -111,10 +116,10 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 		print "running startNetworkWindow"
 		newwin=BeeDrawingWindow(parent,startlayer=False,type=WindowTypes.networkclient)
 
-		newwin.remotedrawingthread=DrawingThread(newwin.remotecommandqueue,newwin,ThreadTypes.network)
-		newwin.remotedrawingthread.start()
-
-		newwin.startNetworkThreads(username,password,host,port)
+		newwin.username=username
+		newwin.password=password
+		newwin.host=host
+		newwin.port=port
 
 		return newwin
 
@@ -254,11 +259,16 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 	def addRemoveLayerRequestToQueue(self,key,source=ThreadTypes.user):
 		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.deletelayer,key),source)
 
-	def queueCommand(self,command,source=ThreadTypes.user):
-		print "queueing command:", command
+	def queueCommand(self,command,source=ThreadTypes.user,owner=0):
+		#print "queueing command:", command
 		if source==ThreadTypes.user:
+			#print "putting command in local queue"
 			self.localcommandqueue.put(command)
+		elif source==ThreadTypes.server:
+			#print "putting command in routing queue"
+			self.master.routinginput.put((command,owner))
 		else:
+			#print "putting command in remote queue"
 			self.remotecommandqueue.put(command)
 
 	def removeLayerByKey(self,key):
@@ -269,10 +279,6 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 			if layer.key==key:
 				index=self.layers.index(layer)
 				self.layers.pop(index)
-
-				# if there is a log then log this action
-				if self.log:
-					self.log.logLayerSub(index)
 
 				# try to set current layer to a valid layer
 				if index==0:
@@ -304,9 +310,6 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 			if self.type==WindowTypes.singleuser:
 				self.addCommandToHistory(LayerDownCommand(key))
 
-			if self.log:
-				self.log.logLayerMove(key,-1)
-
 	def addLayerUpToQueue(self,key,source=ThreadTypes.user):
 		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.layerup,key),source)
 
@@ -326,9 +329,6 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 			# otherwise do nothing
 			if self.type==WindowTypes.singleuser:
 				self.addCommandToHistory(LayerUpCommand(key))
-
-			if self.log:
-				self.log.logLayerMove(key,1)
 
 	# recomposite all layers together into the displayed image
 	# when a thread calls this method it shouldn't have a lock on any layers
@@ -379,6 +379,10 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 					self.remotedrawingthread=None
 				elif self.type==WindowTypes.animation:
 					self.remotedrawingthread=DrawingThread(self.remotecommandqueue,self,ThreadTypes.animation)
+					self.remotedrawingthread.start()
+				elif self.type==WindowTypes.networkclient:
+					self.startNetworkThreads(self.username,self.password,self.host,self.port)
+					self.remotedrawingthread=DrawingThread(self.remotecommandqueue,self,ThreadTypes.network)
 					self.remotedrawingthread.start()
 				else:
 					self.remotedrawingthread=DrawingThread(self.remotecommandqueue,self,ThreadTypes.network)
@@ -656,9 +660,9 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 		self.insertLayer(key,index,type,image,opacity=opacity,visible=visible,compmode=compmode)
 		self.reCompositeImage()
 
-	# insert a blank layer at a given point in the list of layers
-	def insertLayer(self,key,index,type=LayerTypes.user,image=None,opacity=None,visible=None,compmode=None):
-		layer=BeeLayer(self,type,key,image,opacity=opacity,visible=visible,compmode=compmode)
+	# insert a layer at a given point in the list of layers
+	def insertLayer(self,key,index,type=LayerTypes.user,image=None,opacity=None,visible=None,compmode=None,owner=0):
+		layer=BeeLayer(self,type,key,image,opacity=opacity,visible=visible,compmode=compmode,owner=0)
 
 		self.layers.insert(index,layer)
 
@@ -670,16 +674,11 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 		if self.type==WindowTypes.singleuser:
 			self.addCommandToHistory(AddLayerCommand(layer.key))
 
-		# if there is a log then log it
-		if self.log:
-			self.log.logLayerAdd(index,key)
-
 		self.requestLayerListRefresh()
 
-	def addInsertLayerEventToQueue(self,index,type,name=None,source=ThreadTypes.user):
-		key=self.nextLayerKey()
+	def addInsertLayerEventToQueue(self,index,key,name=None,source=ThreadTypes.user,owner=0):
 		# when the source is local like this the owner will always be me (id 0)
-		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.insertlayer,key,index,0),source)
+		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.insertlayer,key,index,owner),source,owner)
 		return key
 
 	def addLayer(self):
@@ -714,3 +713,15 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 		self.listenerthread=NetworkListenerThread(self,username,password,host,port)
 		print "about to start thread"
 		self.listenerthread.start()
+
+	def logCommand(self,command):
+		if self.log:
+			self.log.logCommand(command)
+		if self.type==WindowTypes.standaloneserver:
+			self.master.routinginput.put((command,self.remoteid))
+
+	def logStroke(self,tool):
+		if self.log:
+			self.log.logToolEvent(tool)
+		if self.type==WindowTypes.standaloneserver:
+			self.master.routinginput.put(((DrawingCommandTypes.layer,LayerCommandTypes.tool,command),self.remoteid))

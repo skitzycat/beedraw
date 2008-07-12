@@ -19,12 +19,16 @@ class DrawingThread(qtcore.QThread):
 		# object so it retains information throughout the stroke
 		self.inprocesstools={}
 
+		#print "starting thread with type:", type
+
 	def addExitEventToQueue(self):
 		self.queue.put((DrawingCommandTypes.quit,))
 
 	def run(self):
+		#print "starting drawing thread"
 		while 1:
 			command=self.queue.get()
+			#print "got command from queue:", command
 
 			type=command[0]
 
@@ -33,17 +37,17 @@ class DrawingThread(qtcore.QThread):
 
 			elif type==DrawingCommandTypes.nonlayer:
 				self.processNonLayerCommand(command)
+				self.window.logCommand(command)
 
 			elif type==DrawingCommandTypes.layer:
 				self.processLayerCommand(command)
 
 			elif type==DrawingCommandTypes.alllayer:
-				# these commands need to be requested from the server
-				# if part of a network session and sent locally
 				if self.type==ThreadTypes.user and self.window.type==WindowTypes.networkclient:
 					self.requestAllLayerCommand(command)
 				else:
 					self.processAllLayerCommand(command)
+					self.window.logCommand(command)
 
 	def processNonLayerCommand(self,command):
 		subtype=command[1]
@@ -68,11 +72,13 @@ class DrawingThread(qtcore.QThread):
 			layer=self.window.getLayerForKey(command[2])
 			if layer:
 				layer.setOptions(opacity=command[3])
+				self.window.logCommand(command)
 
 		elif subtype==LayerCommandTypes.mode:
 			layer=self.window.getLayerForKey(command[2])
 			if layer:
 				layer.setOptions(compmode=command[3])
+				self.window.logCommand(command)
 
 		elif subtype==LayerCommandTypes.pendown:
 			#print "Pen down event:", command
@@ -107,9 +113,10 @@ class DrawingThread(qtcore.QThread):
 			if self.inprocesstools.has_key(int(command[2])):
 				tool=self.inprocesstools[int(command[2])]
 				tool.penUp(x,y)
-				# send to server if needed
-				if self.type==ThreadTypes.user and self.window.type==WindowTypes.networkclient:
-					sendToServer((DrawingCommandTypes.layer,LayerCommandTypes.tool,tool))
+
+				# send to server and log file if needed
+				self.window.logStroke(tool)
+
 				del self.inprocesstools[int(command[2])]
 
 		elif subtype==LayerCommandTypes.rawevent:
@@ -120,6 +127,7 @@ class DrawingThread(qtcore.QThread):
 			path=command[6]
 			compmode=qtgui.QPainter.CompositionMode_Source
 			layer.compositeFromCorner(image,x,y,compmode,path)
+			self.window.logCommand(command)
 		else:
 			print "unknown processLayerCommand subtype:", subtype
 
@@ -141,16 +149,30 @@ class DrawingThread(qtcore.QThread):
 			self.window.removeLayerByKey(command[2])
 
 		elif subtype==AllLayerCommandTypes.insertlayer:
-			key = command[2]
-			index = command[3]
-			owner = command[4]
-			if self.window.ownedByMe(owner):
+			#print "processing insert layer command"
+			# in this case we want to fill out the details ourselves
+			if self.type==ThreadTypes.server and command[4] != 0:
+				key=self.window.nextLayerKey()
+				index=len(self.window.layers)
 				self.window.insertLayer(key,index)
+
 			else:
-				self.window.insertLayer(key,index,LayerTypes.network)
+				key = command[2]
+				index = command[3]
+				owner = command[4]
+				if self.window.ownedByMe(owner):
+					self.window.insertLayer(key,index,owner=owner)
+				else:
+					self.window.insertLayer(key,index,LayerTypes.network,owner=owner)
+
+		elif subtype==AllLayerCommandTypes.resync:
+			if self.type==ThreadTypes.server:
+				pass
 
 	def requestAllLayerCommand(self,command):
 		self.sendToServer(command)
 
 	def sendToServer(self,command):
+		if command[0]==DrawingCommandTypes.alllayer and command[1]==AllLayerCommandTypes.insertlayer:
+			command=(command[0],command[1],command[2],command[3],self.window.remoteid)
 		self.window.remoteoutputqueue.put(command)

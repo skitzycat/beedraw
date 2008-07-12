@@ -30,6 +30,9 @@
          <height>0</height>
         </size>
        </property>
+       <property name="text" >
+        <string>localhost</string>
+       </property>
       </widget>
      </item>
      <item>
