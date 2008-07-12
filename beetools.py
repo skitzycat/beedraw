@@ -264,9 +264,6 @@ class DrawingTool(AbstractTool):
 
 		self.layer.window.master.refreshLayerThumb(self.layer.key)
 
-		if self.window.log:
-			self.window.log.logToolEvent(self)
-
 # basic tool for drawing fuzzy edged stuff on the canvas
 class PaintBrushTool(DrawingTool):
 	def __init__(self,options,window):
@@ -286,10 +283,26 @@ class PaintBrushTool(DrawingTool):
 			self.brushimage=self.fullsizedbrush
 			return
 
-		# scale the brush to proper size
-		transform=qtgui.QMatrix()
+		transform=qtgui.QTransform()
 		transform=transform.scale(pressure,pressure)
-		self.brushimage=self.fullsizedbrush.transformed(transform,qtcore.Qt.SmoothTransformation)
+
+		# scale the brush to proper size
+		#self.brushimage=self.fullsizedbrush.transformed(transform,qtcore.Qt.SmoothTransformation)
+
+		# scale the brush to proper size (alternate method)
+		diameter=int((self.fullsizedbrush.width()*pressure)+1)
+		self.brushimage=qtgui.QImage(diameter,diameter,qtgui.QImage.Format_ARGB32_Premultiplied)
+		self.brushimage.fill(0)
+		painter=qtgui.QPainter()
+		painter.begin(self.brushimage)
+		painter.setRenderHint(qtgui.QPainter.Antialiasing)
+		painter.setRenderHint(qtgui.QPainter.SmoothPixmapTransform)
+		painter.setTransform(transform)
+		painter.drawImage(qtcore.QPointF(0,0),self.fullsizedbrush)
+
+		print "updating brush for pressure:", pressure
+		printImage(self.brushimage)
+
 		# update radius so we know how much area to refresh on the screen
 		self.radius=(self.brushimage.width()+1)/2
 
