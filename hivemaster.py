@@ -6,6 +6,11 @@ import PyQt4.QtGui as qtgui
 import PyQt4.QtNetwork as qtnet
 
 from HiveMasterUi import Ui_HiveMasterSpec
+from beedrawingwindow import BeeDrawingWindow
+from beetypes import *
+from beetools import BeeToolBox
+from animation import XmlToQueueEventsConverter
+from sketchlog import SketchLogWriter
 
 from Queue import Queue
 import time
@@ -28,16 +33,31 @@ class HiveMasterWindow(qtgui.QMainWindow):
 		self.ui.setupUi(self)
 		self.show()
 
-		# replace custom widget
-
 		# setup queues used for all thread communication
-		self.routinginput=Queue(100)
+		self.routinginput=Queue(0)
+		self.routingthread=HiveRoutingThread(self)
+		self.routingthread.start()
 
 		# this will be keyed on the client ids and values will be queue objects
 		self.clientwriterqueues={}
 
 		# this dictionary will be keyed on id and map to the username
 		self.clientnames={}
+
+		self.toolbox=BeeToolBox()
+
+		# drawing window which holds the current state of the network session
+		self.window=BeeDrawingWindow(self,600,400,False,WindowTypes.standaloneserver)
+
+	def getToolClassByName(self,name):
+		self.toolbox.getToolClassByName(name)
+
+	def getCurToolInst(self,window):
+		curtool=self.getCurToolDesc()
+		return curtool.setupTool(window)
+
+	def getCurToolDesc(self):
+		return self.toolbox.getCurToolDesc()
 
 	# alternate constuctor to create a standalone server
 	def standAloneServer(app):
@@ -51,12 +71,13 @@ class HiveMasterWindow(qtgui.QMainWindow):
 
 	standAloneServer=staticmethod(standAloneServer)
 
-	def registerClient(self):
+	def registerClient(self,username):
 		lock=qtcore.QMutexLocker(self.nextclientidmutex)
 		newid=self.nextclientid
 		self.nextclientid+=1
 		lock.unlock()
 		self.clientwriterqueues[newid]=Queue(100)
+		self.clientnames[newid]=username
 		return newid
 
 	def closeEvent(self,event):
@@ -84,12 +105,11 @@ class HiveMasterWindow(qtgui.QMainWindow):
 # listen to a socket and add incomming client commands to queue
 class HiveClientListener(qtcore.QThread):
 	def __init__(self,parent,socket,master,id):
-		#qtcore.QThread.__init__(self,parent)
 		qtcore.QThread.__init__(self)
+		self.setParent(self)
 		self.socket=socket
 
 		self.master=master
-		self.id=id
 
 		self.outputqueue=master.routinginput
 
@@ -126,14 +146,7 @@ class HiveClientListener(qtcore.QThread):
 
 	def register(self):
 		# register this new connection and get an id for it
-		id=self.master.registerClient(self.username)
-		# start writing thread
-		newwriter=HiveClientWriter(self,newsock,self.master,id)
-		newwriter.start()
-
-	# pass initial setup data to new client
-	def setupNewClient(self):
-		self.socket.write(qtcore.QByteArray("Document Dimensions\n400\n600\n"))
+		self.id=self.master.registerClient(self.username)
 
 	def run(self):
 		# try to authticate user
@@ -147,36 +160,51 @@ class HiveClientListener(qtcore.QThread):
 
 		print "authentication succeded"
 
-		# pass initial data to client here
-		self.setupNewClient()
+		self.register()
 
+		# pass initial data to client here
+		self.socket.write(qtcore.QByteArray("%d\n%d\n%d\n" % (self.master.window.docwidth,self.master.window.docheight,self.id)))
+
+		# wait for client to respond
+		self.socket.waitForReadyRead(-1)
+
+		# start writing thread
+		newwriter=HiveClientWriter(self,self.socket,self.master,self.id)
+		newwriter.start()
+
+		parser=XmlToQueueEventsConverter(None,self.master.window,0,type=ThreadTypes.network,id=self.id)
 		while 1:
-			# wait for data ready to read or an erro
 			if self.socket.waitForReadyRead(-1):
-				curdata=self.socket.readAll()
-				s=qtcore.QString(curdata).toAscii()
-				print "recived data:", s
+				data=self.socket.read(1024)
+				print "recieved data from client: %s" % qtcore.QString(data)
+				parser.xml.addData(data)
+				parser.read()
 
 			# if error exit
 			else:
 				print "Recieved error:", self.socket.error(), "when reading from socket"
+				#self.socket.write(qtcore.QByteArray("Authentication Failed"))
 				return
 
 # this thread will write to a specific client
 class HiveClientWriter(qtcore.QThread):
 	def __init__(self,parent,socket,master,id):
-		qtcore.QThread.__init__(self,master)
+		#qtcore.QThread.__init__(self,parent)
+		qtcore.QThread.__init__(self)
+		self.setParent(self)
 
 		self.socket=socket
 		self.master=master
 		self.id=id
 
 		self.queue=self.master.clientwriterqueues[id]
+		self.xmlgenerator=SketchLogWriter(self.socket)
 
 	def run(self):
+		self.xmlgenerator.logCreateDocument(self.master.window.docwidth,self.master.window.docheight)
 		while 1:
 			data=self.queue.get()
-			self.socket.write(data)
+			self.xmlgenerator.logCommand(data)
 
 # class to handle running the TCP server and handling new connections
 class HiveServerThread(qtcore.QThread):
@@ -193,6 +221,7 @@ class HiveServerThread(qtcore.QThread):
 	#	qtcore.QThread.finished(self)
 
 	def run(self):
+		id=1
 		print "listening on port ", self.port
 		self.server=qtnet.QTcpServer()
 		ret=self.server.listen(qtnet.QHostAddress("0.0.0.0"),self.port)
@@ -207,6 +236,7 @@ class HiveServerThread(qtcore.QThread):
 
 				# start the listener, that will authenticate client and finish setup
 				newlistener=HiveClientListener(self,newsock,self.master,id)
+				id+=1
 
 				# push responsibility to new thread
 				newsock.setParent(None)
@@ -218,3 +248,26 @@ class HiveServerThread(qtcore.QThread):
 class HiveRoutingThread(qtcore.QThread):
 	def __init__(self,master):
 		qtcore.QThread.__init__(self,master)
+		self.master=master
+		self.queue=master.routinginput
+
+	def run(self):
+		print "starting up HiveRoutingThread"
+		while 1:
+			data=self.queue.get()
+			print "routing info recieved:", data
+			(command,owner)=data
+			if command[0]==DrawingCommandTypes.alllayer:
+				self.sendToAllClients(command)
+			else:
+				self.sendToAllButOwner(owner,command)
+
+	# I'd eventually put a check in here for if the queue is full and if so clear the queue and replace it with a raw event update to the current state
+	def sendToAllClients(self,command):
+		for id in self.master.clientwriterqueues.keys():
+			self.master.clientwriterqueues[id].put(command)
+
+	def sendToAllButOwner(self,source,command):
+		for id in self.master.clientwriterqueues.keys():
+			if source!=id:
+				self.master.clientwriterqueues[id].put(command)

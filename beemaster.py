@@ -33,16 +33,11 @@ class BeeMasterWindow(qtgui.QMainWindow):
 		# list to hold drawing windows created
 		self.drawingwindows=[]
 
-		# list of tools available
-		self.tools=[]
-		self.tools.append(beetools.PencilToolDesc())
-		self.tools.append(beetools.PaintBrushToolDesc())
-		self.tools.append(beetools.EraserToolDesc())
-		self.tools.append(beetools.RectSelectionToolDesc())
+		self.toolbox=beetools.BeeToolBox()
 
 		# add list of tools to tool choice drop down
-		for tool in self.tools:
-			self.ui.toolChoiceBox.addItem(tool.name)
+		for tool in self.toolbox.toolNameGenerator():
+			self.ui.toolChoiceBox.addItem(tool)
 
 		# set signal so we know when the tool changes
 		self.connect(self.ui.toolChoiceBox,qtcore.SIGNAL("activated(int)"),self.on_tool_changed)
@@ -67,14 +62,12 @@ class BeeMasterWindow(qtgui.QMainWindow):
 		return curtool.setupTool(window)
 
 	def getCurToolDesc(self):
-		return self.tools[self.curtoolindex]
+		return self.toolbox.getCurToolDesc()
 
 	def on_tool_changed(self,index):
-		if index!=self.curtoolindex:
-			self.curtoolindex=index
-			# change cursor type for all window view widgets
-			for win in self.drawingwindows:
-				win.view.setCursor(self.tools[self.curtoolindex].getCursor())
+		self.toolbox.setCurToolIndex(index)
+		for win in self.drawingwindows:
+			win.view.setCursor(self.toolbox.getCurToolDesc().getCursor())
 
 	def on_tooloptionsbutton_pressed(self):
 		self.getCurToolDesc().runOptionsDialog(self)
@@ -250,9 +243,4 @@ class BeeMasterWindow(qtgui.QMainWindow):
 			self.refreshLayersList()
 
 	def getToolClassByName(self,name):
-		for tool in self.tools:
-			if name==tool.name:
-				return tool
-
-		print "Error, couldn't find tool with name:", name
-		return None
+		return self.toolbox.getToolDescByName(name)

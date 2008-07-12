@@ -21,16 +21,16 @@ class LayerCommandTypes:
 
 # events that effect the list of layers or all layers
 class AllLayerCommandTypes:
-	scale, resize, layerup, layerdown, createlayer, deletelayer, insertlayer = range(7)
+	scale, resize, layerup, layerdown, createlayer, deletelayer, insertlayer, resync = range(8)
 
 class LayerTypes:
 	user, animation, network = range(3)
 
 class WindowTypes:
-	user, animation, network, server = range(4)
+	singleuser, animation, networkclient, integratedserver, standaloneserver = range(5)
 
 class ThreadTypes:
-	user, remote = range(2)
+	user, animation, network, server = range(4)
 
 # types of ways to modify the current selection
 class SelectionModTypes:
