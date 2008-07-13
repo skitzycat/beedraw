@@ -72,10 +72,21 @@ class AddLayerCommand(AbstractCommand):
 		self.layerkey=layerkey
 
 	def undo(self,window):
-		(self.oldlayer,self.index)=window.removeLayerByKey(self.layerkey)
+		(self.oldlayer,self.index)=window.removeLayerByKey(self.layerkey,history=-1)
 
 	def redo(self,window):
-		window.insertLayer(self.oldlayer,self.index)
+		window.insertRawLayer(self.oldlayer,self.index,history=-1)
+
+class DelLayerCommand(AbstractCommand):
+	def __init__(self,layer,index):
+		self.layer=layer
+		self.index=index
+
+	def undo(self,window):
+		window.insertRawLayer(self.layer,self.index,history=-1)
+
+	def redo(self,window):
+		window.removeLayerByKey(self.layer.key,history=-1)
 
 class LayerUpCommand(AbstractCommand):
 	def __init__(self,layerkey):

@@ -132,12 +132,13 @@ class DrawingTool(AbstractTool):
 		# see if we need to update at all
 		if self.lastpressure==pressure:
 			return
-		self.lastpressure=pressure
 
+		self.lastpressure=pressure
 
 		# if we can use the full sized brush, then do it
 		if self.options["pressuresize"]==0 or pressure==1:
 			self.brushimage=self.fullsizedbrush
+			self.lastpressure=1
 			return
 
 		# scaling radius for brush

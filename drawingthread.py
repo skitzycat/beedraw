@@ -56,11 +56,11 @@ class DrawingThread(qtcore.QThread):
 		elif subtype==NonLayerCommandTypes.endlog:
 			pass
 		elif subtype==NonLayerCommandTypes.undo:
-			self.window.undo(subtype[2])
+			self.window.undo(command[2])
 			if self.type==ThreadTypes.user and self.window.type==WindowTypes.networkclient:
 				self.sendToServer(command)
 		elif subtype==NonLayerCommandTypes.redo:
-			self.window.redo(subtype[2])
+			self.window.redo(command[2])
 			if self.type==ThreadTypes.user and self.window.type==WindowTypes.networkclient:
 				self.sendToServer(command)
 		else:

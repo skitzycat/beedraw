@@ -271,27 +271,30 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 			#print "putting command in remote queue"
 			self.remotecommandqueue.put(command)
 
-	def removeLayerByKey(self,key):
+	# remove layer, but don't add it to history
+	def removeLayerByKey(self,key,history=0):
 		# get a lock so we don't get a collision ever
 		lock=qtcore.QMutexLocker(self.layersmutex)
 		
-		for layer in self.layers:
-			if layer.key==key:
-				index=self.layers.index(layer)
-				self.layers.pop(index)
+		layer=self.getLayerForKey(key)
+		if(layer):
+			index=self.layers.index(layer)
+			if history!=-1:
+				self.addCommandToHistory(DelLayerCommand(layer,index))
+			self.layers.pop(index)
 
-				# try to set current layer to a valid layer
-				if index==0:
-					if len(self.layers) == 0:
-						self.curlayerkey=None
-					else:
-						self.curlayerkey=self.layers[index].key
+			# try to set current layer to a valid layer
+			if index==0:
+				if len(self.layers) == 0:
+					self.curlayerkey=None
 				else:
-					self.curlayerkey=self.layers[index-1].key
+					self.curlayerkey=self.layers[index].key
+			else:
+				self.curlayerkey=self.layers[index-1].key
 
-				self.requestLayerListRefresh()
-				self.reCompositeImage()
-				return (layer,index)
+			self.requestLayerListRefresh()
+			self.reCompositeImage()
+			return (layer,index)
 
 		return (None,None)
 
@@ -660,8 +663,21 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 		self.insertLayer(key,index,type,image,opacity=opacity,visible=visible,compmode=compmode)
 		self.reCompositeImage()
 
+	def insertRawLayer(self,layer,index,history=0):
+		self.layers.insert(index,layer)
+		self.requestLayerListRefresh()
+		self.reCompositeImage()
+		# only select it immediately if we can draw on it
+		if layer.type==LayerTypes.user:
+			self.curlayerkey=layer.key
+
+		# only add command to history if we should
+		if self.type==WindowTypes.singleuser and history!=-1:
+			self.addCommandToHistory(AddLayerCommand(layer.key))
+
+
 	# insert a layer at a given point in the list of layers
-	def insertLayer(self,key,index,type=LayerTypes.user,image=None,opacity=None,visible=None,compmode=None,owner=0):
+	def insertLayer(self,key,index,type=LayerTypes.user,image=None,opacity=None,visible=None,compmode=None,owner=0,history=0):
 		layer=BeeLayer(self,type,key,image,opacity=opacity,visible=visible,compmode=compmode,owner=0)
 
 		self.layers.insert(index,layer)
@@ -671,7 +687,7 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 			self.curlayerkey=key
 
 		# only add command to history if we are in a local session
-		if self.type==WindowTypes.singleuser:
+		if self.type==WindowTypes.singleuser and history!=-1:
 			self.addCommandToHistory(AddLayerCommand(layer.key))
 
 		self.requestLayerListRefresh()
