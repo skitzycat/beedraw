@@ -42,7 +42,7 @@ def printPixmapRect(pixmap,rect):
 # coord1 will not be included in the list becuase it should have already been
 # drawn to as part of the last command, but coord2 will always be the last item
 # in the list, points will be bounded to the area of height and width
-def getPointsPath(x1,y1,x2,y2,step,width,height):
+def getPointsPath(x1,y1,x2,y2,step,width,height,p1=1,p2=1):
 	# start with empty path
 	path=[]
 
@@ -51,11 +51,12 @@ def getPointsPath(x1,y1,x2,y2,step,width,height):
 	# calculate straight line distance between coords
 	delta_x=x2-x1
 	delta_y=y2-y1
+        delta_p=p2-p1
 	h=math.hypot(abs(delta_x),abs(delta_y))
 
 	# if distance between is too small, just return coord 2
 	if h < step*2:
-		path.append((x2,y2))
+		path.append((x2,y2,p2))
 		return path
 
 	# calculate intermediate coords
@@ -63,15 +64,16 @@ def getPointsPath(x1,y1,x2,y2,step,width,height):
 	for point in intermediate_points:
 		newx=int(x1+(delta_x*point/h))
 		newy=int(y1+(delta_y*point/h))
+                newp=p1+(delta_p*point/h)
 		# make sure coords fall in widht and height restrictions
 		if newx>=0 and newx<width and newy>=0 and newy<height:
 			# only add point if it was different from previous one
 			if newx!=lastpoint[0] or newy!=lastpoint[1]:
-				lastpoint=(newx,newy)
-				path.append(lastpoint)
+			  lastpoint=(newx,newy,newp)
+			  path.append(lastpoint)
 
 	if x2>=0 and x2<width and y2>=0 and y2<height:
-		path.append((x2,y2))
+		path.append((x2,y2,p2))
 
 	return path
 
