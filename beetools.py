@@ -190,47 +190,48 @@ class DrawingTool(AbstractTool):
 		layerheight=self.layer.window.docheight
 
 		# get points inbetween according to step option and layer size
-		path=getPointsPath(self.lastpoint[0],self.lastpoint[1],x,y,self.options['step'],layerwidth,layerheight)
+                path=getPointsPath(self.lastpoint[0],self.lastpoint[1],x,y,self.options['step'],layerwidth,layerheight,self.lastpressure,pressure)
 
-		# if no points are on the layer just return
-		if len(path)==0:
-			return
+                # if no points are on the layer just return
+                if len(path)==0:
+                  return
 
-		self.updateBrushForPressure(pressure)
+                #self.updateBrushForPressure(pressure)
 
-		# calculate the bounding rect for this operation
-		left=min(path[0][0],path[-1][0])-self.radius
-		top=min(path[0][1],path[-1][1])-self.radius
-		right=max(path[0][0],path[-1][0])+self.radius
-		bottom=max(path[0][1],path[-1][1])+self.radius
+                # calculate the bounding rect for this operation
+                left=min(path[0][0],path[-1][0])-self.radius
+                top=min(path[0][1],path[-1][1])-self.radius
+                right=max(path[0][0],path[-1][0])+self.radius
+                bottom=max(path[0][1],path[-1][1])+self.radius
 
-		left=max(0,left)
-		top=max(0,top)
-		right=min(layerwidth,right)
-		bottom=min(layerheight,bottom)
+                left=max(0,left)
+                top=max(0,top)
+                right=min(layerwidth,right)
+                bottom=min(layerheight,bottom)
 
-		# calulate area needed to hold everything
-		width=right-left
-		height=bottom-top
+                # calulate area needed to hold everything
+                width=right-left
+                height=bottom-top
 
-		# then make an image for that bounding rect
-		lineimage=qtgui.QImage(width,height,qtgui.QImage.Format_ARGB32_Premultiplied)
-		lineimage.fill(0)
+                # then make an image for that bounding rect
+                lineimage=qtgui.QImage(width,height,qtgui.QImage.Format_ARGB32_Premultiplied)
+                lineimage.fill(0)
 
-		# put points in that image
-		painter=qtgui.QPainter()
-		painter.begin(lineimage)
-		painter.setRenderHint(qtgui.QPainter.HighQualityAntialiasing)
+                # put points in that image
+                painter=qtgui.QPainter()
+                painter.begin(lineimage)
+                painter.setRenderHint(qtgui.QPainter.HighQualityAntialiasing)
 
-		for point in path:
-			lineimgpoint=(point[0]-left-self.radius,point[1]-top-self.radius)
-			painter.drawImage(lineimgpoint[0],lineimgpoint[1],self.brushimage)
+                for point in path:
+                  self.updateBrushForPressure(point[2])
+                  lineimgpoint=(point[0]-left-self.radius,point[1]-top-self.radius)
+                  painter.drawImage(lineimgpoint[0],lineimgpoint[1],self.brushimage)
 
-		painter.end()
+                painter.end()
 
-		self.layer.compositeFromCorner(lineimage,left,top,self.compmode,self.clippath)
+                self.layer.compositeFromCorner(lineimage,left,top,self.compmode,self.clippath)
 
-		self.lastpoint=path[-1]
+                self.lastpoint=path[-1]
 
 	# record this event in the history
 	def penUp(self,x=None,y=None,source=0):
