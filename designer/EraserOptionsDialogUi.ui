@@ -18,7 +18,7 @@
      <item row="0" column="0" >
       <widget class="QLabel" name="label" >
        <property name="text" >
-        <string>Eraser Radius:</string>
+        <string>Eraser Diameter:</string>
        </property>
       </widget>
      </item>
@@ -30,9 +30,12 @@
       </widget>
      </item>
      <item row="0" column="2" >
-      <widget class="QSlider" name="eraserradius" >
+      <widget class="QSlider" name="eraserdiameter" >
        <property name="minimum" >
         <number>1</number>
+       </property>
+       <property name="singleStep" >
+        <number>2</number>
        </property>
        <property name="orientation" >
         <enum>Qt::Horizontal</enum>
@@ -55,7 +58,7 @@
      <item row="0" column="1" >
       <widget class="QLabel" name="eraserradiusdisplay" >
        <property name="text" >
-        <string>10</string>
+        <string>11</string>
        </property>
       </widget>
      </item>
@@ -142,7 +145,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>eraserradius</sender>
+   <sender>eraserdiameter</sender>
    <signal>valueChanged(int)</signal>
    <receiver>eraserradiusdisplay</receiver>
    <slot>setNum(int)</slot>
