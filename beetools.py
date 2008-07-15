@@ -145,12 +145,15 @@ class DrawingTool(AbstractTool):
 		# scaled size for brush
 		bdiameter=self.options["diameter"]*pressure
 		self.diameter=int(math.ceil(bdiameter))
+
+		# calculate offset into target
+		targetoffset=(1-(bdiameter%1))/2.0
  
 		# bounding radius for pixels to update
 		side=self.diameter
  
 		fullsizedrect=qtcore.QRectF(0,0,self.fullsizedbrush.width(),self.fullsizedbrush.height())
-		cursizerect=qtcore.QRectF(0,0,bdiameter,bdiameter)
+		cursizerect=qtcore.QRectF(targetoffset,targetoffset,bdiameter,bdiameter)
  
 		self.brushimage=qtgui.QImage(side,side,qtgui.QImage.Format_ARGB32_Premultiplied)
 		self.brushimage.fill(0)
