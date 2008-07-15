@@ -287,35 +287,86 @@ class PaintBrushTool(DrawingTool):
 			self.diameter=self.options["diameter"]
 			return
  
-		transform=qtgui.QTransform()
-		transform=transform.scale(pressure,pressure)
- 
+		self.diameter=int(math.ceil(self.fullsizedbrush.width()*pressure))
+
+		# the scaling algorithim fails here so we need our own method
+		if self.diameter==1:
+			# if the diameter is 1 set the top left pixel to pure black and fill the others with alpha porportional to where in the size of 2 range the pressure falls
+			alpha=(pressure*self.fullsizedbrush.width())
+		
+			self.brushimage=qtgui.QImage(1,1,qtgui.QImage.Format_ARGB32_Premultiplied)
+
+			fgr=self.fgcolor.red()
+			fgg=self.fgcolor.green()
+			fgb=self.fgcolor.blue()
+
+			# set only pixel
+			color=qtgui.qRgba(fgr*alpha,fgg*alpha,fgb*alpha,alpha*255)
+			self.brushimage.setPixel(0,0,color)
+
+			return
+		elif self.diameter==2:
+			# if the diameter is 2 set the top left pixel to pure black and fill the others with alpha porportional to where in the size of 2 range the pressure falls
+			alpha=(pressure*self.fullsizedbrush.width())-1
+			# reduce alpha for the outer pixels according to the blur option
+			alpha*=1-(self.options["blur"]/100.0)
+		
+			self.brushimage=qtgui.QImage(2,2,qtgui.QImage.Format_ARGB32_Premultiplied)
+
+			fgr=self.fgcolor.red()
+			fgg=self.fgcolor.green()
+			fgb=self.fgcolor.blue()
+
+			# set upper right pixel
+			color=qtgui.qRgba(fgr,fgg,fgb,255)
+			self.brushimage.setPixel(0,0,color)
+
+			# set other pixels
+			color=qtgui.qRgba(fgr*alpha,fgg*alpha,fgb*alpha,alpha*255)
+			self.brushimage.setPixel(1,0,color)
+			self.brushimage.setPixel(0,1,color)
+			self.brushimage.setPixel(1,1,color)
+
+			return
+
+		# for a diameter of 3 or more the QT transforms seem to work alright
+		scaletransform=qtgui.QTransform()
+		finaltransform=qtgui.QTransform()
+
+		scaletransform=scaletransform.scale(pressure,pressure)
+
 		# scale the brush to proper size
-		#self.brushimage=self.fullsizedbrush.transformed(transform,qtcore.Qt.SmoothTransformation)
+		#self.brushimage=self.fullsizedbrush.transformed(scaletransform,qtcore.Qt.SmoothTransformation)
  
  		centeroffset=0
  		#centeroffset=(1-((self.options["diameter"])%1))/2.0
- 		#transformoffset=(1-((self.options["diameter"])%1))/2.0
+		transbrushsize=scaletransform.map(qtcore.QPointF(self.fullsizedbrush.width(),self.fullsizedbrush.height()))
 
-		#transform=transform.translate(transformoffset,transformoffset)
+ 		transformoffset=(1-(transbrushsize.x()%1))/2.0
+
+		finaltransform=finaltransform.translate(transformoffset,transformoffset)
+		finaltransform=finaltransform.scale(pressure,pressure)
+ 
+ 		newtransupperleft=finaltransform.map(qtcore.QPointF(0,0))
+ 		newtranslowerright=finaltransform.map(qtcore.QPointF(self.fullsizedbrush.width(),self.fullsizedbrush.height()))
+		newtransright=1-(newtranslowerright.x()%1)
+		newtransbottom=1-(newtranslowerright.y()%1)
+		#print "new brush margins:", newtransupperleft.x(), newtransupperleft.y(), newtransright, newtransbottom
 
 		# scale the brush to proper size (alternate method)
-		diameter=int(math.ceil(self.fullsizedbrush.width()*pressure))
-		self.brushimage=qtgui.QImage(diameter,diameter,qtgui.QImage.Format_ARGB32_Premultiplied)
+		self.brushimage=qtgui.QImage(self.diameter,self.diameter,qtgui.QImage.Format_ARGB32_Premultiplied)
 		self.brushimage.fill(0)
 		painter=qtgui.QPainter()
 		painter.begin(self.brushimage)
 		#painter.setRenderHint(qtgui.QPainter.Antialiasing)
 		painter.setRenderHint(qtgui.QPainter.SmoothPixmapTransform)
 		painter.setRenderHint(qtgui.QPainter.HighQualityAntialiasing)
-		painter.setTransform(transform)
+		painter.setTransform(finaltransform)
 		painter.drawImage(qtcore.QPointF(centeroffset,centeroffset),self.fullsizedbrush)
  
-		print "updated brush for pressure:", pressure
-		printImage(self.brushimage)
- 
-		# update radius so we know how much area to refresh on the screen
-		self.diameter=self.brushimage.width()
+ 		# debugging code, uncomment as needed
+		#print "updated brush for pressure:", pressure
+		#printImage(self.brushimage)
  
 	def makeFullSizedBrush(self):
 		diameter=self.options["diameter"]
