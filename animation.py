@@ -28,12 +28,12 @@ class XmlToQueueEventsConverter:
 			self.layertype=LayerTypes.network
 
 	def translateKey(self,key):
+		if self.type!=ThreadTypes.animation:
+			return key
 		return self.keymap[key]
-#		if self.type!=ThreadTypes.user:
-#			return key
 
 	def addKeyTranslation(self,key,dockey):
-		if self.type!=ThreadTypes.user:
+		if self.type!=ThreadTypes.animation:
 			self.keymap[key]=key
 		else:
 			self.keymap[key]=dockey
@@ -51,13 +51,6 @@ class XmlToQueueEventsConverter:
 		if self.xml.hasError():
 			print "error while parsing XML:", self.xml.errorString()
 
-		# set all layers we created to be user layers now that animation is over
-		for key in self.keymap.keys():
-			layer=self.window.getLayerForKey(self.keymap[key])
-			if layer:
-				layer.type=LayerTypes.user
-				layer.changeName("")
-
 	def processStartElement(self):
 		name=self.xml.name()
 		attrs=self.xml.attributes()
@@ -68,15 +61,28 @@ class XmlToQueueEventsConverter:
 			self.window.addSetCanvasSizeRequestToQueue(width,height,type)
 
 		elif name == 'addlayer':
+			if self.type==ThreadTypes.server:
+				# create our own key data in this case
+				key=self.window.nextLayerKey()
+			else:
+				(key,ok)=attrs.value("key").toString().toInt()
+
 			(pos,ok)=attrs.value("position").toString().toInt()
-			(key,ok)=attrs.value("key").toString().toInt()
-			(owner,ok)=attrs.value("owner").toString().toInt()
-			print "got owner from xml as:", owner
 
-			dockey=self.window.nextLayerKey()
+			if self.type==ThreadTypes.server:
+				owner=self.id
+			else:
+				(owner,ok)=attrs.value("owner").toString().toInt()
 
-			self.window.addInsertLayerEventToQueue(pos,dockey,"animation",self.type,owner=owner)
+			if self.type!=ThreadTypes.animation:
+				dockey=key
+			# if it's an animation I need to map the key to a local one
+			else:
+				dockey=self.window.nextLayerKey()
+
 			self.addKeyTranslation(key,dockey)
+
+			self.window.addInsertLayerEventToQueue(pos,dockey,self.type,owner=owner)
 
 		elif name == 'sublayer':
 			(key,ok)=attrs.value("index").toString().toInt()
@@ -134,7 +140,7 @@ class XmlToQueueEventsConverter:
 			self.clippoints.append(qtcore.QPointF(x,y))
 		elif name == 'toolparam':
 			(value,ok)=attrs.value('value').toString().toInt()
-			self.curtool.setOption(attrs.value('name'),value)
+			self.curtool.setOption("%s" % attrs.value('name').toString(),value)
 		elif name == 'rawevent':
 			self.inrawevent=True
 			self.raweventargs=[]
@@ -248,16 +254,20 @@ class NetworkListenerThread (qtcore.QThread):
 
 		# listen for events and draw them as they come in
 		while 1:
+			# wait as long as we have to for data
 			if self.socket.waitForReadyRead(-1):
-				data=self.socket.read(1024)
-				print "got animation data from socket: %s" % qtcore.QString(data)
-				parser.xml.addData(data)
-				parser.read()
+				# read till we're out of bytes
+				while self.socket.bytesAvailable():
+					data=self.socket.read(1024)
+					print "got animation data from socket: %s" % qtcore.QString(data)
+					parser.xml.addData(data)
+					parser.read()
 
 			# if error exit
 			else:
 				print "Recieved error:", self.socket.error(), "when reading from socket"
 				#self.socket.write(qtcore.QByteArray("Authentication Failed"))
+				self.window.switchAllLayersToLocal()
 				return
 
 class NetworkWriterThread (qtcore.QThread):

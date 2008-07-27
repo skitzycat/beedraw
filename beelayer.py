@@ -16,9 +16,10 @@ class BeeLayer:
 	def __init__(self,window,type,key,image=None,opacity=None,visible=None,compmode=None,owner=0):
 		self.window=window
 		self.key=key
-		self.owner=0
+		self.owner=owner
 
-		#print "creating layer with type:", type
+		print "creating layer with key:", key
+		print "creating layer with owner:", owner
 		# this is a lock for locking access to the layer image when needed
 		self.imagelock=qtcore.QReadWriteLock()
 
@@ -67,9 +68,10 @@ class BeeLayer:
 
 
 	def changeName(self,newname):
-		if type==LayerTypes.animation:
+		print "setting layer name to:", newname
+		if self.type==LayerTypes.animation:
 			newname+=" (Animation)"
-		elif type==LayerTypes.network:
+		elif self.type==LayerTypes.network:
 			newname+=" (Network)"
 		self.name=newname
 

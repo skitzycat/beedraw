@@ -28,6 +28,14 @@ class SketchLogWriter:
 		elif type==DrawingCommandTypes.alllayer:
 			self.logAllLayerCommand(command)
 
+		bytestowrite=self.output.bytesToWrite()
+		print "still need to write bytes:", bytestowrite
+		while self.output.bytesToWrite()>0:
+			self.output.flush()
+			bytestowrite=self.output.bytesToWrite()
+			print "still need to write bytes:", bytestowrite
+		self.output.flush()
+
 	def logNonLayerCommand(self,command):
 		subtype=command[1]
 		if subtype==NonLayerCommandTypes.startlog:
@@ -55,7 +63,7 @@ class SketchLogWriter:
 			self.logRawEvent(command[3],command[4],layer,command[5],command[6])
 
 		elif subtype==LayerCommandTypes.tool:
-			self.logToolEvent(layer,command[3])
+			self.logToolEvent(command[3])
 
 	def logAllLayerCommand(self,command):
 		subtype=command[1]
@@ -87,7 +95,7 @@ class SketchLogWriter:
 
 	def endEvent(self):
 		self.log.writeEndElement()
-		self.output.flush()
+		#self.output.flush()
 
 	def logLayerAdd(self, position, key, owner=0):
 		lock=qtcore.QMutexLocker(self.mutex)
@@ -230,7 +238,7 @@ class SketchLogWriter:
 		# add tool params to log
 		for key in tool.options.keys():
 			self.log.writeStartElement('toolparam')
-			self.log.writeAttribute('name',key)
+			self.log.writeAttribute('name', key )
 			self.log.writeAttribute('value',str(tool.options[key]))
 			self.log.writeEndElement()
 

@@ -28,7 +28,7 @@ class DrawingThread(qtcore.QThread):
 		#print "starting drawing thread"
 		while 1:
 			command=self.queue.get()
-			#print "got command from queue:", command
+			print "got command from queue:", command
 
 			type=command[0]
 
@@ -87,11 +87,12 @@ class DrawingThread(qtcore.QThread):
 			y=command[4]
 			pressure=command[5]
 			tool=command[6]
-			if layer:
+			# make sure we can find the layer and either it's a locally owned layer or a source that can draw on non-local layers
+			if layer and (self.window.ownedByMe(layer.owner) or self.type!=ThreadTypes.user):
 				self.inprocesstools[int(command[2])]=tool
 				tool.penDown(x,y,pressure)
 			else:
-				print "WARNING: no layer selected"
+				print "WARNING: no vaid layer selected"
 
 		elif subtype==LayerCommandTypes.penmotion:
 			if command[2]==None:
@@ -115,7 +116,7 @@ class DrawingThread(qtcore.QThread):
 				tool.penUp(x,y)
 
 				# send to server and log file if needed
-				self.window.logStroke(tool)
+				self.window.logStroke(tool,int(command[2]))
 
 				del self.inprocesstools[int(command[2])]
 
@@ -151,15 +152,15 @@ class DrawingThread(qtcore.QThread):
 		elif subtype==AllLayerCommandTypes.insertlayer:
 			#print "processing insert layer command"
 			# in this case we want to fill out the details ourselves
-			if self.type==ThreadTypes.server and command[4] != 0:
-				key=self.window.nextLayerKey()
-				index=len(self.window.layers)
-				self.window.insertLayer(key,index)
+			key = command[2]
+			index = command[3]
+			owner = command[4]
+			if self.type==ThreadTypes.server and owner != 0:
+				pass
+				print "calling nextLayerKey from drawingthread.py"
+				self.window.insertLayer(key,index,owner=owner)
 
 			else:
-				key = command[2]
-				index = command[3]
-				owner = command[4]
 				if self.window.ownedByMe(owner):
 					self.window.insertLayer(key,index,owner=owner)
 				else:

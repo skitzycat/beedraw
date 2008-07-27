@@ -49,7 +49,6 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 		self.nextlayerkeymutex=qtcore.QMutex()
 
 		self.cursoroverlay=None
-		self.remoteid=None
 
 		self.selection=[]
 		self.selectionoutline=[]
@@ -59,6 +58,9 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 		self.remotecommandqueue=Queue(0)
 		self.remoteoutputqueue=Queue(0)
 
+		self.remotedrawingthread=None
+		self.remoteid=0
+
 		# initiate drawing thread
 		if type==WindowTypes.standaloneserver:
 			self.localdrawingthread=DrawingThread(self.remotecommandqueue,self,type=ThreadTypes.server)
@@ -66,9 +68,6 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 			self.localdrawingthread=DrawingThread(self.localcommandqueue,self)
 
 		self.localdrawingthread.start()
-
-		self.remotedrawingthread=None
-		self.remoteid=0
 
 		# for sending events to server so they don't slow us down locally
 		self.sendtoserverqueue=None
@@ -98,7 +97,8 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 		# don't go through the queue for this layer add because we need it to
 		# be done before the next step
 		if startlayer:
-			self.insertLayer(self.nextLayerKey(),0,LayerTypes.user)
+			print "calling nextLayerKey from beedrawingwindow constructor"
+			self.addInsertLayerEventToQueue(self.nextLayerKey(),0,source=ThreadTypes.user)
 
 		# have window get destroyed when it gets a close event
 		self.setAttribute(qtcore.Qt.WA_DeleteOnClose)
@@ -155,19 +155,19 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 			self.remotecommandstack[source]=CommandStack(self)
 			self.remotecommandstack[source].addCommand(command)
 
-  # undo last event in stack for passed client id
+	# undo last event in stack for passed client id
 	def undo(self,source=0):
 		# if we don't get a source then assume that it's local, need to implement what it does if it's remote
 		if source==0:
 			self.localcommandstack.undo()
 
-  # redo last event in stack for passed client id
+	# redo last event in stack for passed client id
 	def redo(self,source=0):
 		# if we don't get a source then assume that it's local
 		if source==0:
 			self.localcommandstack.redo()
 
-  # update the clipping path to match the current selection
+	# update the clipping path to match the current selection
 	def updateClipPath(self):
 		if not self.selection:
 			self.clippath=None
@@ -266,7 +266,8 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 			self.localcommandqueue.put(command)
 		elif source==ThreadTypes.server:
 			#print "putting command in routing queue"
-			self.master.routinginput.put((command,owner))
+			#self.master.routinginput.put((command,owner))
+			self.remotecommandqueue.put(command)
 		else:
 			#print "putting command in remote queue"
 			self.remotecommandqueue.put(command)
@@ -316,7 +317,7 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 	def addLayerUpToQueue(self,key,source=ThreadTypes.user):
 		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.layerup,key),source)
 
-  # send event to GUI to update the list of current layers
+	# send event to GUI to update the list of current layers
 	def requestLayerListRefresh(self):
 		event=qtcore.QEvent(BeeCustomEventTypes.refreshlayerslist)
 		self.master.app.postEvent(self.master,event)
@@ -655,6 +656,7 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 	# this is for inserting a layer with a given image, for instance if loading from a log file with a partially started drawing
 	def loadLayer(self,image,type=LayerTypes.user,key=None,index=None, opacity=None, visible=None, compmode=None):
 		if not key:
+			print "calling nextLayerKey from beedrawingwindow loadLayer"
 			key=self.nextLayerKey()
 
 		if not index:
@@ -678,7 +680,8 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 
 	# insert a layer at a given point in the list of layers
 	def insertLayer(self,key,index,type=LayerTypes.user,image=None,opacity=None,visible=None,compmode=None,owner=0,history=0):
-		layer=BeeLayer(self,type,key,image,opacity=opacity,visible=visible,compmode=compmode,owner=0)
+		print "calling insertLayer"
+		layer=BeeLayer(self,type,key,image,opacity=opacity,visible=visible,compmode=compmode,owner=owner)
 
 		self.layers.insert(index,layer)
 
@@ -692,12 +695,13 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 
 		self.requestLayerListRefresh()
 
-	def addInsertLayerEventToQueue(self,index,key,name=None,source=ThreadTypes.user,owner=0):
+	def addInsertLayerEventToQueue(self,index,key,source=ThreadTypes.user,owner=0):
 		# when the source is local like this the owner will always be me (id 0)
 		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.insertlayer,key,index,owner),source,owner)
 		return key
 
 	def addLayer(self):
+		print "calling nextLayerKey from beedrawingwindow addLayer"
 		key=self.nextLayerKey()
 		index=len(self.layers)
 		# when the source is local like this the owner will always be me (id 0)
@@ -730,14 +734,28 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 		print "about to start thread"
 		self.listenerthread.start()
 
-	def logCommand(self,command):
+	def logCommand(self,command,id=0):
 		if self.log:
 			self.log.logCommand(command)
 		if self.type==WindowTypes.standaloneserver:
-			self.master.routinginput.put((command,self.remoteid))
+			self.master.routinginput.put((command,id))
 
-	def logStroke(self,tool):
+	def logStroke(self,tool,layer):
 		if self.log:
 			self.log.logToolEvent(tool)
-		if self.type==WindowTypes.standaloneserver:
-			self.master.routinginput.put(((DrawingCommandTypes.layer,LayerCommandTypes.tool,command),self.remoteid))
+
+		if self.type==WindowTypes.networkclient:
+			self.remoteoutputqueue.put((DrawingCommandTypes.layer,LayerCommandTypes.tool,tool.layerkey,tool))
+
+		elif self.type==WindowTypes.standaloneserver:
+			layer=self.getLayerForKey(tool.layerkey)
+			if not layer:
+				print "couldn't find layer when logging stroke"
+				return
+			print "logging stroke from owner:", layer.owner
+			self.master.routinginput.put(((DrawingCommandTypes.layer,LayerCommandTypes.tool,tool.layerkey,tool),layer.owner))
+
+	def switchAllLayersToLocal(self):
+		for layer in self.layers:
+			layer.type=LayerTypes.user
+			layer.changeName("Layer: %d" % layer.key)

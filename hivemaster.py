@@ -44,13 +44,23 @@ class HiveMasterWindow(qtgui.QMainWindow):
 		# this dictionary will be keyed on id and map to the username
 		self.clientnames={}
 
+		# default value stuff that needs to be here
 		self.toolbox=BeeToolBox()
+		self.fgcolor=qtgui.QColor(0,0,0)
+		self.bgcolor=qtgui.QColor(255,255,255)
 
 		# drawing window which holds the current state of the network session
 		self.window=BeeDrawingWindow(self,600,400,False,WindowTypes.standaloneserver)
 
+	# needs to be implemented so this can be a window controller
+	def refreshThumb(self):
+		return
+	# needs to be implemented so this can be a window controller
+	def refreshLayerThumb(self,key):
+		return
+
 	def getToolClassByName(self,name):
-		self.toolbox.getToolClassByName(name)
+		return self.toolbox.getToolDescByName(name)
 
 	def getCurToolInst(self,window):
 		curtool=self.getCurToolDesc()
@@ -172,13 +182,14 @@ class HiveClientListener(qtcore.QThread):
 		newwriter=HiveClientWriter(self,self.socket,self.master,self.id)
 		newwriter.start()
 
-		parser=XmlToQueueEventsConverter(None,self.master.window,0,type=ThreadTypes.network,id=self.id)
+		parser=XmlToQueueEventsConverter(None,self.master.window,0,type=ThreadTypes.server,id=self.id)
 		while 1:
 			if self.socket.waitForReadyRead(-1):
-				data=self.socket.read(1024)
-				print "recieved data from client: %s" % qtcore.QString(data)
-				parser.xml.addData(data)
-				parser.read()
+				while self.socket.bytesAvailable():
+					data=self.socket.read(1024)
+					print "recieved data from client: %s" % qtcore.QString(data)
+					parser.xml.addData(data)
+					parser.read()
 
 			# if error exit
 			else:
@@ -265,9 +276,12 @@ class HiveRoutingThread(qtcore.QThread):
 	# I'd eventually put a check in here for if the queue is full and if so clear the queue and replace it with a raw event update to the current state
 	def sendToAllClients(self,command):
 		for id in self.master.clientwriterqueues.keys():
+			print "sending to client:", id
 			self.master.clientwriterqueues[id].put(command)
 
 	def sendToAllButOwner(self,source,command):
+		print "sending command to all, but the owner:", source, command
 		for id in self.master.clientwriterqueues.keys():
 			if source!=id:
+				print "sending to client:", id
 				self.master.clientwriterqueues[id].put(command)
