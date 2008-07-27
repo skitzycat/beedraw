@@ -76,7 +76,7 @@ class HiveMasterWindow(qtgui.QMainWindow):
 		# this serves as both the window and the master
 		master.master=master
 		master.layers=[]
-		
+		master.servergui=master
 		master.serverthread=None
 
 	standAloneServer=staticmethod(standAloneServer)
@@ -88,7 +88,24 @@ class HiveMasterWindow(qtgui.QMainWindow):
 		lock.unlock()
 		self.clientwriterqueues[newid]=Queue(100)
 		self.clientnames[newid]=username
+		self.servergui.ui.clientsList.addItem(username)
 		return newid
+
+	def unregisterClient(self,id):
+		if not self.clientnames.has_key(id):
+			return
+
+		# remove from dictionary of clients
+		username=self.clientnames[id]
+		del self.clientnames[id]
+
+		# remove from gui
+		items=self.servergui.ui.clientsList.findItems(username,qtcore.Qt.MatchFixedString)
+		for item in items:
+			index=self.servergui.ui.clientsList.row(item)
+			self.servergui.ui.clientsList.takeItem(index)
+
+		# set layers owned by that client to unowned (do this eventually)
 
 	def closeEvent(self,event):
 		qtgui.QMainWindow.closeEvent(self,event)
@@ -194,6 +211,7 @@ class HiveClientListener(qtcore.QThread):
 			# if error exit
 			else:
 				print "Recieved error:", self.socket.error(), "when reading from socket"
+				self.master.unregisterClient(self.id)
 				#self.socket.write(qtcore.QByteArray("Authentication Failed"))
 				return
 
