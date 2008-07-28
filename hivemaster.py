@@ -21,6 +21,9 @@ class HiveMasterWindow(qtgui.QMainWindow):
 		qtgui.QMainWindow.__init__(self)
 		self.app=app
 
+		# set defaults
+		self.port=8333
+
 		# Initialize values
 		self.connections=[]
 		self.nextclientid=1
@@ -81,15 +84,10 @@ class HiveMasterWindow(qtgui.QMainWindow):
 
 	standAloneServer=staticmethod(standAloneServer)
 
-	def registerClient(self,username):
-		lock=qtcore.QMutexLocker(self.nextclientidmutex)
-		newid=self.nextclientid
-		self.nextclientid+=1
-		lock.unlock()
-		self.clientwriterqueues[newid]=Queue(100)
-		self.clientnames[newid]=username
+	def registerClient(self,username,id):
+		self.clientwriterqueues[id]=Queue(100)
+		self.clientnames[id]=username
 		self.servergui.ui.clientsList.addItem(username)
-		return newid
 
 	def unregisterClient(self,id):
 		if not self.clientnames.has_key(id):
@@ -113,32 +111,39 @@ class HiveMasterWindow(qtgui.QMainWindow):
 
 	def startServer(self):
 		# make sure no other instance is running
-
 		self.stopServer()
-		self.serverthread=HiveServerThread(self)
-		print "starting thread:"
+
+		self.serverthread=HiveServerThread(self,self.port)
 		self.serverthread.start()
+		self.servergui.ui.statusLabel.setText("Serving on port %d" % self.port )
 
 	def stopServer(self):
 		if self.serverthread:
-			self.serverthread.terminate()
+			#self.serverthread.terminate()
+			#self.serverthread.quit()
+			self.serverthread.exit()
 			self.serverthread.wait()
 			self.serverthread=None
+			self.servergui.ui.statusLabel.setText("Serving not running")
 
-	def on_actionStart_triggered(self):
-		self.startServer()
+	def on_actionStart_triggered(self,accept=True):
+		if accept:
+			self.startServer()
+
+	def on_actionStop_triggered(self,accept=True):
+		if accept:
+			self.stopServer()
 
 # thread to setup connection, authenticate and then
 # listen to a socket and add incomming client commands to queue
 class HiveClientListener(qtcore.QThread):
 	def __init__(self,parent,socket,master,id):
-		qtcore.QThread.__init__(self)
-		self.setParent(self)
+		qtcore.QThread.__init__(self,parent)
 		self.socket=socket
 
 		self.master=master
-
 		self.outputqueue=master.routinginput
+		self.id=id
 
 	def authenticate(self):
 		# attempt to read stream of data, which should include version, username and password
@@ -173,7 +178,17 @@ class HiveClientListener(qtcore.QThread):
 
 	def register(self):
 		# register this new connection and get an id for it
-		self.id=self.master.registerClient(self.username)
+		self.master.registerClient(self.username,self.id)
+
+	def disconnected(self):
+		self.master.unregisterClient(self.id)
+
+	def readyRead(self):
+		while self.socket.bytesAvailable():
+			data=self.socket.read(1024)
+			print "recieved data from client: %s" % qtcore.QString(data)
+			self.parser.xml.addData(data)
+			self.parser.read()
 
 	def run(self):
 		# try to authticate user
@@ -188,32 +203,26 @@ class HiveClientListener(qtcore.QThread):
 		print "authentication succeded"
 
 		self.register()
+		print "registered"
+		self.parser=XmlToQueueEventsConverter(None,self.master.window,0,type=ThreadTypes.server,id=self.id)
+		print "created parser"
 
 		# pass initial data to client here
 		self.socket.write(qtcore.QByteArray("%d\n%d\n%d\n" % (self.master.window.docwidth,self.master.window.docheight,self.id)))
 
-		# wait for client to respond
+		# wait for client to respond so it doesn't get confused and mangle the setup data with the start of the XML file
 		self.socket.waitForReadyRead(-1)
+		print "got client response"
+		qtcore.QObject.connect(self.socket, qtcore.SIGNAL("readyRead()"), self.readyRead)
+		qtcore.QObject.connect(self.socket, qtcore.SIGNAL("disconnected()"), self.disconnected)
 
 		# start writing thread
 		newwriter=HiveClientWriter(self,self.socket,self.master,self.id)
 		newwriter.start()
 
-		parser=XmlToQueueEventsConverter(None,self.master.window,0,type=ThreadTypes.server,id=self.id)
-		while 1:
-			if self.socket.waitForReadyRead(-1):
-				while self.socket.bytesAvailable():
-					data=self.socket.read(1024)
-					print "recieved data from client: %s" % qtcore.QString(data)
-					parser.xml.addData(data)
-					parser.read()
-
-			# if error exit
-			else:
-				print "Recieved error:", self.socket.error(), "when reading from socket"
-				self.master.unregisterClient(self.id)
-				#self.socket.write(qtcore.QByteArray("Authentication Failed"))
-				return
+		# start event loop
+		print "starting event loop"
+		self.exec_()
 
 # this thread will write to a specific client
 class HiveClientWriter(qtcore.QThread):
@@ -243,35 +252,43 @@ class HiveServerThread(qtcore.QThread):
 		self.threads=[]
 		self.port=port
 		self.master=master
+		self.nextid=1
 
-	#def on_finished(self):
-	#	print "running server thread cleanup"
-	#	self.server.close()
-	#	qtcore.QThread.finished(self)
+		# connect the signals we want
+		qtcore.QObject.connect(self, qtcore.SIGNAL("finished()"), self.finished)
+		qtcore.QObject.connect(self, qtcore.SIGNAL("started()"), self.started)
 
-	def run(self):
-		id=1
-		print "listening on port ", self.port
-		self.server=qtnet.QTcpServer()
+	def started(self):
+		# needs to be done here because this is running in the proper thread
+		self.server=qtnet.QTcpServer(self)
+
+		# tell me when the server has gotten a new connection
+		qtcore.QObject.connect(self.server, qtcore.SIGNAL("newConnection()"), self.newConnection)
+
 		ret=self.server.listen(qtnet.QHostAddress("0.0.0.0"),self.port)
 
-		while 1:
-			available,timeout=self.server.waitForNewConnection(-1)
+	def finished(self):
+		print "in finished"
 
-			if available:
-				print "found new connection"
-				newsock=self.server.nextPendingConnection()
-				self.sockets.append(newsock)
+	def run(self):
+		self.exec_()
 
-				# start the listener, that will authenticate client and finish setup
-				newlistener=HiveClientListener(self,newsock,self.master,id)
-				id+=1
+	# signal for the server getting a new connection
+	def newConnection(self):
+		print "found new connection"
+		while self.server.hasPendingConnections():
+			newsock=self.server.nextPendingConnection()
+			self.sockets.append(newsock)
 
-				# push responsibility to new thread
-				newsock.setParent(None)
-				newsock.moveToThread(newlistener)
+			# start the listener, that will authenticate client and finish setup
+			newlistener=HiveClientListener(self,newsock,self.master,self.nextid)
+			self.nextid+=1
 
-				newlistener.start()
+			# push responsibility to new thread
+			newsock.setParent(None)
+			newsock.moveToThread(newlistener)
+
+			newlistener.start()
 
 # this thread will route communication as needed between client listeners, the gui and client writers
 class HiveRoutingThread(qtcore.QThread):
@@ -281,7 +298,6 @@ class HiveRoutingThread(qtcore.QThread):
 		self.queue=master.routinginput
 
 	def run(self):
-		print "starting up HiveRoutingThread"
 		while 1:
 			data=self.queue.get()
 			print "routing info recieved:", data
