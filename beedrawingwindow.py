@@ -759,3 +759,23 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 		for layer in self.layers:
 			layer.type=LayerTypes.user
 			layer.changeName("Layer: %d" % layer.key)
+
+	def sendResyncToClient(self,id):
+		# first tell client to get rid of list of layers
+		self.master.routinginput.put(((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.resetlayers),id))
+
+		# get a read lock on all layers and the list of layers
+		listlock=qtcore.QMutexLocker(self.layersmutex)
+		locklist=[]
+		for layer in self.layers:
+			locklist.append(QReadWriteLocker(layer.imagelock),False)
+
+		# send each layer to client
+		index=0
+		for layer in self.layers:
+			index+=1
+			self.sendLayerImageToClient(layer,index,id)
+
+	def sendLayerImageToClient(self,layer,index,id):
+		command=(DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes,layerimage,image,index)
+		self.master.routinginput.put((command,id))

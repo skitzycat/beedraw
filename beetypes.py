@@ -9,9 +9,9 @@ class BeeCustomEventTypes:
 
 # custom enumerated types
 class DrawingCommandTypes:
-	quit, nonlayer, layer, alllayer = range(4)
+	quit, nonlayer, layer, alllayer, networkcontrol = range(5)
 
-# events that don't (inherantly) at least effect any layers
+# events that may effect one or more layers
 class NonLayerCommandTypes:
 	undo, redo = range(2)
 
@@ -19,9 +19,13 @@ class NonLayerCommandTypes:
 class LayerCommandTypes:
 	alpha, mode, pendown, penmotion, penup, rawevent, tool = range(7)
 
-# events that effect the list of layers or all layers
+# events that effect the list of layers, all layers or layer ownership
 class AllLayerCommandTypes:
-	scale, resize, layerup, layerdown, createlayer, deletelayer, insertlayer, resync = range(8)
+	scale, resize, layerup, layerdown, createlayer, deletelayer, insertlayer, resync, releaselayer, layerownership = range(10)
+
+# commands that are only used to communicate when in a network session
+class NetworkControlCommandTypes:
+	resyncrequest, resetlayers, layerimage = range(3)
 
 class LayerTypes:
 	user, animation, network = range(3)
