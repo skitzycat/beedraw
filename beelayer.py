@@ -80,6 +80,7 @@ class BeeLayer:
 
 	# composite image onto layer from center coord
 	def compositeFromCenter(self,image,x,y,compmode,clippath=None):
+		print "calling compositeFromCenter with args:",x,y
 		width=image.size().width()
 		height=image.size().height()
 		self.compositeFromCorner(image,x-int(width/2),y-int(height/2),compmode,clippath)
@@ -87,6 +88,7 @@ class BeeLayer:
 
 	# composite image onto layer from corner coord
 	def compositeFromCorner(self,image,x,y,compmode,clippath=None):
+		print "calling compositeFromCorner with args:",x,y
 		lock=ReadWriteLocker(self.imagelock,True)
 		width=image.size().width()
 		height=image.size().height()
@@ -102,7 +104,7 @@ class BeeLayer:
 		painter.end()
 
 		dirtyregion=qtgui.QRegion(rect)
-		#dirtyregion=dirtyregion.intersect(qtgui.QRegion(self.window.image.rect()))
+		dirtyregion=dirtyregion.intersect(qtgui.QRegion(self.window.image.rect()))
 		lock.unlock()
 		self.window.reCompositeImage(dirtyregion.boundingRect())
 
@@ -417,13 +419,13 @@ class BeeLayersWindow(qtgui.QMainWindow):
 					widget.unhighlight()
 					return
 
-	def refreshLayerThumb(self,key):
+	def refreshLayerThumb(self,key=None):
 		lock=qtcore.QMutexLocker(self.mutex)
 		vbox=self.layersListArea.widget().layout()
 		for item in range(vbox.count()):
 			widget=vbox.itemAt(item).widget()
 			k=widget.layer.key
-			if key==k:
+			if key==k or key==None:
 				widget.refreshThumb()
 
 	def on_new_layer_button_clicked(self,accept=True):
@@ -477,7 +479,10 @@ class LayerPreviewWidget(qtgui.QWidget):
 
 		scaledimage=qtcore.QRectF(xoffset,yoffset,scalewidth,scaleheight)
 
+		backdrop=qtgui.QImage(scalewidth,scaleheight,qtgui.QImage.Format_ARGB32_Premultiplied)
+		backdrop.fill(self.layer.window.backdropcolor)
 		painter=qtgui.QPainter()
 		painter.begin(self)
+		painter.drawImage(scaledimage,backdrop)
 		painter.drawImage(scaledimage,self.layer.image,qtcore.QRectF(self.layer.image.rect()))
 		painter.end()

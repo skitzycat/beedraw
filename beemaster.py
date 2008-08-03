@@ -233,7 +233,7 @@ class BeeMasterWindow(qtgui.QMainWindow):
 			self.layerswindow.refreshLayerHighlight(key)
 
 	# refresh thumbnail of layer with inidcated key
-	def refreshLayerThumb(self,key):
+	def refreshLayerThumb(self,key=None):
 		if self.layerswindow:
 			self.layerswindow.refreshLayerThumb(key)
 

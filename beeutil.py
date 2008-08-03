@@ -211,3 +211,16 @@ def getServerConnection(username,password,host,port):
 	id,ok=sizelist[2].toInt()
 
 	return socket,width,height,id
+
+# make sure point falls within bounds of QRect passed
+def adjustPointToBounds(x,y,rect):
+	if x<rect.x():
+		x=rect.x()
+	elif x>rect.x()+rect.width():
+		x=rect.x()+rect.width()
+	if y<rect.y():
+		y=rect.y()
+	elif y>rect.y()+rect.height():
+		y=rect.y()+rect.height()
+
+	return x,y

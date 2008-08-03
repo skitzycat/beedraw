@@ -44,6 +44,7 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 		self.curlayerkey=None
 		self.activated=False
 		self.backdrop=None
+		self.backdropcolor=0xFFFFFFFF
 
 		self.nextlayerkey=0
 		self.nextlayerkeymutex=qtcore.QMutex()
@@ -239,7 +240,7 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 			self.selection=newselect
 
 		else:
-			print "unrecognized selection modification type"
+			print "unrecognized selection modification type:", type
 
 		self.updateClipPath()
 		# make sure the selection is not the whole image
@@ -557,10 +558,13 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 		lock.unlock()
 		self.reCompositeImage()
 
+		# update all layer preview thumbnails
+		self.master.refreshLayerThumb()
+
 	# create backdrop for bottom of all layers, eventually I'd like this to be configurable, but for now it just fills in all white
 	def recreateBackdrop(self):
 		self.backdrop=qtgui.QImage(self.docwidth,self.docheight,qtgui.QImage.Format_ARGB32_Premultiplied)
-		self.backdrop.fill(0xFFFFFFFF)
+		self.backdrop.fill(self.backdropcolor)
 
 	def on_action_File_Log_toggled(self,state):
 		if state:
