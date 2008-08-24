@@ -208,7 +208,8 @@ class XmlToQueueEventsConverter:
 
 # thread for playing local animations out of a file
 class PlayBackAnimation (qtcore.QThread):
-	def __init__(self,window,filename,stepdelay=.05):
+	#def __init__(self,window,filename,stepdelay=.05):
+	def __init__(self,window,filename,stepdelay=0):
 		qtcore.QThread.__init__(self)
 		self.window=window
 		self.filename=filename

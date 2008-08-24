@@ -28,7 +28,7 @@ class DrawingThread(qtcore.QThread):
 		#print "starting drawing thread"
 		while 1:
 			command=self.queue.get()
-			print "got command from queue:", command
+			#print "got command from queue:", command
 
 			type=command[0]
 

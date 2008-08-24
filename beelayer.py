@@ -18,8 +18,8 @@ class BeeLayer:
 		self.key=key
 		self.owner=owner
 
-		print "creating layer with key:", key
-		print "creating layer with owner:", owner
+		#print "creating layer with key:", key
+		#print "creating layer with owner:", owner
 		# this is a lock for locking access to the layer image when needed
 		self.imagelock=qtcore.QReadWriteLock()
 
@@ -68,7 +68,7 @@ class BeeLayer:
 
 
 	def changeName(self,newname):
-		print "setting layer name to:", newname
+		#print "setting layer name to:", newname
 		if self.type==LayerTypes.animation:
 			newname+=" (Animation)"
 		elif self.type==LayerTypes.network:
@@ -80,7 +80,7 @@ class BeeLayer:
 
 	# composite image onto layer from center coord
 	def compositeFromCenter(self,image,x,y,compmode,clippath=None):
-		print "calling compositeFromCenter with args:",x,y
+		#print "calling compositeFromCenter with args:",x,y
 		width=image.size().width()
 		height=image.size().height()
 		self.compositeFromCorner(image,x-int(width/2),y-int(height/2),compmode,clippath)
@@ -88,7 +88,7 @@ class BeeLayer:
 
 	# composite image onto layer from corner coord
 	def compositeFromCorner(self,image,x,y,compmode,clippath=None):
-		print "calling compositeFromCorner with args:",x,y
+		#print "calling compositeFromCorner with args:",x,y
 		lock=ReadWriteLocker(self.imagelock,True)
 		width=image.size().width()
 		height=image.size().height()

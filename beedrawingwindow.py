@@ -98,7 +98,7 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 		# don't go through the queue for this layer add because we need it to
 		# be done before the next step
 		if startlayer:
-			print "calling nextLayerKey from beedrawingwindow constructor"
+			#print "calling nextLayerKey from beedrawingwindow constructor"
 			self.addInsertLayerEventToQueue(self.nextLayerKey(),0,source=ThreadTypes.user)
 
 		# have window get destroyed when it gets a close event
@@ -660,7 +660,7 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 	# this is for inserting a layer with a given image, for instance if loading from a log file with a partially started drawing
 	def loadLayer(self,image,type=LayerTypes.user,key=None,index=None, opacity=None, visible=None, compmode=None):
 		if not key:
-			print "calling nextLayerKey from beedrawingwindow loadLayer"
+			#print "calling nextLayerKey from beedrawingwindow loadLayer"
 			key=self.nextLayerKey()
 
 		if not index:
@@ -684,7 +684,7 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 
 	# insert a layer at a given point in the list of layers
 	def insertLayer(self,key,index,type=LayerTypes.user,image=None,opacity=None,visible=None,compmode=None,owner=0,history=0):
-		print "calling insertLayer"
+		#print "calling insertLayer"
 		layer=BeeLayer(self,type,key,image,opacity=opacity,visible=visible,compmode=compmode,owner=owner)
 
 		self.layers.insert(index,layer)

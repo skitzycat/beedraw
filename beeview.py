@@ -13,6 +13,10 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 		self.window=window
 		self.show()
 		self.pendown=False
+		# don't draw in the widget background
+		self.setAttribute(qtcore.Qt.WA_NoSystemBackground)
+		# don't double buffer
+		self.setAttribute(qtcore.Qt.WA_PaintOnScreen)
 
 	def newZoom(self):
 		# set up a transformation to do all the zoomming
@@ -216,4 +220,5 @@ class BeeViewScrollArea(qtgui.QScrollArea):
 
 		dirtyview=qtcore.QRectF(topleft.x(),topleft.y(),bottomright.x(),bottomright.y())
 
-		self.widget().update(dirtyview.toAlignedRect())
+		#self.widget().update(dirtyview.toAlignedRect())
+		self.widget().update(qtgui.QRegion(dirtyview.toAlignedRect()))
