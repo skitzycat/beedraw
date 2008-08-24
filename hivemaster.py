@@ -142,7 +142,6 @@ class HiveClientListener(qtcore.QThread):
 		self.socket=socket
 
 		self.master=master
-		self.outputqueue=master.routinginput
 		self.id=id
 
 	def authenticate(self):
@@ -302,7 +301,10 @@ class HiveRoutingThread(qtcore.QThread):
 			data=self.queue.get()
 			print "routing info recieved:", data
 			(command,owner)=data
-			if command[0]==DrawingCommandTypes.alllayer:
+			# a negative number is a flag that we only send it to one client
+			if owner<0:
+				self.sendToSingleClient(abs(owner),command)
+			elif command[0]==DrawingCommandTypes.alllayer:
 				self.sendToAllClients(command)
 			else:
 				self.sendToAllButOwner(owner,command)
@@ -319,3 +321,7 @@ class HiveRoutingThread(qtcore.QThread):
 			if source!=id:
 				print "sending to client:", id
 				self.master.clientwriterqueues[id].put(command)
+
+	def sendToSingleClient(self,source,command):
+		if self.master.clientwriterqueues.has_key(id):
+			self.master.clientwriterqueues[id].put(command)

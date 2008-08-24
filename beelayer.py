@@ -80,6 +80,7 @@ class BeeLayer:
 
 	# composite image onto layer from center coord
 	def compositeFromCenter(self,image,x,y,compmode,clippath=None):
+		print "calling compositeFromCenter with args:",x,y
 		width=image.size().width()
 		height=image.size().height()
 		self.compositeFromCorner(image,x-int(width/2),y-int(height/2),compmode,clippath)
@@ -87,6 +88,7 @@ class BeeLayer:
 
 	# composite image onto layer from corner coord
 	def compositeFromCorner(self,image,x,y,compmode,clippath=None):
+		print "calling compositeFromCorner with args:",x,y
 		lock=ReadWriteLocker(self.imagelock,True)
 		width=image.size().width()
 		height=image.size().height()
@@ -102,14 +104,16 @@ class BeeLayer:
 		painter.end()
 
 		dirtyregion=qtgui.QRegion(rect)
-		#dirtyregion=dirtyregion.intersect(qtgui.QRegion(self.window.image.rect()))
+		dirtyregion=dirtyregion.intersect(qtgui.QRegion(self.window.image.rect()))
 		lock.unlock()
 		self.window.reCompositeImage(dirtyregion.boundingRect())
 
 	def getConfigWidget(self):
-		# can't do this in the constructor because that may occur in not the main thread, this function however should only occur in the main thread
+		# can't do this in the constructor because that may occur in a thread other than the main thread, this function however should only occur in the main thread
 		if not self.configwidget:
 			self.configwidget=LayerConfigWidget(self)
+			self.configwidget.setSizePolicy(qtgui.QSizePolicy.MinimumExpanding,qtgui.QSizePolicy.Fixed)
+			self.configwidget.ui.background_frame.setSizePolicy(qtgui.QSizePolicy.MinimumExpanding,qtgui.QSizePolicy.MinimumExpanding)
 		else:
 			self.configwidget.updateValuesFromLayer()
 		return self.configwidget
@@ -206,6 +210,17 @@ class LayerConfigWidget(qtgui.QWidget):
 		# set initial values according to what the layer has set
 		self.updateValuesFromLayer()
 
+	# create a quick instance just to figure out the standard geometry
+	def getStandardGeometry():
+		testwidget=qtgui.QWidget()
+		#setup ui
+		testwidget.ui=Ui_LayerConfigWidget()
+		testwidget.ui.setupUi(testwidget)
+
+		return testwidget.geometry()
+
+	getStandardGeometry=staticmethod(getStandardGeometry)
+
 	# update the gui to reflect the values of the layer
 	def updateValuesFromLayer(self):
 		# update visibility box
@@ -274,6 +289,11 @@ class BeeLayersWindow(qtgui.QMainWindow):
 		layersListArea.setVerticalScrollBarPolicy(qtcore.Qt.ScrollBarAlwaysOn)
 		layersListArea.setHorizontalScrollBarPolicy(qtcore.Qt.ScrollBarAlwaysOff)
 
+		scrollareawidth=LayerConfigWidget.getStandardGeometry().width()
+		#layersListArea.setFixedWidth(scrollareawidth)
+		layersListArea.setMinimumWidth(scrollareawidth+15)
+		layersListArea.setSizePolicy(qtgui.QSizePolicy.MinimumExpanding,qtgui.QSizePolicy.MinimumExpanding)
+
 		# remove widget that I'm replacing in the layout
 		index=layout.indexOf(self.ui.layersListArea)
 		layout.removeWidget(self.ui.layersListArea)
@@ -285,6 +305,7 @@ class BeeLayersWindow(qtgui.QMainWindow):
 		# add frame to scrolled area
 		frame=qtgui.QFrame(layersListArea)
 		layersListArea.setWidget(frame)
+		#frame.setSizePolicy(qtgui.QSizePolicy.MinimumExpanding,qtgui.QSizePolicy.MinimumExpanding)
 
 		# add layout to frame inside the scroll area
 		vbox=qtgui.QVBoxLayout()
@@ -293,7 +314,7 @@ class BeeLayersWindow(qtgui.QMainWindow):
 		self.layersListArea=layersListArea
 
 	# rebuild layers window by removing all the layers widgets and then adding them back in order
-	def refreshLayersList(self,layers,curlayerkey):
+	def refreshLayersList_backup(self,layers,curlayerkey):
 		lock=qtcore.QMutexLocker(self.mutex)
 
 		frame=self.layersListArea.widget()
@@ -335,6 +356,50 @@ class BeeLayersWindow(qtgui.QMainWindow):
 			widget.show()
 			item+=1
 
+	# rebuild layers window by removing all the layers widgets and then adding them back in order
+	def refreshLayersList(self,layers,curlayerkey):
+		lock=qtcore.QMutexLocker(self.mutex)
+
+		frame=self.layersListArea.widget()
+
+		vbox=frame.layout()
+
+		# remove widgets from layout
+		for widget in frame.children():
+			# skip items of wrong type
+			if not type(widget) is LayerConfigWidget:
+				continue
+			widget.setParent(None)
+			vbox.removeWidget(widget)
+
+		newwidget=None
+
+		# ask each layer for it's widget and add it
+		for layer in layers:
+			newwidget=layer.getConfigWidget()
+			if layer.key==curlayerkey:
+				newwidget.highlight()
+			else:
+				newwidget.unhighlight()
+			vbox.addWidget(newwidget)
+			newwidget.show()
+
+		if newwidget:
+			frame.setGeometry(qtcore.QRect(0,0,newwidget.width,newwidget.height*vbox.count()))
+		else:
+			frame.setGeometry(qtcore.QRect(0,0,0,0))
+
+		return
+		# go through all items setting vertical offset higher each time
+		item = 0
+		for widget in frame.children():
+			# skip items of wrong type
+			if not type(widget) is LayerConfigWidget:
+				continue
+			widget.setGeometry(0,(vbox.count()-item-1)*widget.height,widget.width,widget.height)
+			widget.show()
+			item+=1
+
 	# set proper highlight for layer with passed key
 	def refreshLayerHighlight(self,key):
 		lock=qtcore.QMutexLocker(self.mutex)
@@ -354,13 +419,13 @@ class BeeLayersWindow(qtgui.QMainWindow):
 					widget.unhighlight()
 					return
 
-	def refreshLayerThumb(self,key):
+	def refreshLayerThumb(self,key=None):
 		lock=qtcore.QMutexLocker(self.mutex)
 		vbox=self.layersListArea.widget().layout()
 		for item in range(vbox.count()):
 			widget=vbox.itemAt(item).widget()
 			k=widget.layer.key
-			if key==k:
+			if key==k or key==None:
 				widget.refreshThumb()
 
 	def on_new_layer_button_clicked(self,accept=True):
@@ -414,7 +479,10 @@ class LayerPreviewWidget(qtgui.QWidget):
 
 		scaledimage=qtcore.QRectF(xoffset,yoffset,scalewidth,scaleheight)
 
+		backdrop=qtgui.QImage(scalewidth,scaleheight,qtgui.QImage.Format_ARGB32_Premultiplied)
+		backdrop.fill(self.layer.window.backdropcolor)
 		painter=qtgui.QPainter()
 		painter.begin(self)
+		painter.drawImage(scaledimage,backdrop)
 		painter.drawImage(scaledimage,self.layer.image,qtcore.QRectF(self.layer.image.rect()))
 		painter.end()

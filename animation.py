@@ -48,8 +48,9 @@ class XmlToQueueEventsConverter:
 			elif tokentype==qtxml.QXmlStreamReader.Characters:
 				self.processCharacterData()
 
-		if self.xml.hasError():
-			print "error while parsing XML:", self.xml.errorString()
+		# if it's an error that might actually be a problem then print it out
+		if self.xml.hasError() and self.xml.error() != qtxml.QXmlStreamReader.PrematureEndOfDocumentError:
+				print "error while parsing XML:", self.xml.errorString()
 
 	def processStartElement(self):
 		name=self.xml.name()
@@ -234,41 +235,41 @@ class NetworkListenerThread (qtcore.QThread):
 		# setup initial connection
 		self.socket,width,height,id=getServerConnection(self.username,self.password,self.host,self.port)
 
-		# if is was set up correctly tell window to start the thread that sends out data
-		if self.socket:
-			print "got socket connection"
-			self.window.remoteid=id
-			sendingthread=NetworkWriterThread(self.window,self.socket)
-			self.window.sendingthread=sendingthread
-			print "created thread, about to start sending thread"
-			sendingthread.start()
-
-		# if not tell window to exit and end thread
-		else:
+		# if we failed to get a socket then destroy the window and exit
+		if not self.socket:
 			print "failed to get socket connection"
 			self.window.cleanUp()
 			self.window.destroy()
 			return
 
-		parser=XmlToQueueEventsConverter(None,self.window,0,type=ThreadTypes.network)
+		# get ready for next contact from server
+		self.parser=XmlToQueueEventsConverter(None,self.window,0,type=ThreadTypes.network)
+		qtcore.QObject.connect(self.socket, qtcore.SIGNAL("readyRead()"), self.readyRead)
+		qtcore.QObject.connect(self.socket, qtcore.SIGNAL("disconnected()"), self.disconnected)
 
-		# listen for events and draw them as they come in
-		while 1:
-			# wait as long as we have to for data
-			if self.socket.waitForReadyRead(-1):
-				# read till we're out of bytes
-				while self.socket.bytesAvailable():
-					data=self.socket.read(1024)
-					print "got animation data from socket: %s" % qtcore.QString(data)
-					parser.xml.addData(data)
-					parser.read()
+		print "got socket connection"
+		self.window.remoteid=id
+		sendingthread=NetworkWriterThread(self.window,self.socket)
+		self.window.sendingthread=sendingthread
+		print "created thread, about to start sending thread"
+		sendingthread.start()
 
-			# if error exit
-			else:
-				print "Recieved error:", self.socket.error(), "when reading from socket"
-				#self.socket.write(qtcore.QByteArray("Authentication Failed"))
-				self.window.switchAllLayersToLocal()
-				return
+		# enter control loop
+		self.exec_()
+
+	# what to do when a disconnected signal is recieved
+	def disconnected(self):
+		print "disconnected from server"
+		self.window.switchAllLayersToLocal()
+		self.exit()
+		return
+
+	def readyRead(self):
+		while self.socket.bytesAvailable():
+			data=self.socket.read(1024)
+			print "got animation data from socket: %s" % qtcore.QString(data)
+			self.parser.xml.addData(data)
+			self.parser.read()
 
 class NetworkWriterThread (qtcore.QThread):
 	def __init__(self,window,socket):

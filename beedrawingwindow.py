@@ -44,6 +44,7 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 		self.curlayerkey=None
 		self.activated=False
 		self.backdrop=None
+		self.backdropcolor=0xFFFFFFFF
 
 		self.nextlayerkey=0
 		self.nextlayerkeymutex=qtcore.QMutex()
@@ -239,7 +240,7 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 			self.selection=newselect
 
 		else:
-			print "unrecognized selection modification type"
+			print "unrecognized selection modification type:", type
 
 		self.updateClipPath()
 		# make sure the selection is not the whole image
@@ -557,10 +558,13 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 		lock.unlock()
 		self.reCompositeImage()
 
+		# update all layer preview thumbnails
+		self.master.refreshLayerThumb()
+
 	# create backdrop for bottom of all layers, eventually I'd like this to be configurable, but for now it just fills in all white
 	def recreateBackdrop(self):
 		self.backdrop=qtgui.QImage(self.docwidth,self.docheight,qtgui.QImage.Format_ARGB32_Premultiplied)
-		self.backdrop.fill(0xFFFFFFFF)
+		self.backdrop.fill(self.backdropcolor)
 
 	def on_action_File_Log_toggled(self,state):
 		if state:
@@ -759,3 +763,23 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 		for layer in self.layers:
 			layer.type=LayerTypes.user
 			layer.changeName("Layer: %d" % layer.key)
+
+	def sendResyncToClient(self,id):
+		# first tell client to get rid of list of layers
+		self.master.routinginput.put(((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.resetlayers),id))
+
+		# get a read lock on all layers and the list of layers
+		listlock=qtcore.QMutexLocker(self.layersmutex)
+		locklist=[]
+		for layer in self.layers:
+			locklist.append(QReadWriteLocker(layer.imagelock),False)
+
+		# send each layer to client
+		index=0
+		for layer in self.layers:
+			index+=1
+			self.sendLayerImageToClient(layer,index,id)
+
+	def sendLayerImageToClient(self,layer,index,id):
+		command=(DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes,layerimage,image,index)
+		self.master.routinginput.put((command,id))
