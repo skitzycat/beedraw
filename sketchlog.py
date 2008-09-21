@@ -28,12 +28,13 @@ class SketchLogWriter:
 		elif type==DrawingCommandTypes.alllayer:
 			self.logAllLayerCommand(command)
 
+		elif type==DrawingCommandTypes.networkcontrol:
+			self.logNetworkControl(command)
+
 		bytestowrite=self.output.bytesToWrite()
-		print "still need to write bytes:", bytestowrite
 		while self.output.bytesToWrite()>0:
 			self.output.flush()
 			bytestowrite=self.output.bytesToWrite()
-			print "still need to write bytes:", bytestowrite
 		self.output.flush()
 
 	def logNonLayerCommand(self,command):
@@ -65,6 +66,9 @@ class SketchLogWriter:
 		elif subtype==LayerCommandTypes.tool:
 			self.logToolEvent(command[3])
 
+		else:
+			print "WARNING: don't know how to log layer command type:", subtype
+
 	def logAllLayerCommand(self,command):
 		subtype=command[1]
 		if subtype==AllLayerCommandTypes.resize:
@@ -83,12 +87,15 @@ class SketchLogWriter:
 			self.logLayerSub(command[2])
 
 		elif subtype==AllLayerCommandTypes.insertlayer:
-			print "turning add layer command into xml:", command
 			self.logLayerAdd(command[3], command[2], command[4])
 
-		elif subtype==AllLayerCommandTypes.resync:
-			if self.type==ThreadTypes.server:
-				pass
+	def logNetworkControl(self,command):
+		subtype=command[1]
+		if subtype==NetworkControlCommandTypes.resyncrequest:
+			self.logResyncRequest()
+
+		elif subtype==NetworkControlCommandTypes.resyncstart:
+			self.logResyncStart()
 
 	def startEvent(self):
 		self.log.writeStartElement('event')
@@ -99,7 +106,6 @@ class SketchLogWriter:
 
 	def logLayerAdd(self, position, key, owner=0):
 		lock=qtcore.QMutexLocker(self.mutex)
-
 		self.startEvent()
 
 		# start layer event
@@ -305,6 +311,25 @@ class SketchLogWriter:
 		rawstring='%s' % bytearray
 
 		self.log.writeCharacters(rawstring)
+		self.log.writeEndElement()
+
+		self.endEvent()
+
+	def logResyncRequest(self):
+		print "DEBUG: logging resync"
+		lock=qtcore.QMutexLocker(self.mutex)
+		self.startEvent()
+
+		self.log.writeStartElement('resyncrequest')
+		self.log.writeEndElement()
+
+		self.endEvent()
+
+	def logResyncStart(self):
+		lock=qtcore.QMutexLocker(self.mutex)
+		self.startEvent()
+
+		self.log.writeStartElement('resyncstart')
 		self.log.writeEndElement()
 
 		self.endEvent()

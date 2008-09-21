@@ -161,6 +161,10 @@ class HiveClientListener(qtcore.QThread):
 
 		authlist=authstring.split('\n')
 
+		# if loop ended without getting enough separators just return false
+		if len(authlist)<3:
+			return False
+
 		self.username=authlist[0]
 		password=authlist[1]
 		version=authlist[2]
@@ -176,7 +180,7 @@ class HiveClientListener(qtcore.QThread):
 		return False
 
 	def register(self):
-		# register this new connection and get an id for it
+		# register this new connection
 		self.master.registerClient(self.username,self.id)
 
 	def disconnected(self):
@@ -322,6 +326,8 @@ class HiveRoutingThread(qtcore.QThread):
 				print "sending to client:", id
 				self.master.clientwriterqueues[id].put(command)
 
-	def sendToSingleClient(self,source,command):
+	def sendToSingleClient(self,id,command):
 		if self.master.clientwriterqueues.has_key(id):
 			self.master.clientwriterqueues[id].put(command)
+		else:
+			print "WARNING: Can't find client", id, "for sending data to"

@@ -47,7 +47,13 @@ class DrawingThread(qtcore.QThread):
 					self.requestAllLayerCommand(command)
 				else:
 					self.processAllLayerCommand(command)
-					self.window.logCommand(command)
+					self.window.logServerCommand(command)
+
+			elif type==DrawingCommandTypes.networkcontrol:
+				if self.type==ThreadTypes.user and self.window.type==WindowTypes.networkclient:
+					self.processClientNetworkCommand(command)
+				else:
+					self.processServerNetworkCommand(command)
 
 	def processNonLayerCommand(self,command):
 		subtype=command[1]
@@ -122,9 +128,9 @@ class DrawingThread(qtcore.QThread):
 
 		elif subtype==LayerCommandTypes.rawevent:
 			layer=self.window.getLayerForKey(command[2])
-			image=command[3]
-			x=command[4]
-			y=command[5]
+			x=command[3]
+			y=command[4]
+			image=command[5]
 			path=command[6]
 			compmode=qtgui.QPainter.CompositionMode_Source
 			layer.compositeFromCorner(image,x,y,compmode,path)
@@ -166,12 +172,18 @@ class DrawingThread(qtcore.QThread):
 				else:
 					self.window.insertLayer(key,index,LayerTypes.network,owner=owner)
 
-		elif subtype==AllLayerCommandTypes.resync:
-			if self.type==ThreadTypes.server:
-				pass
-
 	def requestAllLayerCommand(self,command):
 		self.sendToServer(command)
+
+	def processClientNetworkCommand(self,command):
+		subtype=command[1]
+		if subtype==NetworkControlCommandTypes.resyncstart:
+			self.window.clearAllLayers()
+
+	def processServerNetworkCommand(self,command):
+		subtype=command[1]
+		if subtype==NetworkControlCommandTypes.resyncrequest:
+			self.window.sendResyncToClient(command[2]*-1)
 
 	def sendToServer(self,command):
 		if command[0]==DrawingCommandTypes.alllayer and command[1]==AllLayerCommandTypes.insertlayer:

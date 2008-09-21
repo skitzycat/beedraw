@@ -21,11 +21,11 @@ class LayerCommandTypes:
 
 # events that effect the list of layers, all layers or layer ownership
 class AllLayerCommandTypes:
-	scale, resize, layerup, layerdown, createlayer, deletelayer, insertlayer, resync, releaselayer, layerownership = range(10)
+	scale, resize, layerup, layerdown, deletelayer, insertlayer, deleteall, releaselayer, layerownership = range(9)
 
 # commands that are only used to communicate when in a network session
 class NetworkControlCommandTypes:
-	resyncrequest, resetlayers, layerimage = range(3)
+	resyncrequest, resyncstart, resyncend = range(3)
 
 class LayerTypes:
 	user, animation, network = range(3)

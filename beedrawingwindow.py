@@ -723,7 +723,13 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 		self.master.updateLayerHighlight(oldkey)
 
 	def addRawEventToQueue(self,key,image,x,y,path,source=ThreadTypes.user):
-		self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.rawevent,key,image,x,y,path),source)
+		self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.rawevent,key,x,y,image,path),source)
+
+	def addResyncStartToQueue(self,source=ThreadTypes.network):
+		self.queueCommand((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.resyncstart),source)
+
+	def addResyncRequestToQueue(self,owner,source=ThreadTypes.network):
+		self.queueCommand((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.resyncrequest,owner),source)
 
 	def addOpacityChangeToQueue(self,key,value,source=ThreadTypes.user):
 		self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.alpha,key,value),source)
@@ -738,11 +744,17 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 		print "about to start thread"
 		self.listenerthread.start()
 
-	def logCommand(self,command,id=0):
+	def logServerCommand(self,command,id=0):
 		if self.log:
 			self.log.logCommand(command)
 		if self.type==WindowTypes.standaloneserver:
 			self.master.routinginput.put((command,id))
+
+	def logCommand(self,command,id=0):
+		if self.log:
+			self.log.logCommand(command)
+		if self.type==WindowTypes.networkclient:
+			self.remoteoutputqueue.put(command)
 
 	def logStroke(self,tool,layer):
 		if self.log:
@@ -764,15 +776,16 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 			layer.type=LayerTypes.user
 			layer.changeName("Layer: %d" % layer.key)
 
+	# send full resync to client with given ID
 	def sendResyncToClient(self,id):
 		# first tell client to get rid of list of layers
-		self.master.routinginput.put(((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.resetlayers),id))
+		self.master.routinginput.put(((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.resyncstart),id))
 
 		# get a read lock on all layers and the list of layers
 		listlock=qtcore.QMutexLocker(self.layersmutex)
 		locklist=[]
 		for layer in self.layers:
-			locklist.append(QReadWriteLocker(layer.imagelock),False)
+			locklist.append(ReadWriteLocker(layer.imagelock,False))
 
 		# send each layer to client
 		index=0
@@ -781,5 +794,34 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 			self.sendLayerImageToClient(layer,index,id)
 
 	def sendLayerImageToClient(self,layer,index,id):
-		command=(DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes,layerimage,image,index)
-		self.master.routinginput.put((command,id))
+		key=layer.key
+		image=layer.getImageCopy()
+		opacity=layer.opacity
+		compmode=layer.compmode
+		owner=layer.owner
+
+		# send command to create layer
+		insertcommand=(DrawingCommandTypes.alllayer,AllLayerCommandTypes.insertlayer,key,index,owner)
+		self.master.routinginput.put((insertcommand,id))
+
+		# set alpha and composition mode for layer
+		alphacommand=(DrawingCommandTypes.layer,LayerCommandTypes.alpha,key,opacity)
+		self.master.routinginput.put((alphacommand,id))
+		modecommand=(DrawingCommandTypes.layer,LayerCommandTypes.mode,key,compmode)
+		self.master.routinginput.put((modecommand,id))
+
+		# send raw image
+		rawcommand=(DrawingCommandTypes.layer,LayerCommandTypes.rawevent,key,0,0,image,None)
+		self.master.routinginput.put((rawcommand,id))
+
+	# delete all layers
+	def clearAllLayers(self):
+		# lock all layers and the layers list
+		listlock=qtcore.QMutexLocker(self.layersmutex)
+		locklist=[]
+		for layer in self.layers:
+			locklist.append(ReadWriteLocker(layer.imagelock,False))
+
+		self.layers=[]
+		self.requestLayerListRefresh()
+		self.reCompositeImage()

@@ -118,6 +118,11 @@ class BeeLayer:
 			self.configwidget.updateValuesFromLayer()
 		return self.configwidget
 
+	# return copy of image
+	def getImageCopy(self):
+		retimage=self.image.copy()
+		return retimage
+
 	# composite section of layer onto paint object passed
 	def compositeLayerOn(self,painter,dirtyrect):
 		# if layer is not visible just return
@@ -253,7 +258,9 @@ class LayerConfigWidget(qtgui.QWidget):
 		self.layer.window.reCompositeImage()
 
 	def on_opacity_box_valueChanged(self,value):
-		self.layer.window.addOpacityChangeToQueue(self.layer.key,float(value))
+		# there are two events, one with a flota and one with a string, we only need one
+		if type(value) is float:
+			self.layer.window.addOpacityChangeToQueue(self.layer.key,value)
 
 	def on_blend_mode_box_activated(self,value):
 		# we only want the event with the string
@@ -375,7 +382,7 @@ class BeeLayersWindow(qtgui.QMainWindow):
 		newwidget=None
 
 		# ask each layer for it's widget and add it
-		for layer in layers:
+		for layer in reversed(layers):
 			newwidget=layer.getConfigWidget()
 			if layer.key==curlayerkey:
 				newwidget.highlight()

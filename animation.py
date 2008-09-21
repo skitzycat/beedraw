@@ -70,8 +70,10 @@ class XmlToQueueEventsConverter:
 
 			(pos,ok)=attrs.value("position").toString().toInt()
 
+			# if this is the server don't trust the client to give the right ID, insthead pull it from the ID given to this thread
 			if self.type==ThreadTypes.server:
 				owner=self.id
+			# otherwise trust the ID in the message
 			else:
 				(owner,ok)=attrs.value("owner").toString().toInt()
 
@@ -98,8 +100,9 @@ class XmlToQueueEventsConverter:
 				self.window.addLayerDownToQueue(index,type)
 
 		elif name == 'layeralpha':
-			(key,ok)=attrs.value("key").string.toInt()
-			self.window.addOpacityChangeToQueue(key,attrs.value("alpha").toString().toFloat(),type)
+			(key,ok)=attrs.value("key").toString().toInt()
+			(opacity,ok)=attrs.value("alpha").toString().toFloat()
+			self.window.addOpacityChangeToQueue(key,opacity,type)
 
 		elif name == 'layermode':
 			time.sleep(self.stepdelay)
@@ -176,6 +179,19 @@ class XmlToQueueEventsConverter:
 			else:
 				#print "Adding tool motion event to queue on layer", self.curlayer
 				self.window.addPenMotionToQueue(x,y,pressure,self.curlayer,type)
+		elif name == 'resyncrequest':
+			owner=self.id
+			self.window.addResyncRequestToQueue(owner)
+		elif name == 'resyncstart':
+			self.window.addResyncStartToQueue()
+		elif name == 'resyncend':
+			pass
+
+		elif name == 'event':
+			pass
+
+		else:
+			print "WARNING: Don't know how to handle tag: %s" % name.string()
 
 	def processEndElement(self):
 		name=self.xml.name()
@@ -282,6 +298,10 @@ class NetworkWriterThread (qtcore.QThread):
 		self.queue=window.remoteoutputqueue
 
 	def run(self):
+		# start off by sending initial request to sync up with session
+		syncrequest=(DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.resyncrequest)
+		self.gen.logCommand(syncrequest)
+
 		while 1:
 			print "attempting to get item from queue"
 			command=self.queue.get()
