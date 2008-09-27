@@ -23,6 +23,7 @@ class BeeToolBox:
 		self.toolslist.append(PaintBrushToolDesc())
 		self.toolslist.append(EraserToolDesc())
 		self.toolslist.append(RectSelectionToolDesc())
+		self.toolslist.append(EyeDropperToolDesc())
  
 	def toolNameGenerator(self):
 		for tool in self.toolslist:
@@ -100,6 +101,37 @@ class AbstractTool:
 	def penEnter(self):
 		pass
  
+class EyeDropperToolDesc(AbstractToolDesc):
+	def __init__(self):
+		AbstractToolDesc.__init__(self,"Eye Dropper")
+
+	def setDefaultOptions(self):
+		# option for if it should get color for a single layer or the whole visible image
+		# curently this is set to just the whole visible image because otherwise for transparent colors it composes them onto black which doesn't look right at all
+		self.options["singlelayer"]=0
+
+	def getTool(self,window):
+		tool=EyeDropperTool(self.options,window)
+		tool.name=self.name
+		return tool
+ 
+	def setupTool(self,window):
+		return self.getTool(window)
+
+# eye dropper tool (select color from canvas)
+class EyeDropperTool(AbstractTool):
+	def __init__(self,options,window):
+		AbstractTool.__init__(self,options,window)
+		self.name="Eye Dropper"
+		self.window=window
+
+	def penDown(self,x,y,pressure=None):
+		if self.options["singlelayer"]==0:
+			color=self.window.getImagePixelColor(x,y)
+		else:
+			color=self.window.getCurLayerPixelColor(x,y)
+		self.window.master.updateFGColor(qtgui.QColor(color))
+
 # basic tool for everything that draws points on the canvas
 class DrawingTool(AbstractTool):
 	def __init__(self,options,window):
@@ -358,13 +390,13 @@ class PaintBrushTool(DrawingTool):
 		self.brushimage.fill(0)
 		painter=qtgui.QPainter()
 		painter.begin(self.brushimage)
-		#painter.setRenderHint(qtgui.QPainter.Antialiasing)
+		painter.setRenderHint(qtgui.QPainter.Antialiasing)
 		painter.setRenderHint(qtgui.QPainter.SmoothPixmapTransform)
 		painter.setRenderHint(qtgui.QPainter.HighQualityAntialiasing)
 		painter.setTransform(finaltransform)
 		painter.drawImage(qtcore.QPointF(centeroffset,centeroffset),self.fullsizedbrush)
  
- 		# debugging code, uncomment as needed
+ 		# debugging, code, uncomment as needed
 		#print "updated brush for pressure:", pressure
 		#printImage(self.brushimage)
  

@@ -370,6 +370,18 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 		else:
 			self.view.updateView()
 
+	def getImagePixelColor(self,x,y,size=1):
+		imagelocker=ReadWriteLocker(self.imagelock,False)
+		return self.image.pixel(x,y)
+		
+	def getCurLayerPixelColor(self,x,y,size=1):
+		key=self.getCurLayerKey()
+		curlayer=self.getLayerForKey(key)
+		if curlayer:
+			return curlayer.getPixelColor(x,y,size)
+		else:
+			return qtgui.QColor()
+
 	# handle a few events that don't have easy function over loading front ends
 	def event(self,event):
 		# when the window is resized change the view to match

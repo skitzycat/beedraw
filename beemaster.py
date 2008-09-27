@@ -81,8 +81,12 @@ class BeeMasterWindow(qtgui.QMainWindow):
 	def on_foregroundbutton_pressed(self):
 		color=qtgui.QColorDialog.getColor(self.fgcolor,self)
 		if color.isValid():
-			self.fgcolor=color
-			self.ui.FGSwatch.updateColor(self.fgcolor)
+			self.updateFGColor(color)
+
+	# update the foreground color and refresh the swatch widget on screen
+	def updateFGColor(self,color):
+		self.fgcolor=color
+		self.ui.FGSwatch.updateColor(self.fgcolor)
 
 	def on_action_File_Play_triggered(self,accept=True):
 		if not accept:

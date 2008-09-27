@@ -118,6 +118,11 @@ class BeeLayer:
 			self.configwidget.updateValuesFromLayer()
 		return self.configwidget
 
+	# get color of pixel at specified point, or average color in range
+	def getPixelColor(self,x,y,size):
+		lock=ReadWriteLocker(self.imagelock,False)
+		return self.image.pixel(x,y)
+
 	# return copy of image
 	def getImageCopy(self):
 		retimage=self.image.copy()
