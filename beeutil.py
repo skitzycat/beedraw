@@ -267,7 +267,7 @@ def getSimilarColorRegion(image,x,y,similarity):
 		curcolor=qtgui.QColor(image.pixel(curpoint[0],curpoint[1]))
 		if compareColors(basecolor,curcolor,similarity):
 			inpath[curpoint]=1
-			print "adding point to path:", curpoint
+			#print "adding point to path:", curpoint
 			newpath=qtgui.QPainterPath()
 			newpath.addRect(curpoint[0],curpoint[1],1,1)
 			retpath=retpath.united(newpath)
@@ -276,5 +276,5 @@ def getSimilarColorRegion(image,x,y,similarity):
 			pointsqueue.append((curpoint[0]+1,curpoint[1]))
 			pointsqueue.append((curpoint[0],curpoint[1]+1))
 
-	print "done finding selection area"
+	#print "done finding selection area"
 	return retpath

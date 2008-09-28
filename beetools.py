@@ -334,7 +334,10 @@ class PaintBrushTool(DrawingTool):
 			return
 		elif self.diameter==2:
 			# set alpha for the pixels according to the blur option and pressure
-			alpha=((pressure*self.fullsizedbrush.width())-1)*(1-(self.options["blur"]/100.0))
+			alpha=(pressure*self.fullsizedbrush.width())/2
+			alpha*=.5
+			alpha+=.5
+			alpha*=1-(self.options["blur"]/100.0)
 		
 			self.brushimage=qtgui.QImage(2,2,qtgui.QImage.Format_ARGB32_Premultiplied)
 
@@ -365,7 +368,10 @@ class PaintBrushTool(DrawingTool):
 		scaletransform=qtgui.QTransform()
 		finaltransform=qtgui.QTransform()
 
-		scaletransform=scaletransform.scale(pressure,pressure)
+		scaledown=pressure
+		#scaledown=float(self.diameter)/self.fullsizedbrush.width()
+
+		scaletransform=scaletransform.scale(scaledown,scaledown)
 
 		# scale the brush to proper size
 		#self.brushimage=self.fullsizedbrush.transformed(scaletransform,qtcore.Qt.SmoothTransformation)
@@ -377,7 +383,7 @@ class PaintBrushTool(DrawingTool):
  		transformoffset=(1-(transbrushsize.x()%1))/2.0
 
 		finaltransform=finaltransform.translate(transformoffset,transformoffset)
-		finaltransform=finaltransform.scale(pressure,pressure)
+		finaltransform=finaltransform.scale(scaledown,scaledown)
  
  		newtransupperleft=finaltransform.map(qtcore.QPointF(0,0))
  		newtranslowerright=finaltransform.map(qtcore.QPointF(self.fullsizedbrush.width(),self.fullsizedbrush.height()))
@@ -390,9 +396,9 @@ class PaintBrushTool(DrawingTool):
 		self.brushimage.fill(0)
 		painter=qtgui.QPainter()
 		painter.begin(self.brushimage)
-		#painter.setRenderHint(qtgui.QPainter.Antialiasing)
-		#painter.setRenderHint(qtgui.QPainter.SmoothPixmapTransform)
-		#painter.setRenderHint(qtgui.QPainter.HighQualityAntialiasing)
+		painter.setRenderHint(qtgui.QPainter.Antialiasing)
+		painter.setRenderHint(qtgui.QPainter.SmoothPixmapTransform)
+		painter.setRenderHint(qtgui.QPainter.HighQualityAntialiasing)
 		painter.setTransform(finaltransform)
 		painter.drawImage(qtcore.QPointF(centeroffset,centeroffset),self.fullsizedbrush)
  
@@ -690,7 +696,12 @@ class FeatherSelectTool(SelectionTool):
 	def penDown(self,x,y,pressure=None):
 		newpath=getSimilarColorRegion(self.window.image,x,y,self.options['similarity'])
 		self.window.changeSelection(SelectionModTypes.new,newpath)
- 
+
+	def penMotion(self,x,y,pressure=None):
+		pass
+	def penUp(self,x,y,pressure=None):
+		pass
+
 # elipse selection tool
 class ElipseSelectionToolDesc(AbstractToolDesc):
 	def __init__(self):
