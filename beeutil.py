@@ -232,6 +232,49 @@ def compareColors(color1,color2,similarity):
 	bdiff=abs(color1.blue()-color2.blue())
 	adiff=abs(color1.alpha()-color2.alpha())
 
-	if similarity <= max([rdiff,gdiff,bdiff,adiff]):
+	if similarity >= max([rdiff,gdiff,bdiff,adiff]):
 		return True
 	return False
+
+# Gets passed an image, a point and a similarity value.  Returns a path containing the pixel passed and similar colored surrounding pixels
+def getSimilarColorRegion(image,x,y,similarity):
+	width=image.width()
+	height=image.height()
+	# dictionary to keep track of points already in path
+	inpath={}
+	retpath=qtgui.QPainterPath()
+	retpath.addRect(x,y,1,1)
+	# queue of points to check to see if they are part of the region
+	pointsqueue=[]
+
+	# get starting color to compare everything to
+	basecolor=qtgui.QColor(image.pixel(x,y))
+
+	# set up starting conditions
+	inpath[(x,y)]=1
+	pointsqueue.append((x-1,y))
+	pointsqueue.append((x,y-1))
+	pointsqueue.append((x+1,y))
+	pointsqueue.append((x,y+1))
+
+	while len(pointsqueue):
+		curpoint=pointsqueue.pop()
+		# if point is out of bounds for the image or already in the path just ignore it
+		if curpoint[0]<0 or curpoint[0]>=width or curpoint[1]<0 or curpoint[1]>=height or inpath.has_key(curpoint):
+			continue
+
+		# if point needs to be added to path add surrounding points to queue to check
+		curcolor=qtgui.QColor(image.pixel(curpoint[0],curpoint[1]))
+		if compareColors(basecolor,curcolor,similarity):
+			inpath[curpoint]=1
+			print "adding point to path:", curpoint
+			newpath=qtgui.QPainterPath()
+			newpath.addRect(curpoint[0],curpoint[1],1,1)
+			retpath=retpath.united(newpath)
+			pointsqueue.append((curpoint[0]-1,curpoint[1]))
+			pointsqueue.append((curpoint[0],curpoint[1]-1))
+			pointsqueue.append((curpoint[0]+1,curpoint[1]))
+			pointsqueue.append((curpoint[0],curpoint[1]+1))
+
+	print "done finding selection area"
+	return retpath

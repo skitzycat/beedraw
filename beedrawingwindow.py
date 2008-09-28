@@ -180,6 +180,7 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 
 	# change the current selection path
 	def changeSelection(self,type,newarea=None):
+		# new area argument can be implied to be the cursor overlay, but we need one or the other
 		if not self.cursoroverlay and not newarea:
 			return
 

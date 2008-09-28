@@ -24,6 +24,7 @@ class BeeToolBox:
 		self.toolslist.append(EraserToolDesc())
 		self.toolslist.append(RectSelectionToolDesc())
 		self.toolslist.append(EyeDropperToolDesc())
+		self.toolslist.append(FeatherSelectToolDesc())
  
 	def toolNameGenerator(self):
 		for tool in self.toolslist:
@@ -573,7 +574,7 @@ class SelectionOverlay:
  
 		self.path=path
  
-# basic selection tool
+# basic rectangle selection tool
 class SelectionTool(AbstractTool):
 	def __init__(self,options,window):
 		AbstractTool.__init__(self,options,window)
@@ -665,6 +666,31 @@ class RectSelectionToolDesc(AbstractToolDesc):
 		tool=SelectionTool(self.options,window)
 		tool.name=self.name
 		return tool
+
+# fuzzy selection tool description
+class FeatherSelectToolDesc(AbstractToolDesc):
+	def __init__(self):
+		AbstractToolDesc.__init__(self,"Feather Select")
+
+	def setDefaultOptions(self):
+		self.options["similarity"]=10
+
+	def getTool(self,window):
+		tool=FeatherSelectTool(self.options,window)
+		tool.name=self.name
+		return tool
+ 
+	def setupTool(self,window):
+		return self.getTool(window)
+
+# fuzzy selection tool
+class FeatherSelectTool(SelectionTool):
+	def __init__(self,options,window):
+		AbstractTool.__init__(self,options,window)
+
+	def penDown(self,x,y,pressure=None):
+		newpath=getSimilarColorRegion(self.window.image,x,y,self.options['similarity'])
+		self.window.changeSelection(SelectionModTypes.new,newpath)
  
 # elipse selection tool
 class ElipseSelectionToolDesc(AbstractToolDesc):
