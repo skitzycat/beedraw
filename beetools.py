@@ -213,7 +213,7 @@ class DrawingTool(AbstractTool):
 		y=int(y)
  
 		# if it hasn't moved just do nothing
-		if (x,y)==self.lastpoint:
+		if x==self.lastpoint[0] and y==self.lastpoint[1]:
 			return
  
 		self.pointshistory.append((x,y,pressure))
@@ -254,7 +254,7 @@ class DrawingTool(AbstractTool):
 		# put points in that image
 		painter=qtgui.QPainter()
 		painter.begin(lineimage)
-		painter.setRenderHint(qtgui.QPainter.HighQualityAntialiasing)
+		#painter.setRenderHint(qtgui.QPainter.HighQualityAntialiasing)
  
 		for point in path:
 			self.updateBrushForPressure(point[2])
@@ -314,18 +314,12 @@ class PaintBrushTool(DrawingTool):
 			return
 		self.lastpressure=pressure
  
-		# if we can use the full sized brush, then do it
-		if self.options["pressuresize"]==0 or pressure==1:
-			self.brushimage=self.fullsizedbrush
-			self.diameter=self.options["diameter"]
-			return
- 
 		self.diameter=int(math.ceil(self.fullsizedbrush.width()*pressure))
 
 		# the scaling algorithim fails here so we need our own method
 		if self.diameter==1:
-			# if the diameter is 1 set the top left pixel to pure black and fill the others with alpha porportional to where in the size of 2 range the pressure falls
-			alpha=(pressure*self.fullsizedbrush.width())
+			# if the diameter is 1 set the opacity perportinal to the pressure and the blur options
+			alpha=(pressure*self.fullsizedbrush.width())*(1-(self.options['blur']/100.0))
 		
 			self.brushimage=qtgui.QImage(1,1,qtgui.QImage.Format_ARGB32_Premultiplied)
 
@@ -339,10 +333,8 @@ class PaintBrushTool(DrawingTool):
 
 			return
 		elif self.diameter==2:
-			# if the diameter is 2 set the top left pixel to pure black and fill the others with alpha porportional to where in the size of 2 range the pressure falls
-			alpha=(pressure*self.fullsizedbrush.width())-1
-			# reduce alpha for the outer pixels according to the blur option
-			alpha*=1-(self.options["blur"]/100.0)
+			# set alpha for the pixels according to the blur option and pressure
+			alpha=((pressure*self.fullsizedbrush.width())-1)*(1-(self.options["blur"]/100.0))
 		
 			self.brushimage=qtgui.QImage(2,2,qtgui.QImage.Format_ARGB32_Premultiplied)
 
@@ -351,15 +343,22 @@ class PaintBrushTool(DrawingTool):
 			fgb=self.fgcolor.blue()
 
 			# set upper right pixel
-			color=qtgui.qRgba(fgr,fgg,fgb,255)
-			self.brushimage.setPixel(0,0,color)
+			#color=qtgui.qRgba(fgr,fgg,fgb,255)
+			#self.brushimage.setPixel(0,0,color)
 
-			# set other pixels
+			# set all pixels
 			color=qtgui.qRgba(fgr*alpha,fgg*alpha,fgb*alpha,alpha*255)
+			self.brushimage.setPixel(0,0,color)
 			self.brushimage.setPixel(1,0,color)
 			self.brushimage.setPixel(0,1,color)
 			self.brushimage.setPixel(1,1,color)
 
+			return
+
+		# if we can use the full sized brush, then do it
+		if self.options["pressuresize"]==0 or pressure==1:
+			self.brushimage=self.fullsizedbrush
+			self.diameter=self.options["diameter"]
 			return
 
 		# for a diameter of 3 or more the QT transforms seem to work alright
@@ -391,9 +390,9 @@ class PaintBrushTool(DrawingTool):
 		self.brushimage.fill(0)
 		painter=qtgui.QPainter()
 		painter.begin(self.brushimage)
-		painter.setRenderHint(qtgui.QPainter.Antialiasing)
-		painter.setRenderHint(qtgui.QPainter.SmoothPixmapTransform)
-		painter.setRenderHint(qtgui.QPainter.HighQualityAntialiasing)
+		#painter.setRenderHint(qtgui.QPainter.Antialiasing)
+		#painter.setRenderHint(qtgui.QPainter.SmoothPixmapTransform)
+		#painter.setRenderHint(qtgui.QPainter.HighQualityAntialiasing)
 		painter.setTransform(finaltransform)
 		painter.drawImage(qtcore.QPointF(centeroffset,centeroffset),self.fullsizedbrush)
  
@@ -423,7 +422,7 @@ class PaintBrushTool(DrawingTool):
 					if fade > 1:
 						fade=1
 					# need to muliply the color by the alpha becasue it's going into
-					# a premuliplied image
+					# a premultiplied image
 					curcolor=qtgui.qRgba(fgr*fade,fgg*fade,fgb*fade,fade*255)
 					self.fullsizedbrush.setPixel(i,j,curcolor)
  
@@ -485,7 +484,7 @@ class PaintBrushToolDesc(PencilToolDesc):
 		self.options["diameter"]=7
 		self.options["step"]=1
 		self.options["pressuresize"]=1
-		self.options["blur"]=70
+		self.options["blur"]=30
 		self.options["pressurebalance"]=100
  
 	def getTool(self,window):
