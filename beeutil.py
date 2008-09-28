@@ -224,3 +224,14 @@ def adjustPointToBounds(x,y,rect):
 		y=rect.y()+rect.height()
 
 	return x,y
+
+# gets passed 2 QColor objects and similarity if colors are close enough according to similarity return true, otherwise return false.
+def compareColors(color1,color2,similarity):
+	rdiff=abs(color1.red()-color2.red())
+	gdiff=abs(color1.green()-color2.green())
+	bdiff=abs(color1.blue()-color2.blue())
+	adiff=abs(color1.alpha()-color2.alpha())
+
+	if similarity <= max([rdiff,gdiff,bdiff,adiff]):
+		return True
+	return False
