@@ -108,11 +108,11 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 			# for some reason we don't get a release event when the pen is released
 			# after going off the canvas, this is a quick hack to deal with it
 			if event.pressure()>0:
-				self.cursorMoveEvent(event.x(),event.y(),event.pressure())
+				self.cursorMoveEvent(event.x(),event.y(),event.pressure(),event.hiResGlobalX()%1,event.hiResGlobalY()%1)
 			else:
 				self.cursorReleaseEvent(event.x(),event.y())
 		elif event.type()==qtcore.QEvent.TabletPress:
-			self.cursorPressEvent(event.x(),event.y(),event.pressure())
+			self.cursorPressEvent(event.x(),event.y(),event.pressure(),event.hiResGlobalX()%1,event.hiResGlobalY()%1)
 		elif event.type()==qtcore.QEvent.TabletRelease:
 			self.cursorReleaseEvent(event.x(),event.y())
 
@@ -126,7 +126,7 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 		self.cursorReleaseEvent(event.x(),event.y())
 
 	# these are called regardless of if a mouse or tablet event was used
-	def cursorPressEvent(self,x,y,pressure=1):
+	def cursorPressEvent(self,x,y,pressure=1,subx=0,suby=0):
 		# if the window has no layers in it's layers list then just return
 		if not self.window.layers:
 			return
@@ -140,12 +140,12 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 		x,y=self.viewCoordsToImage(x,y)
 		self.window.addPenDownToQueue(x,y,pressure)
 
-	def cursorMoveEvent(self,x,y,pressure=1):
+	def cursorMoveEvent(self,x,y,pressure=1,subx=0,suby=0):
 		if self.pendown:
 			x,y=self.viewCoordsToImage(x,y)
 			self.window.addPenMotionToQueue(x,y,pressure)
 
-	def cursorReleaseEvent(self,x,y,pressure=1):
+	def cursorReleaseEvent(self,x,y,pressure=1,subx=0,suby=0):
 		if self.pendown:
 			self.setCursor(self.window.master.getCurToolDesc().getCursor())
 			x,y=self.viewCoordsToImage(x,y)
@@ -173,8 +173,8 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 		elif y>visible.y()+visible.height():
 			y=visible.y()+visible.height()
 
-		x=int(x/self.window.zoom)
-		y=int(y/self.window.zoom)
+		x=x/self.window.zoom
+		y=y/self.window.zoom
 
 		return x,y
 

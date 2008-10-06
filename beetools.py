@@ -10,6 +10,7 @@ from beeeventstack import *
 from PencilOptionsDialogUi import *
 from BrushOptionsDialogUi import *
 from EraserOptionsDialogUi import *
+from PaintBucketOptionsDialogUi import *
  
 # Class to manage tools and make instances as needed
 class BeeToolBox:
@@ -25,6 +26,7 @@ class BeeToolBox:
 		self.toolslist.append(RectSelectionToolDesc())
 		self.toolslist.append(EyeDropperToolDesc())
 		self.toolslist.append(FeatherSelectToolDesc())
+		self.toolslist.append(PaintBucketToolDesc())
  
 	def toolNameGenerator(self):
 		for tool in self.toolslist:
@@ -87,7 +89,7 @@ class AbstractTool:
 		self.options[key]=value
  
 	# what to do when pen is down to be implemented in subclasses
-	def penDown(self,x,y,pressure=None):
+	def penDown(self,x,y,pressure=None,subx=0,suby=0):
 		pass
  
 	def penMotion(self,x,y,pressure):
@@ -126,7 +128,7 @@ class EyeDropperTool(AbstractTool):
 		self.name="Eye Dropper"
 		self.window=window
 
-	def penDown(self,x,y,pressure=None):
+	def penDown(self,x,y,pressure=None,subx=0,suby=0):
 		if self.options["singlelayer"]==0:
 			color=self.window.getImagePixelColor(x,y)
 		else:
@@ -197,7 +199,7 @@ class DrawingTool(AbstractTool):
 
 		painter.end()
  
-	def penDown(self,x,y,pressure=1):
+	def penDown(self,x,y,pressure=1,subx=0,suby=0):
 		self.layer=self.window.getLayerForKey(self.layerkey)
 		x=int(x)
 		y=int(y)
@@ -611,7 +613,7 @@ class SelectionTool(AbstractTool):
  
 		self.window.view.updateView(refreshregion.boundingRect())
  
-	def penDown(self,x,y,pressure=None):
+	def penDown(self,x,y,pressure=None,subx=0,suby=0):
 		self.startpoint=(x,y)
 		self.lastpoint=(x,y)
  
@@ -693,14 +695,193 @@ class FeatherSelectTool(SelectionTool):
 	def __init__(self,options,window):
 		AbstractTool.__init__(self,options,window)
 
-	def penDown(self,x,y,pressure=None):
+	def penDown(self,x,y,pressure=None,subx=0,suby=0):
 		newpath=getSimilarColorRegion(self.window.image,x,y,self.options['similarity'])
 		self.window.changeSelection(SelectionModTypes.new,newpath)
 
-	def penMotion(self,x,y,pressure=None):
-		pass
-	def penUp(self,x,y,pressure=None):
-		pass
+# paint bucket tool description
+class PaintBucketToolDesc(AbstractToolDesc):
+	def __init__(self):
+		AbstractToolDesc.__init__(self,"Paint Bucket Fill")
+
+	def setDefaultOptions(self):
+		self.options["similarity"]=10
+		self.options["wholeselection"]=1
+
+	def getTool(self,window):
+		tool=PaintBucketTool(self.options,window)
+		tool.name=self.name
+		return tool
+ 
+	def setupTool(self,window):
+		return self.getTool(window)
+
+	def runOptionsDialog(self,parent):
+		dialog=qtgui.QDialog()
+		dialog.ui=Ui_PaintBucketOptionsDialog()
+		dialog.ui.setupUi(dialog)
+ 
+		self.options["similarity"]=10
+		if self.options["wholeselection"]==1:
+			dialog.ui.whole_selection_check.setCheckState(qtcore.CheckState.Checked)
+		else:
+			dialog.ui.whole_selection_check.setCheckState(qtcore.CheckState.Unchecked)
+		dialog.ui.color_threshold_box.setValue(self.options["similarity"])
+ 
+		dialog.exec_()
+
+		if dialog.result():
+			self.options["similarity"]=dialog.ui.color_threshold_box.value()
+			if dialog.ui.whole_selection_check.checkState()==qtcore.CheckState.Unchecked:
+				self.options["wholeselection"]==0
+			else:
+				self.options["wholeselection"]==1
+
+# paint bucket tool
+class PaintBucketTool(SelectionTool):
+	def __init__(self,options,window):
+		AbstractTool.__init__(self,options,window)
+
+	def penDown(self,x,y,pressure=None,subx=0,suby=0):
+		image=qtgui.QImage(self.window.image.size(),self.window.image.format())
+		image.fill(self.window.master.fgcolor.rgb())
+		if self.options['wholeselection']==0:
+			fillpath=getSimilarColorRegion(self.window.image,x,y,self.options['similarity'])
+			if self.window.clippath:
+				fillpath=fillpath.intersected(self.window.clippath)
+			self.window.addRawEventToQueue(self.window.curlayerkey,image,0,0,fillpath)
+		else:
+			self.window.addRawEventToQueue(self.window.curlayerkey,image,0,0,self.window.clippath)
+
+class SketchTool(DrawingTool):
+	def __init__(self,options,window):
+		DrawingTool.__init__(self,options,window)
+		self.lastpressure=-1
+		self.compmode=qtgui.QPainter.CompositionMode_SourceOver
+
+	def updateBrushForPressure(self,pressure):
+		# see if we need to update at all
+		if self.lastpressure==pressure:
+			return
+		self.lastpressure=pressure
+ 
+		self.diameter=int(math.ceil(self.fullsizedbrush.width()*pressure))
+
+		# the scaling algorithim fails here so we need our own method
+		if self.diameter==1:
+			# if the diameter is 1 set the opacity perportinal to the pressure and the blur options
+			alpha=(pressure*self.fullsizedbrush.width())*(1-(self.options['blur']/100.0))
+		
+			self.brushimage=qtgui.QImage(1,1,qtgui.QImage.Format_ARGB32_Premultiplied)
+
+			fgr=self.fgcolor.red()
+			fgg=self.fgcolor.green()
+			fgb=self.fgcolor.blue()
+
+			# set only pixel
+			color=qtgui.qRgba(fgr*alpha,fgg*alpha,fgb*alpha,alpha*255)
+			self.brushimage.setPixel(0,0,color)
+
+			return
+		elif self.diameter==2:
+			# set alpha for the pixels according to the blur option and pressure
+			alpha=(pressure*self.fullsizedbrush.width())/2
+			alpha*=.5
+			alpha+=.5
+			alpha*=1-(self.options["blur"]/100.0)
+		
+			self.brushimage=qtgui.QImage(2,2,qtgui.QImage.Format_ARGB32_Premultiplied)
+
+			fgr=self.fgcolor.red()
+			fgg=self.fgcolor.green()
+			fgb=self.fgcolor.blue()
+
+			# set upper right pixel
+			#color=qtgui.qRgba(fgr,fgg,fgb,255)
+			#self.brushimage.setPixel(0,0,color)
+
+			# set all pixels
+			color=qtgui.qRgba(fgr*alpha,fgg*alpha,fgb*alpha,alpha*255)
+			self.brushimage.setPixel(0,0,color)
+			self.brushimage.setPixel(1,0,color)
+			self.brushimage.setPixel(0,1,color)
+			self.brushimage.setPixel(1,1,color)
+
+			return
+
+		# if we can use the full sized brush, then do it
+		if self.options["pressuresize"]==0 or pressure==1:
+			self.brushimage=self.fullsizedbrush
+			self.diameter=self.options["diameter"]
+			return
+
+		# for a diameter of 3 or more the QT transforms seem to work alright
+		scaletransform=qtgui.QTransform()
+		finaltransform=qtgui.QTransform()
+
+		scaledown=pressure
+		#scaledown=float(self.diameter)/self.fullsizedbrush.width()
+
+		scaletransform=scaletransform.scale(scaledown,scaledown)
+
+		# scale the brush to proper size
+		#self.brushimage=self.fullsizedbrush.transformed(scaletransform,qtcore.Qt.SmoothTransformation)
+ 
+ 		centeroffset=0
+ 		#centeroffset=(1-((self.options["diameter"])%1))/2.0
+		transbrushsize=scaletransform.map(qtcore.QPointF(self.fullsizedbrush.width(),self.fullsizedbrush.height()))
+
+ 		transformoffset=(1-(transbrushsize.x()%1))/2.0
+
+		finaltransform=finaltransform.translate(transformoffset,transformoffset)
+		finaltransform=finaltransform.scale(scaledown,scaledown)
+ 
+ 		newtransupperleft=finaltransform.map(qtcore.QPointF(0,0))
+ 		newtranslowerright=finaltransform.map(qtcore.QPointF(self.fullsizedbrush.width(),self.fullsizedbrush.height()))
+		newtransright=1-(newtranslowerright.x()%1)
+		newtransbottom=1-(newtranslowerright.y()%1)
+		#print "new brush margins:", newtransupperleft.x(), newtransupperleft.y(), newtransright, newtransbottom
+
+		# scale the brush to proper size (alternate method)
+		self.brushimage=qtgui.QImage(self.diameter,self.diameter,qtgui.QImage.Format_ARGB32_Premultiplied)
+		self.brushimage.fill(0)
+		painter=qtgui.QPainter()
+		painter.begin(self.brushimage)
+		painter.setRenderHint(qtgui.QPainter.Antialiasing)
+		painter.setRenderHint(qtgui.QPainter.SmoothPixmapTransform)
+		painter.setRenderHint(qtgui.QPainter.HighQualityAntialiasing)
+		painter.setTransform(finaltransform)
+		painter.drawImage(qtcore.QPointF(centeroffset,centeroffset),self.fullsizedbrush)
+ 
+ 		# debugging, code, uncomment as needed
+		#print "updated brush for pressure:", pressure
+		#printImage(self.brushimage)
+ 
+	def makeFullSizedBrush(self):
+		diameter=self.options["diameter"]
+		radius=diameter/2.0
+		blur=self.options["blur"]
+ 
+		fgr=self.fgcolor.red()
+		fgg=self.fgcolor.green()
+		fgb=self.fgcolor.blue()
+ 
+		center=diameter/2.0
+		self.fullsizedbrush=qtgui.QImage(diameter,diameter,qtgui.QImage.Format_ARGB32_Premultiplied)
+		self.fullsizedbrush.fill(0)
+		for i in range(diameter):
+			for j in range(diameter):
+				# add in .5 to each point so we measure from the center of the pixel
+				distance=math.sqrt(((i+.5-center)**2)+((j+.5-center)**2))
+				if distance < radius:
+					# fade the brush out a little if it is too close to the edge according to the blur percentage
+					fade=(1-(distance/(radius)))/(blur/100.0)
+					if fade > 1:
+						fade=1
+					# need to muliply the color by the alpha becasue it's going into
+					# a premultiplied image
+					curcolor=qtgui.qRgba(fgr*fade,fgg*fade,fgb*fade,fade*255)
+					self.fullsizedbrush.setPixel(i,j,curcolor)
 
 # elipse selection tool
 class ElipseSelectionToolDesc(AbstractToolDesc):
