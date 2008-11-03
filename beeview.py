@@ -137,11 +137,15 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 		self.setCursor(self.window.master.getCurToolDesc().getDownCursor())
 
 		self.pendown=True
+		x=x+subx
+		y=y+suby
 		x,y=self.viewCoordsToImage(x,y)
 		self.window.addPenDownToQueue(x,y,pressure)
 
 	def cursorMoveEvent(self,x,y,pressure=1,subx=0,suby=0):
 		if self.pendown:
+			x=x+subx
+			y=y+suby
 			x,y=self.viewCoordsToImage(x,y)
 			self.window.addPenMotionToQueue(x,y,pressure)
 
