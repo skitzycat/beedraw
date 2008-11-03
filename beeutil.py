@@ -44,7 +44,7 @@ def printPixmapRect(pixmap,rect):
 # in the list, points will be bounded to the area of height and width
 def getPointsPath(x1,y1,x2,y2,step,width,height,p1=1,p2=1):
 	# start with empty path
-	path=[]
+	path=[(x1,y1,p1)]
 
 	lastpoint=(-1,-1)
 
@@ -62,13 +62,13 @@ def getPointsPath(x1,y1,x2,y2,step,width,height,p1=1,p2=1):
 	# calculate intermediate coords
 	intermediate_points=numpy.arange(step,h,step)
 	for point in intermediate_points:
-		newx=int(x1+(delta_x*point/h))
-		newy=int(y1+(delta_y*point/h))
+		newx=x1+(delta_x*point/h)
+		newy=y1+(delta_y*point/h)
 		newp=p1+(delta_p*point/h)
 		# make sure coords fall in widht and height restrictions
 		if newx>=0 and newx<width and newy>=0 and newy<height:
 			# only add point if it was different from previous one
-			if newx!=lastpoint[0] or newy!=lastpoint[1]:
+			if int(newx)!=int(lastpoint[0]) or int(newy)!=int(lastpoint[1]):
 				lastpoint=(newx,newy,newp)
 				path.append(lastpoint)
 

@@ -90,7 +90,7 @@ class AbstractTool:
 		self.options[key]=value
  
 	# what to do when pen is down to be implemented in subclasses
-	def penDown(self,x,y,pressure=None,subx=0,suby=0):
+	def penDown(self,x,y,pressure=None):
 		pass
  
 	def penMotion(self,x,y,pressure):
@@ -129,7 +129,7 @@ class EyeDropperTool(AbstractTool):
 		self.name="Eye Dropper"
 		self.window=window
 
-	def penDown(self,x,y,pressure=None,subx=0,suby=0):
+	def penDown(self,x,y,pressure=None):
 		if self.options["singlelayer"]==0:
 			color=self.window.getImagePixelColor(x,y)
 		else:
@@ -200,20 +200,20 @@ class DrawingTool(AbstractTool):
 
 		painter.end()
  
-	def penDown(self,x,y,pressure=1,subx=0,suby=0):
+	def penDown(self,x,y,pressure=1):
 		self.layer=self.window.getLayerForKey(self.layerkey)
 		self.oldlayerimage=qtgui.QImage(self.layer.image)
 		self.pointshistory=[(x,y,pressure)]
-		self.lastpoint=(int(x),int(y))
+		self.lastpoint=(x,y)
 		self.makeFullSizedBrush()
-		self.updateBrushForPressure(pressure)
-		self.layer.compositeFromCenter(self.brushimage,x,y,self.compmode,self.clippath)
+		self.updateBrushForPressure(pressure,x%1,y%1)
+		self.layer.compositeFromCenter(self.brushimage,int(x),int(y),self.compmode,self.clippath)
  
 	def penMotion(self,x,y,pressure=None,subpixelx=0,subpixely=0):
 		# if it hasn't moved just do nothing
-		if int(x)==self.lastpoint[0] and int(y)==self.lastpoint[1]:
+		if int(x)==int(self.lastpoint[0]) and int(y)==int(self.lastpoint[1]):
 			return
- 
+
 		self.pointshistory.append((x,y,pressure))
  
 		# get size of layer
@@ -227,8 +227,9 @@ class DrawingTool(AbstractTool):
 		if len(path)==0:
 			return
 
-		self.updateBrushForPressure(pressure)
-		radius=int(math.ceil(self.diameter/2.0))
+		self.updateBrushForPressure(pressure,x%1,y%1)
+		#radius=int(math.ceil(self.diameter/2.0))
+		radius=int(math.ceil(self.brushimage.width()/2.0))
 
 		# calculate the bounding rect for this operation
 		left=min(path[0][0],path[-1][0])-radius
@@ -255,15 +256,16 @@ class DrawingTool(AbstractTool):
 		#painter.setRenderHint(qtgui.QPainter.HighQualityAntialiasing)
  
 		for point in path:
-			self.updateBrushForPressure(point[2])
-			lineimgpoint=(point[0]-left-radius,point[1]-top-radius)
+			#print "drawing on point:", point
+			self.updateBrushForPressure(point[2],point[0]%1,point[1]%1)
+			lineimgpoint=(int(point[0])-left-radius,int(point[1])-top-radius)
 			painter.drawImage(lineimgpoint[0],lineimgpoint[1],self.brushimage)
  
 		painter.end()
  
 		self.layer.compositeFromCorner(lineimage,left,top,self.compmode,self.clippath)
  
-		self.lastpoint=(int(path[-1][0]),int(path[-1][1]))
+		self.lastpoint=(path[-1][0],path[-1][1])
  
 	# record this event in the history
 	def penUp(self,x=None,y=None,source=0):
@@ -610,7 +612,7 @@ class SelectionTool(AbstractTool):
  
 		self.window.view.updateView(refreshregion.boundingRect())
  
-	def penDown(self,x,y,pressure=None,subx=0,suby=0):
+	def penDown(self,x,y,pressure=None):
 		self.startpoint=(x,y)
 		self.lastpoint=(x,y)
  
@@ -692,7 +694,7 @@ class FeatherSelectTool(SelectionTool):
 	def __init__(self,options,window):
 		AbstractTool.__init__(self,options,window)
 
-	def penDown(self,x,y,pressure=None,subx=0,suby=0):
+	def penDown(self,x,y,pressure=None):
 		newpath=getSimilarColorRegion(self.window.image,x,y,self.options['similarity'])
 		self.window.changeSelection(SelectionModTypes.new,newpath)
 
@@ -739,7 +741,7 @@ class PaintBucketTool(SelectionTool):
 	def __init__(self,options,window):
 		AbstractTool.__init__(self,options,window)
 
-	def penDown(self,x,y,pressure=None,subx=0,suby=0):
+	def penDown(self,x,y,pressure=None):
 		image=qtgui.QImage(self.window.image.size(),self.window.image.format())
 		image.fill(self.window.master.fgcolor.rgb())
 		if self.options['wholeselection']==0:
