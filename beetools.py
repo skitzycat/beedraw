@@ -828,16 +828,18 @@ class SketchTool(DrawingTool):
 		# try to find exact or closes brushes to scale
 		abovebrush, belowbrush = self.findScaledBrushes(scale)
 
-		# didn't get an exact match so interpolate and it's between two others
+		# didn't get an exact match so interpolate between two others
 		if belowbrush:
+			# shift both of the nearby brushes
 			scaledaboveimage=self.scaleShiftImage(abovebrush,scale,subpixelx,subpixely)
 			scaledbelowimage=self.scaleShiftImage(belowbrush,scale,subpixelx,subpixely)
 
 			t = (scale-belowbrush[1])/(abovebrush[1]-belowbrush[1])
 
+			# interpolate between the results, but trust the one that was closer more
 			outputimage = self.interpolate(scaledbelowimage,scaledaboveimage, t)
 
-		# got an exact match
+		# got an exact match, so just shift it according to sub-pixels
 		elif scale==abovebrush[1]:
 			outputimage=self.scaleShiftImage(abovebrush, scale, subpixelx, subpixely)
 
@@ -846,11 +848,9 @@ class SketchTool(DrawingTool):
 			s = scale/abovebrush[1]
 			outputimage = self.scaleSinglePixelImage(s, abovebrush[0].pixel(0,0), subpixelx, subpixely)
 
-		outputwidth=outputimage.width()
-		outputheight=outputimage.height()
-
 		self.brushimage=outputimage
 
+	# do special case calculations for brush of single pixel size
 	def scaleSinglePixelImage(self,scale,pixel,subpixelx,subpixely):
 		srcwidth=1
 		srcheight=1
@@ -903,27 +903,20 @@ class SketchTool(DrawingTool):
 				green=int(green * scale * scale + .5)
 				blue=int(blue * scale * scale + .5)
 
-				if red < 0:
-					red=0
-				elif red > 255:
+				if red > 255:
 					red=255
-				if green < 0:
-					green=0
-				elif green > 255:
+				if green > 255:
 					green=255
-				if blue < 0:
-					blue=0
-				elif blue > 255:
+				if blue > 255:
 					blue=255
-				if alpha < 0:
-					alpha=0
-				elif alpha > 255:
+				if alpha > 255:
 					alpha=255
 
 				outputimage.setPixel(x,y,qtgui.qRgba(red,green,blue,alpha))
 
 		return outputimage
 
+	# interpolate between two images that are the exact same size
 	def interpolate(self,image1,image2,t):
 		if not ( image1.width() == image2.width() and image1.width() == image2.width() ):
 			print "Error: interploate function passed non compatable images"
@@ -948,27 +941,20 @@ class SketchTool(DrawingTool):
 				blue = int((1-t) * qtgui.qBlue(image1pixel) + t * qtgui.qBlue(image1pixel) + .5 )
 				alpha = int((1-t) * qtgui.qAlpha(image1pixel) + t * qtgui.qAlpha(image1pixel) + .5 )
 
-				if red < 0:
-					red=0
-				elif red > 255:
+				if red > 255:
 					red=255
-				if green < 0:
-					green=0
-				elif green > 255:
+				if green > 255:
 					green=255
-				if blue < 0:
-					blue=0
-				elif blue > 255:
+				if blue > 255:
 					blue=255
-				if alpha < 0:
-					alpha=0
-				elif alpha > 255:
+				if alpha > 255:
 					alpha=255
 
 				outputimage.setPixel(x,y,qtgui.qRgba(red,green,blue,alpha))
 
 		return outputimage
 
+	# return single brush that matches scale passed or two brushes that are nearest to that scale
 	def findScaledBrushes(self,scale):
 		current=None
 		for i in range(len(self.scaledbrushes)):
@@ -983,6 +969,7 @@ class SketchTool(DrawingTool):
 		return (current,None)
 
 
+	# make full sized brush and list of pre-scaled brushes
 	def makeFullSizedBrush(self):
 		diameter=self.options["maxdiameter"]
 		self.diameter=self.options["maxdiameter"]
@@ -1038,6 +1025,7 @@ class SketchTool(DrawingTool):
 
 		self.scaledbrushes.append((scaledImage,xscale,yscale))
 
+	# use subpixel adjustments to shift image and scale it too if needed
 	def scaleShiftImage(self,srcbrush,scale,subpixelx,subpixely):
 		# add one pixel for subpixel adjustments
 		dstwidth=math.ceil(scale*self.fullsizedbrush.width())+1
@@ -1114,21 +1102,13 @@ class SketchTool(DrawingTool):
 						+ (1-a) * b * qtgui.qAlpha(topright)
 						+ (1-a) * (1-b) * qtgui.qAlpha(bottomright) + .5 )
 
-				if red < 0:
-					red=0
-				elif red > 255:
+				if red > 255:
 					red=255
-				if green < 0:
-					green=0
-				elif green > 255:
+				if green > 255:
 					green=255
-				if blue < 0:
-					blue=0
-				elif blue > 255:
+				if blue > 255:
 					blue=255
-				if alpha < 0:
-					alpha=0
-				elif alpha > 255:
+				if alpha > 255:
 					alpha=255
 
 				dstimage.setPixel(dstx,dsty,qtgui.qRgba(red,green,blue,alpha))
