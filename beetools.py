@@ -201,6 +201,7 @@ class DrawingTool(AbstractTool):
 		painter.end()
  
 	def penDown(self,x,y,pressure=1):
+		#print "pen down point:", x, y
 		self.layer=self.window.getLayerForKey(self.layerkey)
 		self.oldlayerimage=qtgui.QImage(self.layer.image)
 		self.pointshistory=[(x,y,pressure)]
@@ -209,7 +210,8 @@ class DrawingTool(AbstractTool):
 		self.updateBrushForPressure(pressure,x%1,y%1)
 		self.layer.compositeFromCenter(self.brushimage,int(x),int(y),self.compmode,self.clippath)
  
-	def penMotion(self,x,y,pressure=None,subpixelx=0,subpixely=0):
+	def penMotion(self,x,y,pressure):
+		#print "pen motion point:", x, y
 		# if it hasn't moved just do nothing
 		if int(x)==int(self.lastpoint[0]) and int(y)==int(self.lastpoint[1]):
 			return
@@ -232,10 +234,10 @@ class DrawingTool(AbstractTool):
 		radius=int(math.ceil(self.brushimage.width()/2.0))
 
 		# calculate the bounding rect for this operation
-		left=min(path[0][0],path[-1][0])-radius
-		top=min(path[0][1],path[-1][1])-radius
-		right=max(path[0][0],path[-1][0])+radius
-		bottom=max(path[0][1],path[-1][1])+radius
+		left=int(min(path[0][0],path[-1][0])-radius)
+		top=int(min(path[0][1],path[-1][1])-radius)
+		right=int(max(path[0][0],path[-1][0])+radius)
+		bottom=int(max(path[0][1],path[-1][1])+radius)
  
 		left=max(0,left)
 		top=max(0,top)
@@ -613,10 +615,14 @@ class SelectionTool(AbstractTool):
 		self.window.view.updateView(refreshregion.boundingRect())
  
 	def penDown(self,x,y,pressure=None):
+		x=int(x)
+		y=int(y)
 		self.startpoint=(x,y)
 		self.lastpoint=(x,y)
  
 	def penUp(self,x,y,source=0):
+		x=int(x)
+		y=int(y)
 		# just for simplicty the dirty region will be the old selection unioned
 		# with the current overlay
 		if len(self.window.selection)>0:
@@ -652,7 +658,9 @@ class SelectionTool(AbstractTool):
 		self.window.view.updateView(dirtyregion.boundingRect())
  
 	# set overlay to display area that would be selected if user lifted up button
-	def penMotion(self,x,y,pressure=None):
+	def penMotion(self,x,y,pressure):
+		x=int(x)
+		y=int(y)
 		if self.startpoint[0]==x or self.startpoint[1]==y:
 			self.window.cursoroverlay=None
 			return
@@ -737,7 +745,7 @@ class PaintBucketToolDesc(AbstractToolDesc):
 				self.options["wholeselection"]==1
 
 # paint bucket tool
-class PaintBucketTool(SelectionTool):
+class PaintBucketTool(AbstractTool):
 	def __init__(self,options,window):
 		AbstractTool.__init__(self,options,window)
 
@@ -812,8 +820,9 @@ class SketchTool(DrawingTool):
 		#unroundedscale=(((maxsize-minsize)/maxsize)*pressure) + ((minsize/maxsize) * pressure)
 		#print "unrounded scale:", unroundedscale
 		unroundedscale=pressure
-		iscale=int(unroundedscale*BRUSH_SIZE_GRANULARITY)
-		scale=float(iscale)/BRUSH_SIZE_GRANULARITY
+		#iscale=int(unroundedscale*BRUSH_SIZE_GRANULARITY)
+		#scale=float(iscale)/BRUSH_SIZE_GRANULARITY
+		scale=unroundedscale
 
 		return scale
 
@@ -852,6 +861,7 @@ class SketchTool(DrawingTool):
 
 	# do special case calculations for brush of single pixel size
 	def scaleSinglePixelImage(self,scale,pixel,subpixelx,subpixely):
+		#print "calling scaleSinglePixelImage with subpixels:",subpixelx,subpixely
 		srcwidth=1
 		srcheight=1
 		dstwidth=2
@@ -882,19 +892,19 @@ class SketchTool(DrawingTool):
 					bottomright=qtgui.qRgba(0,0,0,0)
 
 				red=(a*b*qtgui.qRed(topleft)
-				    + a * (1-b) * qtgui.qRed(bottomleft)
+						+ a * (1-b) * qtgui.qRed(bottomleft)
 						+ (1-a) * b * qtgui.qRed(topright)
 						+ (1-a) * (1-b) * qtgui.qRed(bottomright) + .5 )
 				green=(a*b*qtgui.qGreen(topleft)
-				    + a * (1-b) * qtgui.qGreen(bottomleft)
+						+ a * (1-b) * qtgui.qGreen(bottomleft)
 						+ (1-a) * b * qtgui.qGreen(topright)
 						+ (1-a) * (1-b) * qtgui.qGreen(bottomright) + .5 )
 				blue=(a*b*qtgui.qBlue(topleft)
-				    + a * (1-b) * qtgui.qBlue(bottomleft)
+						+ a * (1-b) * qtgui.qBlue(bottomleft)
 						+ (1-a) * b * qtgui.qBlue(topright)
 						+ (1-a) * (1-b) * qtgui.qBlue(bottomright) + .5 )
 				alpha=(a*b*qtgui.qAlpha(topleft)
-				    + a * (1-b) * qtgui.qAlpha(bottomleft)
+						+ a * (1-b) * qtgui.qAlpha(bottomleft)
 						+ (1-a) * b * qtgui.qAlpha(topright)
 						+ (1-a) * (1-b) * qtgui.qAlpha(bottomright) + .5 )
 
@@ -1027,6 +1037,7 @@ class SketchTool(DrawingTool):
 
 	# use subpixel adjustments to shift image and scale it too if needed
 	def scaleShiftImage(self,srcbrush,scale,subpixelx,subpixely):
+		#print "scaleShiftImage called with subpixels:", subpixelx, subpixely
 		# add one pixel for subpixel adjustments
 		dstwidth=math.ceil(scale*self.fullsizedbrush.width())+1
 		dstheight=math.ceil(scale*self.fullsizedbrush.height())+1
@@ -1086,19 +1097,19 @@ class SketchTool(DrawingTool):
 				b=1-yinterp
 
 				red=(a*b*qtgui.qRed(topleft)
-				    + a * (1-b) * qtgui.qRed(bottomleft)
+						+ a * (1-b) * qtgui.qRed(bottomleft)
 						+ (1-a) * b * qtgui.qRed(topright)
 						+ (1-a) * (1-b) * qtgui.qRed(bottomright) + .5 )
 				green=(a*b*qtgui.qGreen(topleft)
-				    + a * (1-b) * qtgui.qGreen(bottomleft)
+						+ a * (1-b) * qtgui.qGreen(bottomleft)
 						+ (1-a) * b * qtgui.qGreen(topright)
 						+ (1-a) * (1-b) *qtgui.qGreen(bottomright) + .5 )
 				blue=(a*b*qtgui.qBlue(topleft)
-				    + a * (1-b) * qtgui.qBlue(bottomleft)
+						+ a * (1-b) * qtgui.qBlue(bottomleft)
 						+ (1-a) * b * qtgui.qBlue(topright)
 						+ (1-a) * (1-b) * qtgui.qBlue(bottomright) + .5 )
 				alpha=(a*b*qtgui.qAlpha(topleft)
-				    + a * (1-b) * qtgui.qAlpha(bottomleft)
+						+ a * (1-b) * qtgui.qAlpha(bottomleft)
 						+ (1-a) * b * qtgui.qAlpha(topright)
 						+ (1-a) * (1-b) * qtgui.qAlpha(bottomright) + .5 )
 
@@ -1130,3 +1141,9 @@ class SketchTool(DrawingTool):
 		scaledimage=brushimage.scaled(width,height,qtcore.Qt.IgnoreAspectRatio,qtcore.Qt.SmoothTransformation)
 
 		return scaledimage
+
+	def penDown(self,x,y,pressure=1):
+		DrawingTool.penDown(self,x+.5,y+.5,pressure)
+ 
+	def penMotion(self,x,y,pressure):
+		DrawingTool.penMotion(self,x+.5,y+.5,pressure)
