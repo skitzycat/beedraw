@@ -213,9 +213,10 @@ class DrawingTool(AbstractTool):
 	def penMotion(self,x,y,pressure):
 		#print "pen motion point:", x, y
 		# if it hasn't moved just do nothing
-		if int(x)==int(self.lastpoint[0]) and int(y)==int(self.lastpoint[1]):
+		if distance2d(self.lastpoint[0],self.lastpoint[1],x,y) < self.options["step"]:
 			return
 
+		#print "starting new line"
 		self.pointshistory.append((x,y,pressure))
  
 		# get size of layer
@@ -234,10 +235,10 @@ class DrawingTool(AbstractTool):
 		radius=int(math.ceil(self.brushimage.width()/2.0))
 
 		# calculate the bounding rect for this operation
-		left=int(min(path[0][0],path[-1][0])-radius)
-		top=int(min(path[0][1],path[-1][1])-radius)
-		right=int(max(path[0][0],path[-1][0])+radius)
-		bottom=int(max(path[0][1],path[-1][1])+radius)
+		left=int(min(path[0][0],path[-1][0])-radius-.5)
+		top=int(min(path[0][1],path[-1][1])-radius-.5)
+		right=int(max(path[0][0],path[-1][0])+radius+.5)
+		bottom=int(max(path[0][1],path[-1][1])+radius+.5)
  
 		left=max(0,left)
 		top=max(0,top)
@@ -258,7 +259,7 @@ class DrawingTool(AbstractTool):
 		#painter.setRenderHint(qtgui.QPainter.HighQualityAntialiasing)
  
 		for point in path:
-			#print "drawing on point:", point
+			#print "stamping at point:", point[0], point[1]
 			self.updateBrushForPressure(point[2],point[0]%1,point[1]%1)
 			lineimgpoint=(int(point[0])-left-radius,int(point[1])-top-radius)
 			painter.drawImage(lineimgpoint[0],lineimgpoint[1],self.brushimage)

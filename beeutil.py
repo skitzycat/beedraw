@@ -42,11 +42,11 @@ def printPixmapRect(pixmap,rect):
 # coord1 will not be included in the list becuase it should have already been
 # drawn to as part of the last command, but coord2 will always be the last item
 # in the list, points will be bounded to the area of height and width
-def getPointsPath(x1,y1,x2,y2,step,width,height,p1=1,p2=1):
-	# start with empty path
-	path=[(x1,y1,p1)]
+def getPointsPath(x1,y1,x2,y2,linestep,width,height,p1=1,p2=1):
+	# start with a blank list
+	path=[]
 
-	lastpoint=(-1,-1)
+	lastpoint=(x1,y1)
 
 	# calculate straight line distance between coords
 	delta_x=x2-x1
@@ -54,26 +54,21 @@ def getPointsPath(x1,y1,x2,y2,step,width,height,p1=1,p2=1):
 	delta_p=p2-p1
 	h=math.hypot(abs(delta_x),abs(delta_y))
 
-	# if distance between is too small, just return coord 2
-	if h < step*2:
-		path.append((x2,y2,p2))
-		return path
-
 	# calculate intermediate coords
-	intermediate_points=numpy.arange(step,h,step)
+	intermediate_points=numpy.arange(linestep,h,linestep)
 	for point in intermediate_points:
 		newx=x1+(delta_x*point/h)
 		newy=y1+(delta_y*point/h)
 		newp=p1+(delta_p*point/h)
 		# make sure coords fall in widht and height restrictions
 		if newx>=0 and newx<width and newy>=0 and newy<height:
+			# make sure we don't skip a point
+			#if step==0 int(newx)!=int(lastpoint[0]) and int(newy)!=int(lastpoint[1]):
+			#	print "skipped from point:", lastpoint, "to:", newx,newy
 			# only add point if it was different from previous one
-			if int(newx)!=int(lastpoint[0]) or int(newy)!=int(lastpoint[1]):
-				lastpoint=(newx,newy,newp)
-				path.append(lastpoint)
-
-	if x2>=0 and x2<width and y2>=0 and y2<height:
-		path.append((x2,y2,p2))
+			#if int(newx)!=int(lastpoint[0]) or int(newy)!=int(lastpoint[1]):
+			lastpoint=(newx,newy,newp)
+			path.append(lastpoint)
 
 	return path
 
@@ -278,3 +273,6 @@ def getSimilarColorRegion(image,x,y,similarity):
 
 	#print "done finding selection area"
 	return retpath
+
+def distance2d(x1,y1,x2,y2):
+	return math.sqrt(((x1-x2)*(x1-x2))+(y1-y2)*(y1-y2))

@@ -144,9 +144,11 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 
 	def cursorMoveEvent(self,x,y,pressure=1,subx=0,suby=0):
 		if self.pendown:
+			#print "cursorMoveEvent at:",x,y,subx,suby
 			x=x+subx
 			y=y+suby
 			x,y=self.viewCoordsToImage(x,y)
+			#print "translates to image coords:",x,y
 			self.window.addPenMotionToQueue(x,y,pressure)
 
 	def cursorReleaseEvent(self,x,y,pressure=1,subx=0,suby=0):
@@ -177,8 +179,9 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 		elif y>visible.y()+visible.height():
 			y=visible.y()+visible.height()
 
-		x=x/self.window.zoom
-		y=y/self.window.zoom
+		if self.window.zoom!=1:
+			x=x/self.window.zoom
+			y=y/self.window.zoom
 
 		return x,y
 
