@@ -167,6 +167,7 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 			self.window.penEnter()
 
 	def viewCoordsToImage(self,x,y):
+		#print "translating coords:",x,y
 		visible=self.visibleRegion().boundingRect()
 
 		if x<visible.x():
@@ -182,6 +183,8 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 		if self.window.zoom!=1:
 			x=x/self.window.zoom
 			y=y/self.window.zoom
+
+		#print "to coords:",x,y
 
 		return x,y
 

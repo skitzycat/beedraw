@@ -210,10 +210,16 @@ class DrawingTool(AbstractTool):
 		self.updateBrushForPressure(pressure,x%1,y%1)
 		self.layer.compositeFromCenter(self.brushimage,int(x),int(y),self.compmode,self.clippath)
  
+	# determine if it's moved far enough that we care
+	def movedFarEnough(self,x,y):
+		if int(x)==int(lastpoint[0]) and int(y)==int(lastpoint[1]):
+			return False
+		return True
+
 	def penMotion(self,x,y,pressure):
 		#print "pen motion point:", x, y
 		# if it hasn't moved just do nothing
-		if distance2d(self.lastpoint[0],self.lastpoint[1],x,y) < self.options["step"]:
+		if not self.movedFarEnough(x,y):
 			return
 
 		#print "starting new line"
@@ -813,6 +819,12 @@ class SketchTool(DrawingTool):
 		self.compmode=qtgui.QPainter.CompositionMode_SourceOver
 		self.scaledbrushes=[]
 
+
+	def movedFarEnough(self,x,y):
+		if distance2d(self.lastpoint[0],self.lastpoint[1],x,y) < self.options["step"]:
+			return False
+		return True
+
 	# return how much to scale down the brush for the current pressure
 	def scaleForPressure(self,pressure):
 		minsize=0
@@ -849,14 +861,14 @@ class SketchTool(DrawingTool):
 			# interpolate between the results, but trust the one that was closer more
 			outputimage = self.interpolate(scaledbelowimage,scaledaboveimage, t)
 
-		# got an exact match, so just shift it according to sub-pixels
-		elif scale==abovebrush[1]:
-			outputimage=self.scaleShiftImage(abovebrush, scale, subpixelx, subpixely)
-
 		# we were below the lowest sized brush
-		else:
+		elif abovebrush[1]!=scale:
 			s = scale/abovebrush[1]
 			outputimage = self.scaleSinglePixelImage(s, abovebrush[0].pixel(0,0), subpixelx, subpixely)
+
+		# got an exact match, so just shift it according to sub-pixels
+		else:
+			outputimage=self.scaleShiftImage(abovebrush, scale, subpixelx, subpixely)
 
 		self.brushimage=outputimage
 
@@ -984,6 +996,9 @@ class SketchTool(DrawingTool):
 	def makeFullSizedBrush(self):
 		diameter=self.options["maxdiameter"]
 		self.diameter=self.options["maxdiameter"]
+
+		# round up to the nearest even number
+		diameter=diameter+(diameter%2)
 		radius=diameter/2.0
 		blur=self.options["blur"]
  
@@ -991,13 +1006,12 @@ class SketchTool(DrawingTool):
 		fgg=self.fgcolor.green()
 		fgb=self.fgcolor.blue()
  
-		center=diameter/2.0
 		self.fullsizedbrush=qtgui.QImage(diameter,diameter,qtgui.QImage.Format_ARGB32_Premultiplied)
 		self.fullsizedbrush.fill(0)
 		for i in range(diameter):
 			for j in range(diameter):
 				# add in .5 to each point so we measure from the center of the pixel
-				distance=math.sqrt(((i+.5-center)**2)+((j+.5-center)**2))
+				distance=math.sqrt(((i+.5-radius)**2)+((j+.5-radius)**2))
 				if distance < radius:
 					# fade the brush out a little if it is too close to the edge according to the blur percentage
 					fade=(1-(distance/(radius)))/(blur/100.0)
@@ -1094,8 +1108,8 @@ class SketchTool(DrawingTool):
 				else:
 					bottomright = qtgui.qRgba(0,0,0,0)
 
-				a=1-xinterp
-				b=1-yinterp
+				a=1.-xinterp
+				b=1.-yinterp
 
 				red=(a*b*qtgui.qRed(topleft)
 						+ a * (1-b) * qtgui.qRed(bottomleft)
@@ -1142,9 +1156,3 @@ class SketchTool(DrawingTool):
 		scaledimage=brushimage.scaled(width,height,qtcore.Qt.IgnoreAspectRatio,qtcore.Qt.SmoothTransformation)
 
 		return scaledimage
-
-	def penDown(self,x,y,pressure=1):
-		DrawingTool.penDown(self,x+.5,y+.5,pressure)
- 
-	def penMotion(self,x,y,pressure):
-		DrawingTool.penMotion(self,x+.5,y+.5,pressure)
