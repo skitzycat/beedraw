@@ -212,7 +212,7 @@ class DrawingTool(AbstractTool):
  
 	# determine if it's moved far enough that we care
 	def movedFarEnough(self,x,y):
-		if int(x)==int(lastpoint[0]) and int(y)==int(lastpoint[1]):
+		if int(x)==int(self.lastpoint[0]) and int(y)==int(self.lastpoint[1]):
 			return False
 		return True
 
