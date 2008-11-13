@@ -840,9 +840,6 @@ class SketchTool(DrawingTool):
 		return scale
 
 	def updateBrushForPressure(self,pressure,subpixelx=0,subpixely=0):
-		# see if we need to update at all
-		if self.lastpressure==pressure:
-			return
 		self.lastpressure=pressure
 
 		scale=self.scaleForPressure(pressure)
