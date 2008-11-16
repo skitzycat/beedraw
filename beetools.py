@@ -201,7 +201,7 @@ class DrawingTool(AbstractTool):
 		painter.end()
  
 	def penDown(self,x,y,pressure=1):
-		#print "pen down point:", x, y
+		print "pen down point:", x, y
 		self.layer=self.window.getLayerForKey(self.layerkey)
 		self.oldlayerimage=qtgui.QImage(self.layer.image)
 		self.pointshistory=[(x,y,pressure)]
@@ -840,6 +840,7 @@ class SketchTool(DrawingTool):
 		return scale
 
 	def updateBrushForPressure(self,pressure,subpixelx=0,subpixely=0):
+		print "updating brush for pressure/subpixels:", pressure, subpixelx, subpixely
 		self.lastpressure=pressure
 
 		scale=self.scaleForPressure(pressure)
@@ -868,10 +869,11 @@ class SketchTool(DrawingTool):
 			outputimage=self.scaleShiftImage(abovebrush, scale, subpixelx, subpixely)
 
 		self.brushimage=outputimage
+		printImage(outputimage)
 
 	# do special case calculations for brush of single pixel size
 	def scaleSinglePixelImage(self,scale,pixel,subpixelx,subpixely):
-		#print "calling scaleSinglePixelImage with subpixels:",subpixelx,subpixely
+		print "calling scaleSinglePixelImage with subpixels:",subpixelx,subpixely
 		srcwidth=1
 		srcheight=1
 		dstwidth=2
@@ -879,8 +881,8 @@ class SketchTool(DrawingTool):
 
 		outputimage=qtgui.QImage(dstwidth,dstheight,qtgui.QImage.Format_ARGB32_Premultiplied)
 
-		a = subpixelx
-		b = subpixely
+		a = 1.-subpixelx
+		b = 1.-subpixely
  
  		for y in range(dstheight):
 			for x in range(dstwidth):
@@ -994,8 +996,6 @@ class SketchTool(DrawingTool):
 		diameter=self.options["maxdiameter"]
 		self.diameter=self.options["maxdiameter"]
 
-		# round up to the nearest even number
-		diameter=diameter+(diameter%2)
 		radius=diameter/2.0
 		blur=self.options["blur"]
  
@@ -1049,7 +1049,7 @@ class SketchTool(DrawingTool):
 
 	# use subpixel adjustments to shift image and scale it too if needed
 	def scaleShiftImage(self,srcbrush,scale,subpixelx,subpixely):
-		#print "scaleShiftImage called with subpixels:", subpixelx, subpixely
+		print "scaleShiftImage called with subpixels:", subpixelx, subpixely
 		# add one pixel for subpixel adjustments
 		dstwidth=math.ceil(scale*self.fullsizedbrush.width())+1
 		dstheight=math.ceil(scale*self.fullsizedbrush.height())+1
@@ -1066,19 +1066,24 @@ class SketchTool(DrawingTool):
 
 		for dsty in range(int(dstheight)):
 			for dstx in range(int(dstwidth)):
+				# to translate from destination to source we do several calculations:
+				#   subtract the subpixel ammount
+				#   add 1/2 so we are sampling the center of the destination pixel
+				#   mulitply by the scale difference
 				srcx = (dstx - subpixelx + .5) * xscale
 				srcy = (dsty - subpixely + .5) * yscale
 
+				# shift by half a pixel so we are sampling center of source pixel
 				srcx -= .5
 				srcy -= .5
 
-				leftx = int(srcx)
+				leftx = math.floor(srcx)
 				if srcx < 0:
 					leftx -= 1
 
 				xinterp = srcx - leftx
 
-				topy = int(srcy)
+				topy = math.floor(srcy)
 
 				if srcy < 0:
 					topy -= 1
