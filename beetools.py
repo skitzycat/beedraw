@@ -208,6 +208,17 @@ class DrawingTool(AbstractTool):
 		self.lastpoint=(x,y)
 		self.makeFullSizedBrush()
 		self.updateBrushForPressure(pressure,x%1,y%1)
+
+		if self.brushimage.width()%2==0:
+			x=round(x)
+		else:
+			x=math.floor(x)
+
+		if self.brushimage.height()%2==0:
+			y=round(y)
+		else:
+			y=math.floor(y)
+
 		self.layer.compositeFromCenter(self.brushimage,int(x),int(y),self.compmode,self.clippath)
  
 	# determine if it's moved far enough that we care
@@ -267,7 +278,8 @@ class DrawingTool(AbstractTool):
 		for point in path:
 			#print "stamping at point:", point[0], point[1]
 			self.updateBrushForPressure(point[2],point[0]%1,point[1]%1)
-			lineimgpoint=(int(point[0])-left-radius,int(point[1])-top-radius)
+
+			lineimgpoint=(round(point[0])-left-radius,round(point[1])-top-radius)
 			painter.drawImage(lineimgpoint[0],lineimgpoint[1],self.brushimage)
  
 		painter.end()
@@ -788,6 +800,8 @@ class SketchToolDesc(PencilToolDesc):
 		self.options["pressuresize"]=1
 		self.options["blur"]=30
 		self.options["pressurebalance"]=100
+		self.options["fade vertical"]=2
+		self.options["fade horizontal"]=2
  
 	def getTool(self,window):
 		tool=SketchTool(self.options,window)
@@ -841,7 +855,6 @@ class SketchTool(DrawingTool):
 
 	def updateBrushForPressure(self,pressure,subpixelx=0,subpixely=0):
 		print "updating brush for pressure/subpixels:", pressure, subpixelx, subpixely
-		self.lastpressure=pressure
 
 		scale=self.scaleForPressure(pressure)
 
@@ -859,8 +872,8 @@ class SketchTool(DrawingTool):
 			# interpolate between the results, but trust the one that was closer more
 			outputimage = self.interpolate(scaledbelowimage,scaledaboveimage, t)
 
-		# we were below the lowest sized brush
-		elif abovebrush[1]!=scale:
+		# we were below the lowest sized brush or exactly at 1
+		elif abovebrush[1]!=scale or (abovebrush[0].width()==1 and abovebrush[0].height()==1):
 			s = scale/abovebrush[1]
 			outputimage = self.scaleSinglePixelImage(s, abovebrush[0].pixel(0,0), subpixelx, subpixely)
 
@@ -869,7 +882,6 @@ class SketchTool(DrawingTool):
 			outputimage=self.scaleShiftImage(abovebrush, scale, subpixelx, subpixely)
 
 		self.brushimage=outputimage
-		printImage(outputimage)
 
 	# do special case calculations for brush of single pixel size
 	def scaleSinglePixelImage(self,scale,pixel,subpixelx,subpixely):
@@ -881,8 +893,14 @@ class SketchTool(DrawingTool):
 
 		outputimage=qtgui.QImage(dstwidth,dstheight,qtgui.QImage.Format_ARGB32_Premultiplied)
 
-		a = 1.-subpixelx
-		b = 1.-subpixely
+		a = subpixelx-.5
+		b = subpixely-.5
+
+		if a<0:
+			a=1.+a
+
+		if b<0:
+			b=1.+b
  
  		for y in range(dstheight):
 			for x in range(dstwidth):
@@ -993,59 +1011,102 @@ class SketchTool(DrawingTool):
 
 	# make full sized brush and list of pre-scaled brushes
 	def makeFullSizedBrush(self):
-		diameter=self.options["maxdiameter"]
-		self.diameter=self.options["maxdiameter"]
+		shape=BrushShapes.ellipse
 
-		radius=diameter/2.0
-		blur=self.options["blur"]
- 
-		fgr=self.fgcolor.red()
-		fgg=self.fgcolor.green()
-		fgb=self.fgcolor.blue()
- 
-		self.fullsizedbrush=qtgui.QImage(diameter,diameter,qtgui.QImage.Format_ARGB32_Premultiplied)
-		self.fullsizedbrush.fill(0)
-		for i in range(diameter):
-			for j in range(diameter):
-				# add in .5 to each point so we measure from the center of the pixel
-				distance=math.sqrt(((i+.5-radius)**2)+((j+.5-radius)**2))
-				if distance < radius:
-					# fade the brush out a little if it is too close to the edge according to the blur percentage
-					fade=(1-(distance/(radius)))/(blur/100.0)
-					if fade > 1:
-						fade=1
-					# need to muliply the color by the alpha becasue it's going into
-					# a premultiplied image
-					curcolor=qtgui.qRgba(fgr*fade,fgg*fade,fgb*fade,fade*255)
-					self.fullsizedbrush.setPixel(i,j,curcolor)
- 
-		self.brushimage=self.fullsizedbrush
+		# only support one brush shape right now
+		if shape==BrushShapes.ellipse:
+			self.makeEllipseBrush()
 
- 		# construct a series of brushes where each one's dimensions
-		# are half the size of the previous one
-		width=diameter
-		height=diameter
+		self.makeScaledBrushes()
 
-		scaledImage=self.fullsizedbrush
+	# make list of pre-scaled brushes
+	def makeScaledBrushes(self):
+		self.scaledbrushes=[]
 
-		while width>1 and height>1:
-			scaledImage=self.scaleImage(scaledImage,width,height)
+		width=self.fullsizedbrush.width() * MAXIMUM_SCALE
+		height=self.fullsizedbrush.height() * MAXIMUM_SCALE
 
-			xscale = float(width)/diameter
-			yscale = float(height)/diameter
+		while True:
+			if width >= self.fullsizedbrush.width() and height >= self.fullsizedbrush.height():
+				scaledImage=self.scaleImage(self.fullsizedbrush,width,height)
+			# scale down using previous one once below 1:1
+			else:
+				scaledImage=self.scaleImage(scaledImage,width,height)
+
+			xscale = float(width) / self.fullsizedbrush.width()
+			yscale = float(height) / self.fullsizedbrush.height()
+			scale=xscale
 
 			self.scaledbrushes.append((scaledImage,xscale,yscale))
 
-			width = (width + 1) / 2
-			height = (height + 1) / 2
+			if width==1 and height==1:
+				break
 
-		# do it one last time for a brush of size 1
-		scaledImage=self.scaleImage(scaledImage,width,height)
+			# never scale by less than 1/2
+			width = int ((width + 1) / 2)
+			height = int((height + 1) / 2)
 
-		xscale = float(width)/diameter
-		yscale = float(height)/diameter
+	def makeEllipseBrush(self):
+		self.width=self.options["maxdiameter"]
+		self.height=self.options["maxdiameter"]
+		fgr=self.fgcolor.red()
+		fgg=self.fgcolor.green()
+		fgb=self.fgcolor.blue()
 
-		self.scaledbrushes.append((scaledImage,xscale,yscale))
+		self.fullsizedbrush=qtgui.QImage(self.width,self.height,qtgui.QImage.Format_ARGB32_Premultiplied)
+
+		for i in range(self.width):
+			for j in range(self.height):
+				v=self.ellipseBrushFadeAt(i,j)
+				self.fullsizedbrush.setPixel(i,j,qtgui.qRgba(int(fgr*v),int(fgg*v),int(fgb*v),int(v*255)))
+
+	def ellipseBrushFadeAt(self,x,y):
+		m_xcentre = self.width/2.0
+		m_ycentre = self.height/2.0
+		m_xcoef = 2.0/self.width
+		m_ycoef = 2.0/self.height
+
+		if self.options["fade horizontal"] == 0:
+			m_xfadecoef = 1.0
+		else:
+			m_xfadecoef = 1.0 / self.options["fade horizontal"] 
+
+		if self.options["fade vertical"] == 0:
+			m_yfadecoef = 1.0
+		else:
+			m_yfadecoef = 1.0 / self.options["fade vertical"] 
+
+		xr = (x - m_xcentre) + .5
+		yr = (y - m_ycentre) + .5
+
+		n = norme(xr*m_xcoef,yr*m_ycoef)
+
+		# case 1:
+		if n > 1:
+			return 0
+
+		# case 2:
+		normefade = norme(xr * m_xfadecoef, yr * m_yfadecoef)
+		if normefade > 1:
+			if xr == 0:
+				xle = 0
+				if yr > 0:
+					yle=1.0/m_ycoef
+				else:
+					yle=-1.0/m_ycoef
+
+			else:
+				c = yr / float(xr)
+				xle = math.sqrt(1. / norme(m_xcoef, c * m_ycoef ))
+				if xr <= 0:
+					xle = -xle
+				yle = xle*c
+
+				normefadelimite = norme(xle * m_xfadecoef, yle * m_yfadecoef)
+				return 1.-(normefade - 1) / (normefadelimite - 1 )
+
+		# case 3
+		return 1
 
 	# use subpixel adjustments to shift image and scale it too if needed
 	def scaleShiftImage(self,srcbrush,scale,subpixelx,subpixely):
@@ -1057,6 +1118,8 @@ class SketchTool(DrawingTool):
 		dstimage=qtgui.QImage(dstwidth,dstheight,qtgui.QImage.Format_ARGB32_Premultiplied)
 
 		srcimage=srcbrush[0]
+		print "performing scale and shift on image:"
+		printImage(srcimage)
 
 		xscale=srcbrush[1]/scale
 		yscale=srcbrush[2]/scale
@@ -1077,16 +1140,12 @@ class SketchTool(DrawingTool):
 				srcx -= .5
 				srcy -= .5
 
-				leftx = math.floor(srcx)
-				if srcx < 0:
-					leftx -= 1
+				# simple integer truncation will not be suitable here because it does the wrong thing for negative numbers
+				leftx = int(math.floor(srcx))
 
 				xinterp = srcx - leftx
 
-				topy = math.floor(srcy)
-
-				if srcy < 0:
-					topy -= 1
+				topy = int(math.floor(srcy))
 
 				yinterp = srcy - topy
 
@@ -1110,8 +1169,31 @@ class SketchTool(DrawingTool):
 				else:
 					bottomright = qtgui.qRgba(0,0,0,0)
 
-				a=1.-xinterp
-				b=1.-yinterp
+				if dstwidth%2==1:
+					a=1.-xinterp
+				else:
+					a=xinterp-.5
+					if a<0:
+						a=1.+a
+
+				if dstheight%2==1:
+					b=1.-yinterp
+				else:
+					b=yinterp-.5
+					if b<0:
+						b=1.+b
+
+				#a = subpixelx
+				#b = subpixely
+
+				#a = subpixelx-.5
+				#b = subpixely-.5
+
+				#if a<0:
+				#	a=1.+a
+
+				#if b<0:
+				#	b=1.+b
 
 				red=(a*b*qtgui.qRed(topleft)
 						+ a * (1-b) * qtgui.qRed(bottomleft)
@@ -1141,6 +1223,8 @@ class SketchTool(DrawingTool):
 
 				dstimage.setPixel(dstx,dsty,qtgui.qRgba(red,green,blue,alpha))
 
+		print "Shifted into:"
+		printImage(dstimage)
 		return dstimage
 
 	def scaleImage(self,brushimage,width,height):

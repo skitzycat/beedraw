@@ -82,17 +82,18 @@ class BeeLayer:
 	def compositeFromCenter(self,image,x,y,compmode,clippath=None):
 		x=int(x)
 		y=int(y)
-		#print "calling compositeFromCenter with args:",x,y
+		print "calling compositeFromCenter with args:",x,y
 		width=image.size().width()
 		height=image.size().height()
-		self.compositeFromCorner(image,x-int(width/2),y-int(height/2),compmode,clippath)
+		print "image dimensions:", width, height
+		self.compositeFromCorner(image,x-int((width)/2),y-int((height)/2),compmode,clippath)
 		return
 
 	# composite image onto layer from corner coord
 	def compositeFromCorner(self,image,x,y,compmode,clippath=None):
 		x=int(x)
 		y=int(y)
-		#print "calling compositeFromCorner with args:",x,y
+		print "calling compositeFromCorner with args:",x,y
 		lock=ReadWriteLocker(self.imagelock,True)
 		width=image.size().width()
 		height=image.size().height()

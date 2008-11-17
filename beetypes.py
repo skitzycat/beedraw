@@ -39,3 +39,7 @@ class ThreadTypes:
 # types of ways to modify the current selection
 class SelectionModTypes:
 	clear, new, intersect, add, subtract = range(5)
+
+# types of brush shapes
+class BrushShapes:
+	ellipse = range(1)
