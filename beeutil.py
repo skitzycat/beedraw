@@ -52,14 +52,21 @@ def getPointsPath(x1,y1,x2,y2,linestep,width,height,p1=1,p2=1):
 	delta_x=x2-x1
 	delta_y=y2-y1
 	delta_p=p2-p1
+
 	h=math.hypot(abs(delta_x),abs(delta_y))
 
 	# calculate intermediate coords
 	intermediate_points=numpy.arange(linestep,h,linestep)
+	if len(intermediate_points)==0:
+		return path
+	pstep=delta_p/len(intermediate_points)
+	newp=p1
+
 	for point in intermediate_points:
 		newx=x1+(delta_x*point/h)
 		newy=y1+(delta_y*point/h)
-		newp=p1+(delta_p*point/h)
+		newp=newp+pstep
+
 		# make sure coords fall in widht and height restrictions
 		if newx>=0 and newx<width and newy>=0 and newy<height:
 			# make sure we don't skip a point
