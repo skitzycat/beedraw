@@ -1049,7 +1049,7 @@ class SketchTool(DrawingTool):
 
 	# use subpixel adjustments to shift image and scale it too if needed
 	def scaleShiftImage(self,srcbrush,scale,subpixelx,subpixely):
-		#print "scaleShiftImage called with subpixels:", subpixelx, subpixely
+		print "scaleShiftImage called with subpixels:", subpixelx, subpixely
 		# add one pixel for subpixel adjustments
 		dstwidth=math.ceil(scale*self.fullsizedbrush.width())+1
 		dstheight=math.ceil(scale*self.fullsizedbrush.height())+1
@@ -1064,24 +1064,31 @@ class SketchTool(DrawingTool):
 		srcwidth=srcimage.width()
 		srcheight=srcimage.height()
 
+		srccenterx=srcwidth/2.
+		srccentery=srcheight/2.
+
+		dstcenterx=dstwidth/2.
+		dstcentery=dstheight/2.
+
 		for dsty in range(int(dstheight)):
 			for dstx in range(int(dstwidth)):
-				srcx = (dstx - subpixelx + .5) * xscale
-				srcy = (dsty - subpixely + .5) * yscale
+				# distance from x to center of dst image x
+				distx = dstx - dstcenterx + .5
+				srcx = (distx * scale) + srccenterx - subpixelx
 
-				srcx -= .5
-				srcy -= .5
+				disty = dsty - dstcentery - subpixely + .5
+				srcy = (disty * scale) + srccentery - subpixelx
+				#srcx = (dstx - subpixelx + .5) * xscale
+				#srcy = (dsty - subpixely + .5) * yscale
 
-				leftx = int(srcx)
-				if srcx < 0:
-					leftx -= 1
+				#srcx -= .5
+				#srcy -= .5
+
+				leftx = math.floor(srcx)
 
 				xinterp = srcx - leftx
 
-				topy = int(srcy)
-
-				if srcy < 0:
-					topy -= 1
+				topy = math.floor(srcy)
 
 				yinterp = srcy - topy
 
@@ -1136,6 +1143,8 @@ class SketchTool(DrawingTool):
 
 				dstimage.setPixel(dstx,dsty,qtgui.qRgba(red,green,blue,alpha))
 
+		print "shifted brush:"
+		printImage(dstimage)
 		return dstimage
 
 	def scaleImage(self,brushimage,width,height):
