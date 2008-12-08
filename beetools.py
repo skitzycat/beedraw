@@ -1131,26 +1131,28 @@ class SketchTool(DrawingTool):
 		srcwidth=srcimage.width()
 		srcheight=srcimage.height()
 
+		srccenterx=srcwidth/2.
+		srccentery=srcheight/2.
+
+		dstcenterx=dstwidth/2.
+		dstcentery=dstheight/2.
+
 		for dsty in range(int(dstheight)):
 			for dstx in range(int(dstwidth)):
-				# to translate from destination to source we do several calculations:
-				#   subtract the subpixel ammount
-				#   add 1/2 so we are sampling the center of the destination pixel
-				#   mulitply by the scale difference
-				srcx = (dstx - subpixelx + .5) * xscale
-				srcy = (dsty - subpixely + .5) * yscale
+				# distance from x to center of dst image x
+				distx = dstx - dstcenterx + .5
+				srcx = (distx * scale) + srccenterx - subpixelx
 
-				# shift by half a pixel so we are sampling center of source pixel
-				srcx -= .5
-				srcy -= .5
+				disty = dsty - dstcentery - subpixely + .5
+				srcy = (disty * scale) + srccentery - subpixelx
+				#srcx = (dstx - subpixelx + .5) * xscale
+				#srcy = (dsty - subpixely + .5) * yscale
 
 				# simple integer truncation will not be suitable here because it does the wrong thing for negative numbers
 				leftx = int(math.floor(srcx))
-
 				xinterp = srcx - leftx
 
 				topy = int(math.floor(srcy))
-
 				yinterp = srcy - topy
 
 				if leftx >= 0 and leftx < srcwidth and topy >= 0 and topy < srcheight:
