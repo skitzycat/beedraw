@@ -202,6 +202,7 @@ class DrawingTool(AbstractTool):
  
 	def penDown(self,x,y,pressure=1):
 		print "pen down point:", x, y
+		print "pen pressure:", pressure
 		self.layer=self.window.getLayerForKey(self.layerkey)
 		self.oldlayerimage=qtgui.QImage(self.layer.image)
 		self.pointshistory=[(x,y,pressure)]
@@ -1111,6 +1112,7 @@ class SketchTool(DrawingTool):
 	# use subpixel adjustments to shift image and scale it too if needed
 	def scaleShiftImage(self,srcbrush,scale,subpixelx,subpixely):
 		print "scaleShiftImage called with subpixels:", subpixelx, subpixely
+		print "scaleShiftImage called with scale:", scale
 		# add one pixel for subpixel adjustments
 		dstwidth=math.ceil(scale*self.fullsizedbrush.width())+1
 		dstheight=math.ceil(scale*self.fullsizedbrush.height())+1
@@ -1123,6 +1125,8 @@ class SketchTool(DrawingTool):
 
 		xscale=srcbrush[1]/scale
 		yscale=srcbrush[2]/scale
+
+		print "xscale, yscale:",xscale,yscale
 
 		srcwidth=srcimage.width()
 		srcheight=srcimage.height()
@@ -1175,6 +1179,7 @@ class SketchTool(DrawingTool):
 					a=xinterp-.5
 					if a<0:
 						a=1.+a
+					a=1.-a
 
 				if dstheight%2==1:
 					b=1.-yinterp
@@ -1182,9 +1187,10 @@ class SketchTool(DrawingTool):
 					b=yinterp-.5
 					if b<0:
 						b=1.+b
+					b=1.-b
 
-				#a = subpixelx
-				#b = subpixely
+				#a = 1.-subpixelx
+				#b = 1.-subpixely
 
 				#a = subpixelx-.5
 				#b = subpixely-.5
