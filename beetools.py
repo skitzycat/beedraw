@@ -210,15 +210,9 @@ class DrawingTool(AbstractTool):
 		self.makeFullSizedBrush()
 		self.updateBrushForPressure(pressure,x%1,y%1)
 
-		if self.brushimage.width()%2==0:
-			x=round(x)
-		else:
-			x=math.floor(x)
+		x=math.floor(x)
 
-		if self.brushimage.height()%2==0:
-			y=round(y)
-		else:
-			y=math.floor(y)
+		y=math.floor(y)
 
 		self.layer.compositeFromCenter(self.brushimage,int(x),int(y),self.compmode,self.clippath)
  
@@ -277,11 +271,27 @@ class DrawingTool(AbstractTool):
 		#painter.setRenderHint(qtgui.QPainter.HighQualityAntialiasing)
  
 		for point in path:
-			#print "stamping at point:", point[0], point[1]
 			self.updateBrushForPressure(point[2],point[0]%1,point[1]%1)
 
-			lineimgpoint=(round(point[0])-left-radius,round(point[1])-top-radius)
-			painter.drawImage(lineimgpoint[0],lineimgpoint[1],self.brushimage)
+			stampx=point[0]-left-radius
+			stampy=point[1]-top-radius
+
+			#print "stamping at point:", stampx, stampy
+
+			#if self.brushimage.width()%2==0:
+			#	stampx=round(stampx)
+			#else:
+			#	stampx=math.floor(stampx)
+
+			#if self.brushimage.height()%2==0:
+			#	stampy=round(stampy)
+			#else:
+			#	stampy=math.floor(stampy)
+
+			stampx=math.floor(stampx)
+			stampy=math.floor(stampy)
+
+			painter.drawImage(stampx,stampy,self.brushimage)
  
 		painter.end()
  
@@ -855,8 +865,8 @@ class SketchTool(DrawingTool):
 		return scale
 
 	def updateBrushForPressure(self,pressure,subpixelx=0,subpixely=0):
-		print "updating brush for pressure/subpixels:", pressure, subpixelx, subpixely
-
+		self.lastpressure=pressure
+		#print "updating brush for pressure/subpixels:", pressure, subpixelx, subpixely
 		scale=self.scaleForPressure(pressure)
 
 		# try to find exact or closes brushes to scale
@@ -886,7 +896,7 @@ class SketchTool(DrawingTool):
 
 	# do special case calculations for brush of single pixel size
 	def scaleSinglePixelImage(self,scale,pixel,subpixelx,subpixely):
-		print "calling scaleSinglePixelImage with subpixels:",subpixelx,subpixely
+		#print "calling scaleSinglePixelImage with subpixels:",subpixelx,subpixely
 		srcwidth=1
 		srcheight=1
 		dstwidth=2
@@ -965,6 +975,7 @@ class SketchTool(DrawingTool):
 
 		if t < 0 or t > 1:
 			print "Error: interploate function passed bad t value:", t
+			raise Exception, "interploate passed bad t value"
 			return image1
 
 		width=image1.width()
@@ -1120,13 +1131,13 @@ class SketchTool(DrawingTool):
 		dstimage=qtgui.QImage(dstwidth,dstheight,qtgui.QImage.Format_ARGB32_Premultiplied)
 
 		srcimage=srcbrush[0]
-		print "performing scale and shift on image:"
-		printImage(srcimage)
+		#print "performing scale and shift on image:"
+		#printImage(srcimage)
 
 		xscale=srcbrush[1]/scale
 		yscale=srcbrush[2]/scale
 
-		print "xscale, yscale:",xscale,yscale
+		#print "xscale, yscale:",xscale,yscale
 
 		srcwidth=srcimage.width()
 		srcheight=srcimage.height()
@@ -1140,13 +1151,13 @@ class SketchTool(DrawingTool):
 		for dsty in range(int(dstheight)):
 			for dstx in range(int(dstwidth)):
 				# distance from x to center of dst image x
-				distx = dstx - dstcenterx + .5
-				srcx = (distx * scale) + srccenterx - subpixelx
+				#distx = dstx - dstcenterx + .5
+				#srcx = (distx * scale) + srccenterx - subpixelx
 
-				disty = dsty - dstcentery - subpixely + .5
-				srcy = (disty * scale) + srccentery - subpixelx
-				#srcx = (dstx - subpixelx + .5) * xscale
-				#srcy = (dsty - subpixely + .5) * yscale
+				#disty = dsty - dstcentery + .5
+				#srcy = (disty * scale) + srccentery - subpixely
+				srcx = (dstx - subpixelx + .5) * xscale
+				srcy = (dsty - subpixely + .5) * yscale
 
 				# simple integer truncation will not be suitable here because it does the wrong thing for negative numbers
 				leftx = int(math.floor(srcx))
@@ -1175,33 +1186,8 @@ class SketchTool(DrawingTool):
 				else:
 					bottomright = qtgui.qRgba(0,0,0,0)
 
-				if dstwidth%2==1:
-					a=1.-xinterp
-				else:
-					a=xinterp-.5
-					if a<0:
-						a=1.+a
-					a=1.-a
-
-				if dstheight%2==1:
-					b=1.-yinterp
-				else:
-					b=yinterp-.5
-					if b<0:
-						b=1.+b
-					b=1.-b
-
-				#a = 1.-subpixelx
-				#b = 1.-subpixely
-
-				#a = subpixelx-.5
-				#b = subpixely-.5
-
-				#if a<0:
-				#	a=1.+a
-
-				#if b<0:
-				#	b=1.+b
+				a = 1.-xinterp
+				b = 1.-yinterp
 
 				red=(a*b*qtgui.qRed(topleft)
 						+ a * (1-b) * qtgui.qRed(bottomleft)
