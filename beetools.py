@@ -904,14 +904,17 @@ class SketchTool(DrawingTool):
 
 		outputimage=qtgui.QImage(dstwidth,dstheight,qtgui.QImage.Format_ARGB32_Premultiplied)
 
-		a = subpixelx-.5
-		b = subpixely-.5
+		a = subpixelx
+		b = subpixely
 
-		if a<0:
-			a=1.+a
+		#a = subpixelx-.5
+		#b = subpixely-.5
 
-		if b<0:
-			b=1.+b
+		#if a<0:
+		#	a=1.+a
+
+		#if b<0:
+		#	b=1.+b
  
  		for y in range(dstheight):
 			for x in range(dstwidth):
