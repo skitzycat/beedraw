@@ -201,8 +201,8 @@ class DrawingTool(AbstractTool):
 		painter.end()
  
 	def penDown(self,x,y,pressure=1):
-		print "pen down point:", x, y
-		print "pen pressure:", pressure
+		#print "pen down point:", x, y
+		#print "pen pressure:", pressure
 		self.layer=self.window.getLayerForKey(self.layerkey)
 		self.oldlayerimage=qtgui.QImage(self.layer.image)
 		self.pointshistory=[(x,y,pressure)]
@@ -886,7 +886,7 @@ class SketchTool(DrawingTool):
 		# we were below the lowest sized brush or exactly at 1
 		elif abovebrush[1]!=scale or (abovebrush[0].width()==1 and abovebrush[0].height()==1):
 			s = scale/abovebrush[1]
-			outputimage = self.scaleSinglePixelImage(s, abovebrush[0].pixel(0,0), subpixelx, subpixely)
+			outputimage = self.scaleSinglePixelImage(s, self.singlepixelbrush.pixel(0,0), subpixelx, subpixely)
 
 		# got an exact match, so just shift it according to sub-pixels
 		else:
@@ -897,6 +897,7 @@ class SketchTool(DrawingTool):
 	# do special case calculations for brush of single pixel size
 	def scaleSinglePixelImage(self,scale,pixel,subpixelx,subpixely):
 		#print "calling scaleSinglePixelImage with subpixels:",subpixelx,subpixely
+		#print "calling scaleSinglePixelImage with scale",scale
 		srcwidth=1
 		srcheight=1
 		dstwidth=2
@@ -1034,6 +1035,9 @@ class SketchTool(DrawingTool):
 
 		self.makeScaledBrushes()
 
+		self.singlepixelbrush=qtgui.QImage(1,1,qtgui.QImage.Format_ARGB32_Premultiplied)
+		self.singlepixelbrush.setPixel(0,0,self.fgcolor.rgba())
+
 	# make list of pre-scaled brushes
 	def makeScaledBrushes(self):
 		self.scaledbrushes=[]
@@ -1054,12 +1058,13 @@ class SketchTool(DrawingTool):
 
 			self.scaledbrushes.append((scaledImage,xscale,yscale))
 
-			if width==1 and height==1:
-				break
-
 			# never scale by less than 1/2
 			width = int ((width + 1) / 2)
 			height = int((height + 1) / 2)
+
+			# break before we get to a single pixel brush
+			if width==1 and height==1:
+				break
 
 	def makeEllipseBrush(self):
 		self.width=self.options["maxdiameter"]
@@ -1125,8 +1130,8 @@ class SketchTool(DrawingTool):
 
 	# use subpixel adjustments to shift image and scale it too if needed
 	def scaleShiftImage(self,srcbrush,scale,subpixelx,subpixely):
-		print "scaleShiftImage called with subpixels:", subpixelx, subpixely
-		print "scaleShiftImage called with scale:", scale
+		#print "scaleShiftImage called with subpixels:", subpixelx, subpixely
+		#print "scaleShiftImage called with scale:", scale
 		# add one pixel for subpixel adjustments
 		dstwidth=math.ceil(scale*self.fullsizedbrush.width())+1
 		dstheight=math.ceil(scale*self.fullsizedbrush.height())+1
@@ -1161,6 +1166,9 @@ class SketchTool(DrawingTool):
 				#srcy = (disty * scale) + srccentery - subpixely
 				srcx = (dstx - subpixelx + .5) * xscale
 				srcy = (dsty - subpixely + .5) * yscale
+
+				srcx -= .5
+				srcy -= .5
 
 				# simple integer truncation will not be suitable here because it does the wrong thing for negative numbers
 				leftx = int(math.floor(srcx))
@@ -1220,8 +1228,8 @@ class SketchTool(DrawingTool):
 
 				dstimage.setPixel(dstx,dsty,qtgui.qRgba(red,green,blue,alpha))
 
-		print "Shifted into:"
-		printImage(dstimage)
+		#print "Shifted into:"
+		#printImage(dstimage)
 		return dstimage
 
 	def scaleImage(self,brushimage,width,height):
