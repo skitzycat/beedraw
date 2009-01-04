@@ -875,8 +875,8 @@ class SketchTool(DrawingTool):
 		# didn't get an exact match so interpolate between two others
 		if belowbrush:
 			# shift both of the nearby brushes
-			scaledaboveimage=self.scaleShiftImage(abovebrush,scale,subpixelx,subpixely)
-			scaledbelowimage=self.scaleShiftImage(belowbrush,scale,subpixelx,subpixely)
+			scaledaboveimage=self.fast_scaleShiftImage(abovebrush,scale,subpixelx,subpixely)
+			scaledbelowimage=self.fast_scaleShiftImage(belowbrush,scale,subpixelx,subpixely)
 
 			t = (scale-belowbrush[1])/(abovebrush[1]-belowbrush[1])
 
@@ -890,7 +890,7 @@ class SketchTool(DrawingTool):
 
 		# got an exact match, so just shift it according to sub-pixels
 		else:
-			outputimage=self.scaleShiftImage(abovebrush, scale, subpixelx, subpixely)
+			outputimage=self.fast_scaleShiftImage(abovebrush, scale, subpixelx, subpixely)
 
 		self.brushimage=outputimage
 
@@ -1112,13 +1112,13 @@ class SketchTool(DrawingTool):
 
 			self.scaledbrushes.append((scaledImage,xscale,yscale))
 
+			# break after we get to a single pixel brush
+			if width==1 and height==1:
+				break
+
 			# never scale by less than 1/2
 			width = int ((width + 1) / 2)
 			height = int((height + 1) / 2)
-
-			# break before we get to a single pixel brush
-			if width==1 and height==1:
-				break
 
 	def makeEllipseBrush(self):
 		self.width=self.options["maxdiameter"]
@@ -1181,6 +1181,35 @@ class SketchTool(DrawingTool):
 
 		# case 3
 		return 1
+
+	# use subpixel adjustments to shift image and scale it too if needed, optimized version that pushes as much calculation into Qt as possible
+	def fast_scaleShiftImage(self,srcbrush,scale,subpixelx,subpixely):
+		dstwidth=math.ceil(scale*self.fullsizedbrush.width())+1
+		dstheight=math.ceil(scale*self.fullsizedbrush.height())+1
+
+		dstimage=qtgui.QImage(dstwidth,dstheight,qtgui.QImage.Format_ARGB32_Premultiplied)
+		dstimage.fill(0)
+
+		srcimage=srcbrush[0]
+		#print "performing scale and shift on image:"
+		#printImage(srcimage)
+
+		xsize=(self.fullsizedbrush.width()*scale)
+		ysize=(self.fullsizedbrush.height()*scale)
+
+		dstrect=qtcore.QRectF(subpixelx,subpixely,xsize,ysize)
+		#print "destination image of size:", dstwidth, dstheight
+		#print "destination rect:", rectToTuple(dstrect)
+
+		painter=qtgui.QPainter()
+		painter.begin(dstimage)
+		painter.setRenderHint(qtgui.QPainter.Antialiasing)
+		#painter.setRenderHint(qtgui.QPainter.HighQualityAntialiasing)
+		painter.setRenderHint(qtgui.QPainter.SmoothPixmapTransform)
+		painter.drawImage(dstrect,srcimage,qtcore.QRectF(srcimage.rect()))
+		painter.end()
+
+		return dstimage
 
 	# use subpixel adjustments to shift image and scale it too if needed
 	def scaleShiftImage(self,srcbrush,scale,subpixelx,subpixely):
@@ -1282,8 +1311,11 @@ class SketchTool(DrawingTool):
 
 				dstimage.setPixel(dstx,dsty,qtgui.qRgba(red,green,blue,alpha))
 
-		#print "Shifted into:"
-		#printImage(dstimage)
+		print "Regular shift:"
+		printImage(dstimage)
+		print "Fast shift:"
+		fastimage=self.fast_scaleShiftImage(srcbrush,scale,subpixelx,subpixely)
+		printImage(fastimage)
 		return dstimage
 
 	def scaleImage(self,brushimage,width,height):
