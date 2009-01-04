@@ -881,7 +881,7 @@ class SketchTool(DrawingTool):
 			t = (scale-belowbrush[1])/(abovebrush[1]-belowbrush[1])
 
 			# interpolate between the results, but trust the one that was closer more
-			outputimage = self.interpolate(scaledbelowimage,scaledaboveimage, t)
+			outputimage = self.fast_interpolate(scaledbelowimage,scaledaboveimage, t)
 
 		# we were below the lowest sized brush or exactly at 1
 		elif abovebrush[1]!=scale or (abovebrush[0].width()==1 and abovebrush[0].height()==1):
@@ -971,8 +971,8 @@ class SketchTool(DrawingTool):
 
 		return outputimage
 
-	# interpolate between two images that are the exact same size
-	def interpolate(self,image1,image2,t):
+	# optimizied algorithm to interpoloate two images, this pushes the work into Qt functions and saves memory by altering the original images
+	def fast_interpolate(self,image1,image2,t):
 		if not ( image1.width() == image2.width() and image1.width() == image2.width() ):
 			print "Error: interploate function passed non compatable images"
 			return image1
@@ -985,6 +985,53 @@ class SketchTool(DrawingTool):
 		width=image1.width()
 		height=image1.height()
 
+		fade=int(t*255)
+		fadecolor=qtgui.QColor(0,0,0,fade)
+		fadeimg=qtgui.QImage(width,height,qtgui.QImage.Format_ARGB32_Premultiplied)
+		fadeimg.fill(fadecolor.rgba())
+		painter=qtgui.QPainter()
+
+		painter.begin(image1)
+		painter.setCompositionMode(qtgui.QPainter.CompositionMode_DestinationOut)
+		painter.drawImage(0,0,fadeimg)
+		painter.end()
+		#print "image 1 after fade"
+		#printImage(image1)
+
+		painter=qtgui.QPainter()
+		painter.begin(image2)
+		painter.setCompositionMode(qtgui.QPainter.CompositionMode_DestinationIn)
+		painter.drawImage(0,0,fadeimg)
+		#painter.end()
+		#print "image 2 after fade"
+		#printImage(image2)
+		#painter.begin(image2)
+		painter.setCompositionMode(qtgui.QPainter.CompositionMode_Plus)
+		painter.drawImage(0,0,image1)
+		painter.end()
+
+		return image2
+
+	# interpolate between two images that are the exact same size
+	def interpolate(self,image1,image2,t):
+		if not ( image1.width() == image2.width() and image1.width() == image2.width() ):
+			print "Error: interploate function passed non compatable images"
+			return image1
+
+		if t < 0 or t > 1:
+			print "Error: interploate function passed bad t value:", t
+			raise Exception, "interploate passed bad t value"
+			return image1
+
+		print "interploate passed t value:", t
+		print "and images:"
+		printImage(image1)
+		print ""
+		printImage(image2)
+
+		width=image1.width()
+		height=image1.height()
+
 		outputimage=qtgui.QImage(width,height,qtgui.QImage.Format_ARGB32_Premultiplied)
 
 		for x in range(width):
@@ -992,10 +1039,10 @@ class SketchTool(DrawingTool):
 				image1pixel = image1.pixel(x,y)
 				image2pixel = image2.pixel(x,y)
 
-				red = int((1-t) * qtgui.qRed(image1pixel) + t * qtgui.qRed(image1pixel) + .5 )
-				green = int((1-t) * qtgui.qGreen(image1pixel) + t * qtgui.qGreen(image1pixel) + .5 )
-				blue = int((1-t) * qtgui.qBlue(image1pixel) + t * qtgui.qBlue(image1pixel) + .5 )
-				alpha = int((1-t) * qtgui.qAlpha(image1pixel) + t * qtgui.qAlpha(image1pixel) + .5 )
+				red = int((1-t) * qtgui.qRed(image1pixel) + t * qtgui.qRed(image2pixel) + .5 )
+				green = int((1-t) * qtgui.qGreen(image1pixel) + t * qtgui.qGreen(image2pixel) + .5 )
+				blue = int((1-t) * qtgui.qBlue(image1pixel) + t * qtgui.qBlue(image2pixel) + .5 )
+				alpha = int((1-t) * qtgui.qAlpha(image1pixel) + t * qtgui.qAlpha(image2pixel) + .5 )
 
 				if red > 255:
 					red=255
@@ -1007,6 +1054,13 @@ class SketchTool(DrawingTool):
 					alpha=255
 
 				outputimage.setPixel(x,y,qtgui.qRgba(red,green,blue,alpha))
+
+		fast_image=self.fast_interpolate(image1,image2,t)
+		if outputimage!=fast_image:
+			print "Fast transform not equal"
+			printImage(fast_image)
+			print ""
+			printImage(outputimage)
 
 		return outputimage
 
