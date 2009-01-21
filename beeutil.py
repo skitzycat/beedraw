@@ -17,8 +17,8 @@ except:
 
 # print contents of image as integers representing each pixel
 def printImage(image):
-	for i in range(image.width()):
-		for j in range(image.height()):
+	for i in range(image.height()):
+		for j in range(image.width()):
 			curpix=image.pixel(j,i)
 			#print curpix,
 			print "%08x" % (curpix),

@@ -201,7 +201,7 @@ class DrawingTool(AbstractTool):
 		painter.end()
  
 	def penDown(self,x,y,pressure=1):
-		#print "pen down point:", x, y
+		print "pen down point:", x, y
 		#print "pen pressure:", pressure
 		self.layer=self.window.getLayerForKey(self.layerkey)
 		self.oldlayerimage=qtgui.QImage(self.layer.image)
@@ -211,7 +211,6 @@ class DrawingTool(AbstractTool):
 		self.updateBrushForPressure(pressure,x%1,y%1)
 
 		x=math.floor(x)
-
 		y=math.floor(y)
 
 		self.layer.compositeFromCenter(self.brushimage,int(x),int(y),self.compmode,self.clippath)
@@ -242,21 +241,27 @@ class DrawingTool(AbstractTool):
 		if len(path)==0:
 			return
 
-		self.updateBrushForPressure(pressure,x%1,y%1)
-		#radius=int(math.ceil(self.diameter/2.0))
-		radius=int(math.ceil(self.brushimage.width()/2.0))
+		# figure out the maximum pressure we will encounter for this motion
+		maxpressure=max(self.lastpressure,pressure)
+
+		# figure out the maximum radius the brush will have
+		maxscale=self.scaleForPressure(maxpressure)
+		maxradius=int(math.ceil(self.fullsizedbrush.width()*maxscale/2.0))
 
 		# calculate the bounding rect for this operation
-		left=int(min(path[0][0],path[-1][0])-radius-.5)
-		top=int(min(path[0][1],path[-1][1])-radius-.5)
-		right=int(max(path[0][0],path[-1][0])+radius+.5)
-		bottom=int(max(path[0][1],path[-1][1])+radius+.5)
+		left=int(math.floor(min(path[0][0],path[-1][0])-maxradius)-1)
+		top=int(math.floor(min(path[0][1],path[-1][1])-maxradius)-1)
+		right=int(math.ceil(max(path[0][0],path[-1][0])+maxradius)+1)
+		bottom=int(math.ceil(max(path[0][1],path[-1][1])+maxradius)+1)
  
 		left=max(0,left)
 		top=max(0,top)
 		right=min(layerwidth,right)
 		bottom=min(layerheight,bottom)
- 
+
+		print "left of line rect:", left
+		print "top of line rect:", top
+
 		# calulate area needed to hold everything
 		width=right-left
 		height=bottom-top
@@ -264,6 +269,8 @@ class DrawingTool(AbstractTool):
 		# then make an image for that bounding rect
 		lineimage=qtgui.QImage(width,height,qtgui.QImage.Format_ARGB32_Premultiplied)
 		lineimage.fill(0)
+
+		#print "line image size:", width, height
 
 		# put points in that image
 		painter=qtgui.QPainter()
@@ -273,27 +280,35 @@ class DrawingTool(AbstractTool):
 		for point in path:
 			self.updateBrushForPressure(point[2],point[0]%1,point[1]%1)
 
-			stampx=point[0]-left-radius
-			stampy=point[1]-top-radius
+			#xradius=round(self.brushimage.width()/2)
+			#yradius=round(self.brushimage.height()/2)
 
-			#print "stamping at point:", stampx, stampy
+			#xradius=math.floor(self.brushimage.width()/2)
+			#yradius=math.floor(self.brushimage.height()/2)
 
-			#if self.brushimage.width()%2==0:
-			#	stampx=round(stampx)
-			#else:
-			#	stampx=math.floor(stampx)
+			xradius=self.brushimage.width()/2.0
+			yradius=self.brushimage.height()/2.0
 
-			#if self.brushimage.height()%2==0:
-			#	stampy=round(stampy)
-			#else:
-			#	stampy=math.floor(stampy)
+			print "point:", point
+			stampx=point[0]-left-xradius
+			stampy=point[1]-top-yradius
 
-			stampx=math.floor(stampx)
-			stampy=math.floor(stampy)
+			#stampx=math.floor(stampx)
+			#stampy=math.floor(stampy)
+
+			stampx=round(stampx)
+			stampy=round(stampy)
+
+			print "stamping at point:", stampx, stampy, "image:"
+			printImage(self.brushimage)
 
 			painter.drawImage(stampx,stampy,self.brushimage)
  
 		painter.end()
+
+		print "at point:", left, top
+		print "stamping line image:"
+		printImage(lineimage)
  
 		self.layer.compositeFromCorner(lineimage,left,top,self.compmode,self.clippath)
  
