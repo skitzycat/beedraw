@@ -201,7 +201,7 @@ class DrawingTool(AbstractTool):
 		painter.end()
  
 	def penDown(self,x,y,pressure=1):
-		print "pen down point:", x, y
+		#print "pen down point:", x, y
 		#print "pen pressure:", pressure
 		self.layer=self.window.getLayerForKey(self.layerkey)
 		self.oldlayerimage=qtgui.QImage(self.layer.image)
@@ -227,6 +227,7 @@ class DrawingTool(AbstractTool):
 		if not self.movedFarEnough(x,y):
 			return
 
+		#print "-------------------"
 		#print "starting new line"
 		self.pointshistory.append((x,y,pressure))
  
@@ -248,19 +249,19 @@ class DrawingTool(AbstractTool):
 		maxscale=self.scaleForPressure(maxpressure)
 		maxradius=int(math.ceil(self.fullsizedbrush.width()*maxscale/2.0))
 
+		#print "maxradius:", maxradius
+		#print "path:", path
+
 		# calculate the bounding rect for this operation
 		left=int(math.floor(min(path[0][0],path[-1][0])-maxradius)-1)
 		top=int(math.floor(min(path[0][1],path[-1][1])-maxradius)-1)
 		right=int(math.ceil(max(path[0][0],path[-1][0])+maxradius)+1)
 		bottom=int(math.ceil(max(path[0][1],path[-1][1])+maxradius)+1)
- 
+
 		left=max(0,left)
 		top=max(0,top)
 		right=min(layerwidth,right)
 		bottom=min(layerheight,bottom)
-
-		print "left of line rect:", left
-		print "top of line rect:", top
 
 		# calulate area needed to hold everything
 		width=right-left
@@ -283,32 +284,43 @@ class DrawingTool(AbstractTool):
 			#xradius=round(self.brushimage.width()/2)
 			#yradius=round(self.brushimage.height()/2)
 
-			#xradius=math.floor(self.brushimage.width()/2)
-			#yradius=math.floor(self.brushimage.height()/2)
+			xradius=self.brushimage.width()/2
+			yradius=self.brushimage.height()/2
 
-			xradius=self.brushimage.width()/2.0
-			yradius=self.brushimage.height()/2.0
+			#xradius=self.brushimage.width()/2.0
+			#yradius=self.brushimage.height()/2.0
 
-			print "point:", point
-			stampx=point[0]-left-xradius
-			stampy=point[1]-top-yradius
+			pointx=point[0]
+			pointy=point[1]
 
-			#stampx=math.floor(stampx)
-			#stampy=math.floor(stampy)
+			#print "point:", pointx, pointy
+			#print "brush width:", self.brushimage.width()
+			#print "brush radius:", xradius
+			#print "left:", left
+			#print "top:", top
 
-			stampx=round(stampx)
-			stampy=round(stampy)
+			stampx=pointx-left-xradius
+			stampy=pointy-top-yradius
+			#stampx=point[0]-left
+			#stampy=point[1]-top
 
-			print "stamping at point:", stampx, stampy, "image:"
-			printImage(self.brushimage)
+			#stampx=math.ceil(stampx)
+			#stampy=math.ceil(stampy)
+
+			#print "stamping at unrounded point:", stampx, stampy
+
+			stampx=int(math.floor(stampx))
+			stampy=int(math.floor(stampy))
+
+			#print "stamping at point:", stampx, stampy
+			#printImage(self.brushimage)
 
 			painter.drawImage(stampx,stampy,self.brushimage)
  
 		painter.end()
 
-		print "at point:", left, top
-		print "stamping line image:"
-		printImage(lineimage)
+		#print "stamping line image:"
+		#printImage(lineimage)
  
 		self.layer.compositeFromCorner(lineimage,left,top,self.compmode,self.clippath)
  
@@ -877,6 +889,8 @@ class SketchTool(DrawingTool):
 		#scale=float(iscale)/BRUSH_SIZE_GRANULARITY
 		scale=unroundedscale
 
+		#print "calculated that scale should be:", scale
+
 		return scale
 
 	def updateBrushForPressure(self,pressure,subpixelx=0,subpixely=0):
@@ -884,7 +898,7 @@ class SketchTool(DrawingTool):
 		#print "updating brush for pressure/subpixels:", pressure, subpixelx, subpixely
 		scale=self.scaleForPressure(pressure)
 
-		# try to find exact or closes brushes to scale
+		# try to find exact or closest brushes to scale
 		abovebrush, belowbrush = self.findScaledBrushes(scale)
 
 		# didn't get an exact match so interpolate between two others
@@ -1018,12 +1032,13 @@ class SketchTool(DrawingTool):
 		painter.setCompositionMode(qtgui.QPainter.CompositionMode_DestinationIn)
 		painter.drawImage(0,0,fadeimg)
 		#painter.end()
-		#print "image 2 after fade"
-		#printImage(image2)
 		#painter.begin(image2)
 		painter.setCompositionMode(qtgui.QPainter.CompositionMode_Plus)
 		painter.drawImage(0,0,image1)
 		painter.end()
+
+		#print "interpolated image"
+		#printImage(image2)
 
 		return image2
 
@@ -1199,8 +1214,13 @@ class SketchTool(DrawingTool):
 
 	# use subpixel adjustments to shift image and scale it too if needed, optimized version that pushes as much calculation into Qt as possible
 	def fast_scaleShiftImage(self,srcbrush,scale,subpixelx,subpixely):
-		dstwidth=math.ceil(scale*self.fullsizedbrush.width())+1
-		dstheight=math.ceil(scale*self.fullsizedbrush.height())+1
+
+		dstwidthf=scale*self.fullsizedbrush.width()
+		dstheightf=scale*self.fullsizedbrush.height()
+		#print "unrounded dstwidth:", dstwidthf
+
+		dstwidth=math.ceil(dstwidthf)+1
+		dstheight=math.ceil(dstheightf)+1
 
 		dstimage=qtgui.QImage(dstwidth,dstheight,qtgui.QImage.Format_ARGB32_Premultiplied)
 		dstimage.fill(0)
@@ -1209,20 +1229,41 @@ class SketchTool(DrawingTool):
 		#print "performing scale and shift on image:"
 		#printImage(srcimage)
 
-		xsize=(self.fullsizedbrush.width()*scale)
-		ysize=(self.fullsizedbrush.height()*scale)
+		xcenter=(dstimage.width()/2.0)-.5
+		ycenter=(dstimage.height()/2.0)-.5
 
-		dstrect=qtcore.QRectF(subpixelx,subpixely,xsize,ysize)
+		xsize=self.fullsizedbrush.width()*scale
+		ysize=self.fullsizedbrush.height()*scale
+
+		dstleft=xcenter-(xsize/2.0)+subpixelx
+		dsttop=ycenter-(ysize/2.0)+subpixely
+
+		if dstimage.width()%2==0:
+			dstleft+=.5
+			dsttop+=.5
+
+		#print "xcenter:", xcenter
+		#print "ycenter:", ycenter
+
+		#print "xsize:", xsize
+		#print "ysize:", xsize
+
+		dstrect=qtcore.QRectF(dstleft,dsttop,xsize,ysize)
+		srcrect=qtcore.QRectF(srcimage.rect())
 		#print "destination image of size:", dstwidth, dstheight
 		#print "destination rect:", rectToTuple(dstrect)
+		#print "source rect:", rectToTuple(srcrect)
 
 		painter=qtgui.QPainter()
 		painter.begin(dstimage)
 		painter.setRenderHint(qtgui.QPainter.Antialiasing)
-		#painter.setRenderHint(qtgui.QPainter.HighQualityAntialiasing)
+		painter.setRenderHint(qtgui.QPainter.HighQualityAntialiasing)
 		painter.setRenderHint(qtgui.QPainter.SmoothPixmapTransform)
-		painter.drawImage(dstrect,srcimage,qtcore.QRectF(srcimage.rect()))
+		painter.drawImage(dstrect,srcimage,srcrect)
 		painter.end()
+
+		#print "scaled image:"
+		#printImage(dstimage)
 
 		return dstimage
 
