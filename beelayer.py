@@ -26,7 +26,7 @@ class BeeLayer:
 		self.type=type
 
 		# for floting selections and temporary overlays for tools and such
-		self.overlays=[]
+		self.tooloverlay=None
 
 		if image:
 			self.image=image
@@ -145,13 +145,12 @@ class BeeLayer:
 		lock=ReadWriteLocker(self.imagelock,True)
 
 		# if we have overlays, make a temporary image that with the overlays composited on it and composite that on the paint object
-		if len(self.overlays):
+		if self.tooloverlay:
 			tmpimage=self.image.copy(dirtyrect)
 			tmprect=tmpimage.rect()
 			tmppainter=qtgui.QPainter()
 			tmppainter.begin(tmpimage)
-			for overlay in self.overlays:
-				tmppainter.drawImage(tmprect,overlay,dirtyrect)
+			tmppainter.drawImage(tmprect,tooloverlay,dirtyrect)
 			tmppainter.end()
 
 			painter.drawImage(dirtyrect,tmpimage)

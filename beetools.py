@@ -221,6 +221,9 @@ class DrawingTool(AbstractTool):
 			return False
 		return True
 
+	def scaleForPressure(self,pressure):
+		return pressure
+
 	def penMotion(self,x,y,pressure):
 		#print "pen motion point:", x, y
 		# if it hasn't moved just do nothing
