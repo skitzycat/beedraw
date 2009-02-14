@@ -284,14 +284,8 @@ class DrawingTool(AbstractTool):
 		for point in path:
 			self.updateBrushForPressure(point[2],point[0]%1,point[1]%1)
 
-			#xradius=round(self.brushimage.width()/2)
-			#yradius=round(self.brushimage.height()/2)
-
 			xradius=self.brushimage.width()/2
 			yradius=self.brushimage.height()/2
-
-			#xradius=self.brushimage.width()/2.0
-			#yradius=self.brushimage.height()/2.0
 
 			pointx=point[0]
 			pointy=point[1]
@@ -304,13 +298,6 @@ class DrawingTool(AbstractTool):
 
 			stampx=pointx-left-xradius
 			stampy=pointy-top-yradius
-			#stampx=point[0]-left
-			#stampy=point[1]-top
-
-			#stampx=math.ceil(stampx)
-			#stampy=math.ceil(stampy)
-
-			#print "stamping at unrounded point:", stampx, stampy
 
 			stampx=int(math.floor(stampx))
 			stampy=int(math.floor(stampy))
@@ -511,6 +498,8 @@ class PencilToolDesc(AbstractToolDesc):
 		self.options["step"]=1
 		self.options["pressuresize"]=1
 		self.options["pressurebalance"]=100
+    self.options["opacity"]=100
+    self.options["stampmode"]=DrawingToolStampMode.darkest
  
 	def getTool(self,window):
 		tool=DrawingTool(self.options,window)
@@ -550,11 +539,13 @@ class PaintBrushToolDesc(PencilToolDesc):
 		AbstractToolDesc.__init__(self,"paintbrush")
  
 	def setDefaultOptions(self):
+    PencilToolDecs.setDefaultOptions(self)
 		self.options["maxdiameter"]=7
 		self.options["step"]=1
 		self.options["pressuresize"]=1
 		self.options["blur"]=30
 		self.options["pressurebalance"]=100
+    self.options["opacity"]=100
  
 	def getTool(self,window):
 		tool=PaintBrushTool(self.options,window)
@@ -836,13 +827,14 @@ class SketchToolDesc(PencilToolDesc):
 		AbstractToolDesc.__init__(self,"sketch brush")
  
 	def setDefaultOptions(self):
+    PencilToolDecs.setDefaultOptions(self)
 		self.options["maxdiameter"]=7
 		self.options["step"]=1
-		self.options["pressuresize"]=1
 		self.options["blur"]=30
 		self.options["pressurebalance"]=100
 		self.options["fade vertical"]=2
 		self.options["fade horizontal"]=2
+    self.options["opacity"]=100
  
 	def getTool(self,window):
 		tool=SketchTool(self.options,window)

@@ -43,3 +43,7 @@ class SelectionModTypes:
 # types of brush shapes
 class BrushShapes:
 	ellipse = range(1)
+
+# types of stamp mode
+class DrawingToolStampMode:
+	darkest, overlay = range(2)
