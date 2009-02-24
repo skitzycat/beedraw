@@ -107,7 +107,7 @@ class DrawingThread(qtcore.QThread):
 			x=command[3]
 			y=command[4]
 			pressure=command[5]
-			if self.inprocesstools.has_key(int(command[2])):
+			if int(command[2]) in self.inprocesstools:
 				tool=self.inprocesstools[int(command[2])]
 				tool.penMotion(x,y,pressure)
 
@@ -117,7 +117,7 @@ class DrawingThread(qtcore.QThread):
 			#print "Pen up event:", command
 			x=command[3]
 			y=command[4]
-			if self.inprocesstools.has_key(int(command[2])):
+			if int(command[2]) in self.inprocesstools:
 				tool=self.inprocesstools[int(command[2])]
 				tool.penUp(x,y)
 

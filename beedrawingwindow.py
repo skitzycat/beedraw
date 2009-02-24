@@ -150,7 +150,7 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 		if source==0:
 			self.localcommandstack.add(command)
 		# else add it to proper remote command stack, add stack if needed
-		elif self.remotecommandstack.has_key(source):
+		elif source in self.remotecommandstack:
 			self.remotecommandstack[source].addCommand(command)
 		else:
 			self.remotecommandstack[source]=CommandStack(self)

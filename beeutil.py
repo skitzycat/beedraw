@@ -133,7 +133,7 @@ class BlendTranslations:
 	}
 
 	def nameToMode(name):
-		if BlendTranslations.map.has_key(name):
+		if name in BlendTranslations.map:
 			return BlendTranslations.map[name]
 		print "warning, couldn't find mode for name:", name
 		return None
@@ -262,7 +262,7 @@ def getSimilarColorRegion(image,x,y,similarity):
 	while len(pointsqueue):
 		curpoint=pointsqueue.pop()
 		# if point is out of bounds for the image or already in the path just ignore it
-		if curpoint[0]<0 or curpoint[0]>=width or curpoint[1]<0 or curpoint[1]>=height or inpath.has_key(curpoint):
+		if curpoint[0]<0 or curpoint[0]>=width or curpoint[1]<0 or curpoint[1]>=height or curpoint in inpath:
 			continue
 
 		# if point needs to be added to path add surrounding points to queue to check
