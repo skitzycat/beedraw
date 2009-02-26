@@ -210,8 +210,9 @@ class BeeMasterWindow(qtgui.QMainWindow):
 		# copy list of windows otherwise destroying the windows as we iterate through will skip some
 		tmplist=self.drawingwindows[:]
 
+		# sending close will cause the windows to remove themselves from the window list
 		for window in tmplist:
-			window.cleanUp()
+			window.close()
 
 		self.layerswindow.close()
 		self.layerswindow=None

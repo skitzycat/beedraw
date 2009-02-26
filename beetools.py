@@ -498,8 +498,8 @@ class PencilToolDesc(AbstractToolDesc):
 		self.options["step"]=1
 		self.options["pressuresize"]=1
 		self.options["pressurebalance"]=100
-    self.options["opacity"]=100
-    self.options["stampmode"]=DrawingToolStampMode.darkest
+		self.options["opacity"]=100
+		self.options["stampmode"]=DrawingToolStampMode.darkest
  
 	def getTool(self,window):
 		tool=DrawingTool(self.options,window)
@@ -539,13 +539,13 @@ class PaintBrushToolDesc(PencilToolDesc):
 		AbstractToolDesc.__init__(self,"paintbrush")
  
 	def setDefaultOptions(self):
-    PencilToolDecs.setDefaultOptions(self)
+		PencilToolDesc.setDefaultOptions(self)
 		self.options["maxdiameter"]=7
 		self.options["step"]=1
 		self.options["pressuresize"]=1
 		self.options["blur"]=30
 		self.options["pressurebalance"]=100
-    self.options["opacity"]=100
+		self.options["opacity"]=100
  
 	def getTool(self,window):
 		tool=PaintBrushTool(self.options,window)
@@ -827,14 +827,14 @@ class SketchToolDesc(PencilToolDesc):
 		AbstractToolDesc.__init__(self,"sketch brush")
  
 	def setDefaultOptions(self):
-    PencilToolDecs.setDefaultOptions(self)
+		PencilToolDesc.setDefaultOptions(self)
 		self.options["maxdiameter"]=7
 		self.options["step"]=1
 		self.options["blur"]=30
 		self.options["pressurebalance"]=100
 		self.options["fade vertical"]=2
 		self.options["fade horizontal"]=2
-    self.options["opacity"]=100
+		self.options["opacity"]=100
  
 	def getTool(self,window):
 		tool=SketchTool(self.options,window)

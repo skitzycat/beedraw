@@ -104,6 +104,10 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 		# have window get destroyed when it gets a close event
 		self.setAttribute(qtcore.Qt.WA_DeleteOnClose)
 
+	def __del__(self):
+		qtgui.QMainWindow.__del__(self)
+		print "deleting window"
+
 	# alternate constructor for serving a network session
 	def startNetworkServer(parent,port="8333"):
 		newwin=BeeDrawingWindow(parent)
@@ -407,6 +411,10 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 					self.remotedrawingthread.start()
 			self.master.takeFocus(self)
 
+		# I don't want to deffer the delete I want to do it now
+		elif event.type()==qtcore.QEvent.DeferredDelete:
+			self.cleanUp()
+
 		return False
 
 # get the current layer key and make sure it is valid, if it is not valid then set it to something valid if there are any layers
@@ -669,6 +677,7 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 
 		self.master.drawingwindows.remove(self)
 		self.close()
+		self.destroy()
 
 	# this is for inserting a layer with a given image, for instance if loading from a log file with a partially started drawing
 	def loadLayer(self,image,type=LayerTypes.user,key=None,index=None, opacity=None, visible=None, compmode=None):
