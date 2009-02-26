@@ -11,8 +11,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>222</width>
-    <height>130</height>
+    <width>281</width>
+    <height>162</height>
    </rect>
   </property>
   <property name="sizePolicy" >
@@ -167,8 +167,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>222</width>
-     <height>28</height>
+     <width>281</width>
+     <height>35</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuMain_Window" >
@@ -179,7 +179,7 @@
     <addaction name="action_File_Open" />
     <addaction name="action_File_Play" />
     <addaction name="action_File_Connect" />
-    <addaction name="actionExit" />
+    <addaction name="action_File_Exit" />
    </widget>
    <widget class="QMenu" name="menuEdit" >
     <property name="title" >
@@ -229,7 +229,7 @@
     <string>Ctrl+C</string>
    </property>
   </action>
-  <action name="actionExit" >
+  <action name="action_File_Exit" >
    <property name="text" >
     <string>Exit</string>
    </property>

@@ -88,6 +88,12 @@ class BeeMasterWindow(qtgui.QMainWindow):
 		self.fgcolor=color
 		self.ui.FGSwatch.updateColor(self.fgcolor)
 
+	def on_action_File_Exit_triggered(self,accept=True):
+		if not accept:
+			return
+
+		self.close();
+
 	def on_action_File_Play_triggered(self,accept=True):
 		if not accept:
 			return
@@ -206,7 +212,7 @@ class BeeMasterWindow(qtgui.QMainWindow):
 			self.layerswindow.hide()
 
 	# destroy all subwindows
-	def cleanup(self,event):
+	def cleanUp(self):
 		# copy list of windows otherwise destroying the windows as we iterate through will skip some
 		tmplist=self.drawingwindows[:]
 
@@ -219,7 +225,7 @@ class BeeMasterWindow(qtgui.QMainWindow):
 
 	def closeEvent(self,event):
 		# destroy subwindows
-		self.cleanup(event)
+		self.cleanUp()
 		# then do the standard main window close event
 		qtgui.QMainWindow.closeEvent(self,event)
 
