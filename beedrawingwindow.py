@@ -510,6 +510,10 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 			self.zoom/=1.25
 			self.view.newZoom()
 
+	def on_action_File_Close_triggered(self,accept=True):
+		if accept:
+			self.close()
+
 	def on_action_Zoom_1_1_triggered(self,accept=True):
 		if accept:
 			self.zoom=1.0

@@ -25,7 +25,6 @@ class HiveMasterWindow(qtgui.QMainWindow):
 		self.port=8333
 
 		# Initialize values
-		self.connections=[]
 		self.nextclientid=1
 		self.nextclientidmutex=qtcore.QMutex()
 
@@ -125,6 +124,26 @@ class HiveMasterWindow(qtgui.QMainWindow):
 			self.serverthread.wait()
 			self.serverthread=None
 			self.servergui.ui.statusLabel.setText("Serving not running")
+
+	def on_kick_button_pressed(self):
+		curselection=self.ui.clientsList.selectedIndexes()
+		# if there are any items in the list that means that something was selected
+		if curselection:
+			target=curselection[0].data().toString()
+			print "should kick off:", target
+			self.kickClient(target)
+
+	def kickClient(name):
+		# first find the ID of the client
+		id=None
+		for i in self.clientnames.keys():
+			if self.clientnames[i]==name:
+				id=i
+				break
+
+		# if the client isn't in the list just do nothing
+		if not id:
+			return
 
 	def on_actionStart_triggered(self,accept=True):
 		if accept:

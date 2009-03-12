@@ -73,7 +73,7 @@
     <addaction name="action_File_Save_As" />
     <addaction name="action_File_Log" />
     <addaction name="separator" />
-    <addaction name="actionClose" />
+    <addaction name="action_File_Close" />
    </widget>
    <widget class="QMenu" name="menuView" >
     <property name="title" >
@@ -123,7 +123,7 @@
     <string>Ctrl+A</string>
    </property>
   </action>
-  <action name="actionClose" >
+  <action name="action_File_Close" >
    <property name="text" >
     <string>Close</string>
    </property>
