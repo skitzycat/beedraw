@@ -11,12 +11,15 @@ from beeutil import *
 
 from LayerWidgetUi import Ui_LayerConfigWidget
 from LayersWindowUi import Ui_LayersWindow
+import beemaster
 
 class BeeLayer:
-	def __init__(self,window,type,key,image=None,opacity=None,visible=None,compmode=None,owner=0):
-		self.window=window
+	def __init__(self,windowid,type,key,image=None,opacity=None,visible=None,compmode=None,owner=0):
+		self.windowid=windowid
 		self.key=key
 		self.owner=owner
+
+		win=beemaster.BeeMasterWindow().getWindowById(windowid)
 
 		#print "creating layer with key:", key
 		#print "creating layer with owner:", owner
@@ -31,7 +34,7 @@ class BeeLayer:
 		if image:
 			self.image=image
 		else:
-			self.image=qtgui.QImage(window.docwidth,window.docheight,qtgui.QImage.Format_ARGB32_Premultiplied)
+			self.image=qtgui.QImage(win.docwidth,win.docheight,qtgui.QImage.Format_ARGB32_Premultiplied)
 			self.image.fill(0)
 
 		# set default values for anything we didn't get an explicit value for
@@ -51,6 +54,9 @@ class BeeLayer:
 		# set default name for layer
 		self.changeName("Layer %d" % key)
 
+	def getWindow(self):
+		return beemaster.BeeMasterWindow().getWindowById(self.windowid)
+
 	# this will set things up to be pickled
 	def __getstate__(self):
 		state=self.__dict__.copy()
@@ -65,7 +71,6 @@ class BeeLayer:
 		self.__dict__.update(state)
 		# make new mutex
 		self.mutex=QMutex()
-
 
 	def changeName(self,newname):
 		#print "setting layer name to:", newname
@@ -109,14 +114,15 @@ class BeeLayer:
 		painter.end()
 
 		dirtyregion=qtgui.QRegion(rect)
-		dirtyregion=dirtyregion.intersect(qtgui.QRegion(self.window.image.rect()))
+		win=beemaster.BeeMasterWindow().getWindowById(self.windowid)
+		dirtyregion=dirtyregion.intersect(qtgui.QRegion(win.image.rect()))
 		lock.unlock()
-		self.window.reCompositeImage(dirtyregion.boundingRect())
+		win.reCompositeImage(dirtyregion.boundingRect())
 
 	def getConfigWidget(self):
 		# can't do this in the constructor because that may occur in a thread other than the main thread, this function however should only occur in the main thread
 		if not self.configwidget:
-			self.configwidget=LayerConfigWidget(self)
+			self.configwidget=LayerConfigWidget(self.windowid,self.key)
 			self.configwidget.setSizePolicy(qtgui.QSizePolicy.MinimumExpanding,qtgui.QSizePolicy.Fixed)
 			self.configwidget.ui.background_frame.setSizePolicy(qtgui.QSizePolicy.MinimumExpanding,qtgui.QSizePolicy.MinimumExpanding)
 		else:
@@ -173,12 +179,13 @@ class BeeLayer:
 		if self.configwidget:
 			self.configwidget.updateValuesFromLayer()
 
-		self.window.reCompositeImage()
+		beemaster.BeeMasterWindow().getWindowById(self.windowid).reCompositeImage()
 
 	def adjustCanvasSize(self,leftadj,topadj,rightadj,bottomadj):
 		lock=ReadWriteLocker(self.imagelock,True)
 
-		newimage=qtgui.QImage(self.window.docwidth,self.window.docheight,qtgui.QImage.Format_ARGB32_Premultiplied)
+		win=beemaster.BeeMasterWindow().getWindowById(self.windowid)
+		newimage=qtgui.QImage(win.docwidth,win.docheight,qtgui.QImage.Format_ARGB32_Premultiplied)
 		newimage.fill(0)
 
 		oldimagerect=self.image.rect()
@@ -196,11 +203,12 @@ class BeeLayer:
 
 # widget that we can use to set the options of each layer
 class LayerConfigWidget(qtgui.QWidget):
-	def __init__(self,layer):
+	def __init__(self,windowid,layerkey):
 		qtgui.QWidget.__init__(self)
 
 		# save the layer this is suppose to configure
-		self.layer=layer
+		self.layerkey=layerkey
+		self.windowid=windowid
 
 		#setup ui
 		self.ui=Ui_LayerConfigWidget()
@@ -217,7 +225,7 @@ class LayerConfigWidget(qtgui.QWidget):
 		self.ui.background_frame.setAutoFillBackground(True)
 
 		# replace layer preview widget with custom widget
-		self.ui.layerThumb=LayerPreviewWidget(self.ui.layerThumb,layer)
+		self.ui.layerThumb=LayerPreviewWidget(self.ui.layerThumb,windowid,layerkey)
 
 		self.ui.layerThumb.setAutoFillBackground(True)
 
@@ -237,17 +245,18 @@ class LayerConfigWidget(qtgui.QWidget):
 
 	# update the gui to reflect the values of the layer
 	def updateValuesFromLayer(self):
+		layer=beemaster.BeeMasterWindow().getLayerById(self.windowid,self.layerkey)
 		# update visibility box
-		self.ui.visibility_box.setChecked(self.layer.visible)
+		self.ui.visibility_box.setChecked(layer.visible)
 
 		# update opacity value
-		self.ui.opacity_box.setValue(self.layer.opacity)
+		self.ui.opacity_box.setValue(layer.opacity)
 
 		# update name
-		self.ui.layer_name_label.setText(self.layer.name)
+		self.ui.layer_name_label.setText(layer.name)
 
 		# update blend mode box
-		self.ui.blend_mode_box.setCurrentIndex(self.ui.blend_mode_box.findText(BlendTranslations.modeToName(self.layer.compmode)))
+		self.ui.blend_mode_box.setCurrentIndex(self.ui.blend_mode_box.findText(BlendTranslations.modeToName(layer.compmode)))
 
 	def refreshThumb(self):
 		self.ui.layerThumb.update()
@@ -261,15 +270,17 @@ class LayerConfigWidget(qtgui.QWidget):
 		self.refreshThumb()
 
 	def on_visibility_box_toggled(self,state):
+		layer=beemaster.BeeMasterWindow().getLayerById(self.windowid,self.layerkey)
 		# change visibility
-		self.layer.visible=state
+		layer.visible=state
 		# recomposite whole image
-		self.layer.window.reCompositeImage()
+		layer.window.reCompositeImage()
 
 	def on_opacity_box_valueChanged(self,value):
 		# there are two events, one with a flota and one with a string, we only need one
 		if type(value) is float:
-			self.layer.window.addOpacityChangeToQueue(self.layer.key,value)
+			layer=beemaster.BeeMasterWindow().getLayerById(self.windowid,self.layerkey)
+			layer.window.addOpacityChangeToQueue(layer.key,value)
 
 	def on_blend_mode_box_activated(self,value):
 		# we only want the event with the string
@@ -278,10 +289,13 @@ class LayerConfigWidget(qtgui.QWidget):
 
 		newmode=BlendTranslations.nameToMode(value)
 		if newmode!=None:
-			self.layer.window.addBlendModeChangeToQueue(self.layer.key,newmode)
+			layer=beemaster.BeeMasterWindow().getLayerById(self.windowid,self.layerkey)
+			layer.window.addBlendModeChangeToQueue(layer.key,newmode)
 
 	def mousePressEvent(self,event):
-		self.layer.window.setActiveLayer(self.layer.key)
+		layer=beemaster.BeeMasterWindow().getLayerById(self.windowid,self.layerkey)
+		window=layer.getWindow()
+		window.setActiveLayer(layer.key)
 
 class BeeLayersWindow(qtgui.QMainWindow):
 	def __init__(self,master):
@@ -427,7 +441,7 @@ class BeeLayersWindow(qtgui.QMainWindow):
 			if not type(widget) is LayerConfigWidget:
 				continue
 
-			if key==widget.layer.key:
+			if key==widget.layerkey:
 				if key==self.master.curwindow.curlayerkey:
 					widget.highlight()
 					return
@@ -440,7 +454,7 @@ class BeeLayersWindow(qtgui.QMainWindow):
 		vbox=self.layersListArea.widget().layout()
 		for item in range(vbox.count()):
 			widget=vbox.itemAt(item).widget()
-			k=widget.layer.key
+			k=widget.layerkey
 			if key==k or key==None:
 				widget.refreshThumb()
 
@@ -470,35 +484,38 @@ class BeeLayersWindow(qtgui.QMainWindow):
 
 # custom widget for the thumbnail view of a layer
 class LayerPreviewWidget(qtgui.QWidget):
-	def __init__(self,replacingwidget,layer):
+	def __init__(self,replacingwidget,windowid,layerkey):
 		qtgui.QWidget.__init__(self,replacingwidget.parentWidget())
 
 		self.setGeometry(replacingwidget.frameGeometry())
 		self.setObjectName(replacingwidget.objectName())
 
-		self.layer=layer
+		self.windowid=windowid
+		self.layerkey=layerkey
 		self.show()
 
 		self.mutex=qtcore.QMutex()
 
 	# repaint preview for layer, I want to keep this in the same aspect ratio as the layer
 	def paintEvent(self,event):
+		layer=beemaster.BeeMasterWindow().getLayerById(self.windowid,self.layerkey)
+		window=beemaster.BeeMasterWindow().getWindowById(self.windowid)
 		lock=qtcore.QMutexLocker(self.mutex)
 		# get how much we need to scale down both dimensions
-		scalefactor=self.width()/float(max(self.layer.image.width(),self.layer.image.height()))
+		scalefactor=self.width()/float(max(layer.image.width(),layer.image.height()))
 
 		# get dimensions of the image if we keep the aspect ratio and put it in the preview widget
-		scalewidth=self.layer.image.width()*scalefactor
-		scaleheight=self.layer.image.height()*scalefactor
+		scalewidth=layer.image.width()*scalefactor
+		scaleheight=layer.image.height()*scalefactor
 		xoffset=(self.width()-scalewidth)/2
 		yoffset=(self.height()-scaleheight)/2
 
 		scaledimage=qtcore.QRectF(xoffset,yoffset,scalewidth,scaleheight)
 
 		backdrop=qtgui.QImage(scalewidth,scaleheight,qtgui.QImage.Format_ARGB32_Premultiplied)
-		backdrop.fill(self.layer.window.backdropcolor)
+		backdrop.fill(window.backdropcolor)
 		painter=qtgui.QPainter()
 		painter.begin(self)
 		painter.drawImage(scaledimage,backdrop)
-		painter.drawImage(scaledimage,self.layer.image,qtcore.QRectF(self.layer.image.rect()))
+		painter.drawImage(scaledimage,layer.image,qtcore.QRectF(layer.image.rect()))
 		painter.end()

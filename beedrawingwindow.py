@@ -34,10 +34,16 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 		self.docheight=height
 		self.type=type
 
+		# set unique ID
+		self.id=master.getNextWindowId()
+
+		# register window so the master can get back to here
+		self.master.registerWindow(self)
+
 		# initialize values
 		self.zoom=1.0
 		self.log=None
-		self.localcommandstack=CommandStack(self)
+		self.localcommandstack=CommandStack(self.id)
 		self.remotecommandstacks={}
 		self.ui=Ui_DrawingWindowSpec()
 		self.ui.setupUi(self)
@@ -64,9 +70,9 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 
 		# initiate drawing thread
 		if type==WindowTypes.standaloneserver:
-			self.localdrawingthread=DrawingThread(self.remotecommandqueue,self,type=ThreadTypes.server)
+			self.localdrawingthread=DrawingThread(self.remotecommandqueue,self.id,type=ThreadTypes.server)
 		else:
-			self.localdrawingthread=DrawingThread(self.localcommandqueue,self)
+			self.localdrawingthread=DrawingThread(self.localcommandqueue,self.id)
 
 		self.localdrawingthread.start()
 
@@ -104,9 +110,9 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 		# have window get destroyed when it gets a close event
 		self.setAttribute(qtcore.Qt.WA_DeleteOnClose)
 
-	def __del__(self):
-		qtgui.QMainWindow.__del__(self)
-		print "deleting window"
+	# this is for debugging memory cleanup
+	#def __del__(self):
+	#	print "DESTRUCTOR: bee drawing window"
 
 	# alternate constructor for serving a network session
 	def startNetworkServer(parent,port="8333"):
@@ -157,7 +163,7 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 		elif source in self.remotecommandstack:
 			self.remotecommandstack[source].addCommand(command)
 		else:
-			self.remotecommandstack[source]=CommandStack(self)
+			self.remotecommandstack[source]=CommandStack(self.id)
 			self.remotecommandstack[source].addCommand(command)
 
 	# undo last event in stack for passed client id
@@ -400,18 +406,18 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 				if self.type==WindowTypes.singleuser:
 					self.remotedrawingthread=None
 				elif self.type==WindowTypes.animation:
-					self.remotedrawingthread=DrawingThread(self.remotecommandqueue,self,ThreadTypes.animation)
+					self.remotedrawingthread=DrawingThread(self.remotecommandqueue,self.id,ThreadTypes.animation)
 					self.remotedrawingthread.start()
 				elif self.type==WindowTypes.networkclient:
 					self.startNetworkThreads(self.username,self.password,self.host,self.port)
-					self.remotedrawingthread=DrawingThread(self.remotecommandqueue,self,ThreadTypes.network)
+					self.remotedrawingthread=DrawingThread(self.remotecommandqueue,self.id,ThreadTypes.network)
 					self.remotedrawingthread.start()
 				else:
-					self.remotedrawingthread=DrawingThread(self.remotecommandqueue,self,ThreadTypes.network)
+					self.remotedrawingthread=DrawingThread(self.remotecommandqueue,self.id,ThreadTypes.network)
 					self.remotedrawingthread.start()
 			self.master.takeFocus(self)
 
-		# I don't want to deffer the delete I want to do it now
+		# once the window has received a deferred delete it needs to have all it's references removed so memory can be freed up
 		elif event.type()==qtcore.QEvent.DeferredDelete:
 			self.cleanUp()
 
@@ -667,21 +673,27 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 			imagelock=ReadWriteLocker(self.imagelock)
 			writer.write(self.image)
 
+	# this is here because the window doesn't seem to get deleted when it's closed
+	# the cleanUp function attempts to clean up as much memory as possible
 	def cleanUp(self):
 		# end the log if there is one
 		self.endLog()
 
+		# for some reason this seems to get rid of a reference
+		self.setParent(None)
+
 		self.localdrawingthread.addExitEventToQueue()
-		self.localdrawingthread.wait(2000)
+		if not self.localdrawingthread.wait(10000):
+			print "WARNING: drawing thread did not terminate on time"
 
 		# if we started a remote drawing thread kill it
 		if self.remotedrawingthread:
 			self.remotedrawingthread.addExitEventToQueue()
-			self.remotedrawingthread.wait(2000)
+			if not self.remotedrawingthread.wait(20000):
+				print "WARNING: remote drawing thread did not terminate on time"
 
-		self.master.drawingwindows.remove(self)
-		self.close()
-		self.destroy()
+		# this should be the last referece to the window
+		self.master.unregisterWindow(self)
 
 	# this is for inserting a layer with a given image, for instance if loading from a log file with a partially started drawing
 	def loadLayer(self,image,type=LayerTypes.user,key=None,index=None, opacity=None, visible=None, compmode=None):
@@ -711,7 +723,7 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 	# insert a layer at a given point in the list of layers
 	def insertLayer(self,key,index,type=LayerTypes.user,image=None,opacity=None,visible=None,compmode=None,owner=0,history=0):
 		#print "calling insertLayer"
-		layer=BeeLayer(self,type,key,image,opacity=opacity,visible=visible,compmode=compmode,owner=owner)
+		layer=BeeLayer(self.id,type,key,image,opacity=opacity,visible=visible,compmode=compmode,owner=owner)
 
 		self.layers.insert(index,layer)
 

@@ -17,16 +17,29 @@ from beelayer import BeeLayersWindow
 from beeutil import getSupportedReadFileFormats
 import beetools
 
-class BeeMasterWindow(qtgui.QMainWindow):
+import sip
+
+class BeeMasterWindow(qtgui.QMainWindow,object):
+	instances = {}
+	def __new__(cls, *args, **kwargs):
+		if BeeMasterWindow.instances.get(cls) is None:
+			cls.__original_init__ = cls.__init__
+			BeeMasterWindow.instances[cls] = sip.wrapper.__new__(cls, *args, **kwargs)
+		elif cls.__init__ == cls.__original_init__:
+			def nothing(*args, **kwargs):
+				pass
+			cls.__init__ = nothing
+		return BeeMasterWindow.instances[cls]
+
 	def __init__(self,app):
 		qtgui.QMainWindow.__init__(self)
-
-		self.app=app
 
 		# setup interface according to designer code
 		self.ui=Ui_BeeMasterSpec()
 		self.ui.setupUi(self)
 		self.show()
+
+		self.app=app
 
 		self.curwindow=None
 
@@ -56,6 +69,41 @@ class BeeMasterWindow(qtgui.QMainWindow):
 
 		# vars for dialog windows that there should only be one of each
 		self.layerswindow=BeeLayersWindow(self)
+
+		# keep track of current ID so each window gets a unique ID
+		self.nextwindowid=0
+
+	def registerWindow(self,window):
+		self.drawingwindows.append(window)
+
+	def unregisterWindow(self,window):
+		#print "unregistering window with references:", sys.getrefcount(window)
+		self.drawingwindows.remove(window)
+
+	def getNextWindowId(self):
+		self.nextwindowid+=1
+		return self.nextwindowid
+
+	def getWindowById(self,id):
+		for win in self.drawingwindows:
+			if win.id==id:
+				return win
+		print "Error: Couldn't find window with ID:", id
+		return None
+
+	def getLayerById(self,win_id,layer_id):
+		win=self.getWindowById(win_id)
+		if win:
+			return win.getLayerForKey(layer_id)
+		return None
+
+	def removeWindow(self,window):
+		try:
+			self.drawingwindows.remove(window)
+		except:
+			pass
+		if self.curwindow==window:
+			self.curwindow=None
 
 	def getCurToolInst(self,window):
 		curtool=self.getCurToolDesc()
@@ -101,9 +149,7 @@ class BeeMasterWindow(qtgui.QMainWindow):
 		filename=str(qtgui.QFileDialog.getOpenFileName(self,"Select log file to play","","Sketch logfiles (*.slg)"))
 
 		if filename:
-			newwin=BeeDrawingWindow.newAnimationWindow(self,filename)
-			self.drawingwindows.append(newwin)
-			self.curwindow=newwin
+			self.curwin=BeeDrawingWindow.newAnimationWindow(self,filename)
 			newwin.animationthread.start()
 
 	def on_action_File_Open_triggered(self,accept=True):
@@ -162,15 +208,12 @@ class BeeMasterWindow(qtgui.QMainWindow):
 			self.curwindow=BeeDrawingWindow(self,image.width(),image.height(),False)
 			self.curwindow.loadLayer(image)
 
-			self.drawingwindows.append(self.curwindow)
 			self.refreshLayersList()
 
 	def on_actionFileMenuNew_triggered(self,accept=True):
 		if not accept:
 			return
-		newwin=BeeDrawingWindow(self)
-		self.drawingwindows.append(newwin)
-		self.curwindow=newwin
+		self.curwindow=BeeDrawingWindow(self)
 
 		self.refreshLayersList()
 
@@ -193,7 +236,6 @@ class BeeMasterWindow(qtgui.QMainWindow):
 		password=dialogui.passwordfield.text()
 
 		self.curwindow=BeeDrawingWindow.startNetworkWindow(self,username,password,hostname,port)
-		self.drawingwindows.append(self.curwindow)
 		self.refreshLayersList()
 
 	def on_action_File_Start_Server_triggered(self,accept=True):
@@ -201,7 +243,6 @@ class BeeMasterWindow(qtgui.QMainWindow):
 			return
 		self.serverwin=HiveMasterWindow(app)
 		self.curwindow=BeeDrawingWindow.startNetworkServer(self)
-		self.drawingwindows.append(self.curwindow)
 		self.refreshLayersList()
 
 	def on_actionLayers_toggled(self,state):
@@ -217,8 +258,8 @@ class BeeMasterWindow(qtgui.QMainWindow):
 		tmplist=self.drawingwindows[:]
 
 		# sending close will cause the windows to remove themselves from the window list
-		for window in tmplist:
-			window.close()
+		#for window in tmplist:
+		#	window.close()
 
 		self.layerswindow.close()
 		self.layerswindow=None

@@ -85,7 +85,7 @@ class AbstractTool:
 		self.clippath=None
 		self.options=options
 		self.window=window
- 
+
 	def setOption(self,key,value):
 		self.options[key]=value
  
@@ -104,6 +104,10 @@ class AbstractTool:
  
 	def penEnter(self):
 		pass
+
+	def cleanUp(self):
+		self.window.curtool=None
+		self.window=None
  
 class EyeDropperToolDesc(AbstractToolDesc):
 	def __init__(self):
@@ -235,8 +239,8 @@ class DrawingTool(AbstractTool):
 		self.pointshistory.append((x,y,pressure))
  
 		# get size of layer
-		layerwidth=self.layer.window.docwidth
-		layerheight=self.layer.window.docheight
+		layerwidth=self.window.docwidth
+		layerheight=self.window.docheight
  
 		# get points inbetween according to step option and layer size
 		path=getPointsPath(self.lastpoint[0],self.lastpoint[1],x,y,self.options['step'],layerwidth,layerheight,self.lastpressure,pressure)
@@ -345,9 +349,9 @@ class DrawingTool(AbstractTool):
 		oldimage=self.oldlayerimage.copy(dirtyrect)
  
 		command=DrawingCommand(self.layer.key,oldimage,dirtyrect)
-		self.layer.window.addCommandToHistory(command,source)
+		self.window.addCommandToHistory(command,source)
  
-		self.layer.window.master.refreshLayerThumb(self.layer.key)
+		self.window.master.refreshLayerThumb(self.layer.key)
  
 # basic tool for drawing fuzzy edged stuff on the canvas
 class PaintBrushTool(DrawingTool):
