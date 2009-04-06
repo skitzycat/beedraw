@@ -5,8 +5,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>420</width>
-    <height>316</height>
+    <width>467</width>
+    <height>340</height>
    </rect>
   </property>
   <property name="windowTitle" >
@@ -41,7 +41,7 @@
       </spacer>
      </item>
      <item>
-      <widget class="QWidget" native="1" name="widget" >
+      <widget class="QWidget" native="1" name="image_preview" >
        <property name="sizePolicy" >
         <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
          <horstretch>0</horstretch>
@@ -49,6 +49,12 @@
         </sizepolicy>
        </property>
        <property name="minimumSize" >
+        <size>
+         <width>200</width>
+         <height>200</height>
+        </size>
+       </property>
+       <property name="maximumSize" >
         <size>
          <width>200</width>
          <height>200</height>

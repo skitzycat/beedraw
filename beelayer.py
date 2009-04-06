@@ -11,7 +11,8 @@ from beeutil import *
 
 from LayerWidgetUi import Ui_LayerConfigWidget
 from LayersWindowUi import Ui_LayersWindow
-import beemaster
+
+from beeapp import BeeApp
 
 class BeeLayer:
 	def __init__(self,windowid,type,key,image=None,opacity=None,visible=None,compmode=None,owner=0):
@@ -19,7 +20,7 @@ class BeeLayer:
 		self.key=key
 		self.owner=owner
 
-		win=beemaster.BeeMasterWindow().getWindowById(windowid)
+		win=BeeApp().master.getWindowById(windowid)
 
 		#print "creating layer with key:", key
 		#print "creating layer with owner:", owner
@@ -55,7 +56,7 @@ class BeeLayer:
 		self.changeName("Layer %d" % key)
 
 	def getWindow(self):
-		return beemaster.BeeMasterWindow().getWindowById(self.windowid)
+		return BeeApp().master.getWindowById(self.windowid)
 
 	# this will set things up to be pickled
 	def __getstate__(self):
@@ -114,7 +115,7 @@ class BeeLayer:
 		painter.end()
 
 		dirtyregion=qtgui.QRegion(rect)
-		win=beemaster.BeeMasterWindow().getWindowById(self.windowid)
+		win=BeeApp().master.getWindowById(self.windowid)
 		dirtyregion=dirtyregion.intersect(qtgui.QRegion(win.image.rect()))
 		lock.unlock()
 		win.reCompositeImage(dirtyregion.boundingRect())
@@ -179,12 +180,12 @@ class BeeLayer:
 		if self.configwidget:
 			self.configwidget.updateValuesFromLayer()
 
-		beemaster.BeeMasterWindow().getWindowById(self.windowid).reCompositeImage()
+		BeeApp().master.getWindowById(self.windowid).reCompositeImage()
 
 	def adjustCanvasSize(self,leftadj,topadj,rightadj,bottomadj):
 		lock=ReadWriteLocker(self.imagelock,True)
 
-		win=beemaster.BeeMasterWindow().getWindowById(self.windowid)
+		win=BeeApp().master.getWindowById(self.windowid)
 		newimage=qtgui.QImage(win.docwidth,win.docheight,qtgui.QImage.Format_ARGB32_Premultiplied)
 		newimage.fill(0)
 
@@ -245,7 +246,7 @@ class LayerConfigWidget(qtgui.QWidget):
 
 	# update the gui to reflect the values of the layer
 	def updateValuesFromLayer(self):
-		layer=beemaster.BeeMasterWindow().getLayerById(self.windowid,self.layerkey)
+		layer=BeeApp().master.getLayerById(self.windowid,self.layerkey)
 		# update visibility box
 		self.ui.visibility_box.setChecked(layer.visible)
 
@@ -270,7 +271,7 @@ class LayerConfigWidget(qtgui.QWidget):
 		self.refreshThumb()
 
 	def on_visibility_box_toggled(self,state):
-		layer=beemaster.BeeMasterWindow().getLayerById(self.windowid,self.layerkey)
+		layer=BeeApp().master.getLayerById(self.windowid,self.layerkey)
 		# change visibility
 		layer.visible=state
 		# recomposite whole image
@@ -279,7 +280,7 @@ class LayerConfigWidget(qtgui.QWidget):
 	def on_opacity_box_valueChanged(self,value):
 		# there are two events, one with a flota and one with a string, we only need one
 		if type(value) is float:
-			layer=beemaster.BeeMasterWindow().getLayerById(self.windowid,self.layerkey)
+			layer=BeeApp().master.getLayerById(self.windowid,self.layerkey)
 			layer.window.addOpacityChangeToQueue(layer.key,value)
 
 	def on_blend_mode_box_activated(self,value):
@@ -289,11 +290,11 @@ class LayerConfigWidget(qtgui.QWidget):
 
 		newmode=BlendTranslations.nameToMode(value)
 		if newmode!=None:
-			layer=beemaster.BeeMasterWindow().getLayerById(self.windowid,self.layerkey)
+			layer=BeeApp().master.getLayerById(self.windowid,self.layerkey)
 			layer.window.addBlendModeChangeToQueue(layer.key,newmode)
 
 	def mousePressEvent(self,event):
-		layer=beemaster.BeeMasterWindow().getLayerById(self.windowid,self.layerkey)
+		layer=BeeApp().master.getLayerById(self.windowid,self.layerkey)
 		window=layer.getWindow()
 		window.setActiveLayer(layer.key)
 
@@ -498,8 +499,8 @@ class LayerPreviewWidget(qtgui.QWidget):
 
 	# repaint preview for layer, I want to keep this in the same aspect ratio as the layer
 	def paintEvent(self,event):
-		layer=beemaster.BeeMasterWindow().getLayerById(self.windowid,self.layerkey)
-		window=beemaster.BeeMasterWindow().getWindowById(self.windowid)
+		layer=BeeApp().master.getLayerById(self.windowid,self.layerkey)
+		window=BeeApp().master.getWindowById(self.windowid)
 		lock=qtcore.QMutexLocker(self.mutex)
 		# get how much we need to scale down both dimensions
 		scalefactor=self.width()/float(max(layer.image.width(),layer.image.height()))

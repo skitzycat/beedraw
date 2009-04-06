@@ -3,6 +3,7 @@ import PyQt4.QtCore as qtcore
 
 class CanvasAdjustPreview(qtgui.QWidget):
 	def __init__(self,replacingwidget,window):
+		print "creating canvas adjust preview"
 		qtgui.QWidget.__init__(self,replacingwidget.parentWidget())
 
 		self.setGeometry(replacingwidget.frameGeometry())
@@ -10,28 +11,31 @@ class CanvasAdjustPreview(qtgui.QWidget):
 
 		self.window=window
 
-		self.previewimage=self.window.image.scaled(40,40,qtcore.Qt.IgnoreAspectRatio)
+		self.previewimage=window.image.scaled(200,200,qtcore.Qt.KeepAspectRatio)
 
-		self.imagewidth=self.window.image.width()
-		self.imageheight=self.window.image.height()
+		self.basewidth=window.image.width()
+		self.baseheight=window.image.height()
 
-		self.xoffset=20
-		self.yoffset=20
+		self.xoffset=(200-self.previewimage.width())/2
+		self.yoffset=(200-self.previewimage.height())/2
 
-		self.sizeratio=self.previewimage.width()/self.window.image.width()
+		self.sizeratio=self.previewimage.width()/window.image.width()
 
 		self.drawrect=qtcore.QRectF(self.xoffset,self.yoffset,self.previewimage.width(),self.previewimage.height())
 
-		self.rectpen=qtgui.QPen(qtgui.darkMagenta)
+		pencolor=qtgui.QColor()
+		pencolor.setNamedColor("blueviolet")
+		self.rectpen=qtgui.QPen(pencolor)
 		self.rectpen.setWidth(3)
 
 		self.show()
 
 	def paintEvent(self,event):
+		print "starting paint event"
 		painter=qtgui.QPainter()
 		painter.begin(self)
 
-		painter.drawImage(self.xoffset,self.yoffset)
+		painter.drawImage(self.xoffset,self.yoffset,self.previewimage)
 
 		painter.setPen(self.rectpen)
 		painter.drawRect(self.drawrect)
@@ -39,10 +43,24 @@ class CanvasAdjustPreview(qtgui.QWidget):
 		painter.end()
 
 	def newAdjustments(self,left,top,right,bottom):
-		leftbound=(left*self.sizeratio)+self.xoffset
-		topbound=(top*self.sizeratio)+self.yoffset
-		width=(right+self.imagewidth-left)*self.sizeratio
-		height=(bottom+self.imageheight-top)*self.sizeratio
+		newwidth=self.basewidth-left+right
+		newheight=self.baseheight-top+bottom
+
+		newscalefactor=200/max(newwidth,newheight)
+
+		newscaledwidth=newwidth*newscalefactor
+		newscaledheight=newheight*newscalefactor
+
+		newpreview=qtgui.QImage(newwidth,newheight,qtgui.QImage.Format_ARGB32_Premultiplied)
+
+		oldimagepos_x=left*newscalefactor
+		oldimagepos_y=top*newscalefactor
+
+		# fill area with white
+		newpreview.fill(0xFFFFFFFF)
+
+		# draw image onto preview area
+		painter=qtgui.QPainter()
 
 		self.drawrect=qtcore.QRectF(leftbound,topbound,width,height)
 

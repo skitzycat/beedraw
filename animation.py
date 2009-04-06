@@ -10,6 +10,8 @@ import PyQt4.QtGui as qtgui
 import PyQt4.QtXml as qtxml
 
 class XmlToQueueEventsConverter:
+	"""  Represents a parser to to turn an incomming xml stream into drawing events
+	"""
 	def __init__(self,device,window,stepdelay,type=ThreadTypes.animation,id=0):
 		if device:
 			self.xml=qtxml.QXmlStreamReader(device)
@@ -28,6 +30,8 @@ class XmlToQueueEventsConverter:
 			self.layertype=LayerTypes.network
 
 	def translateKey(self,key):
+		""" Translate key from local id to current window ID this is only needed in animation threads, in other thread types just return what was passed
+		"""
 		if self.type!=ThreadTypes.animation:
 			return key
 		return self.keymap[key]
@@ -39,6 +43,8 @@ class XmlToQueueEventsConverter:
 			self.keymap[key]=dockey
 
 	def read(self):
+		""" Read tokens in the xml document until the end or until an error occurs, this function serves as a switchboard to call other functions based on the type of token
+		"""
 		while not self.xml.atEnd():
 			tokentype=self.xml.readNext()
 			if tokentype==qtxml.QXmlStreamReader.StartElement:
@@ -53,6 +59,9 @@ class XmlToQueueEventsConverter:
 				print "error while parsing XML:", self.xml.errorString()
 
 	def processStartElement(self):
+		""" Handle any type of starting XML tag and turn it into a drawing event if needed
+		"""
+		type=self.type
 		name=self.xml.name()
 		attrs=self.xml.attributes()
 
@@ -255,8 +264,7 @@ class NetworkListenerThread (qtcore.QThread):
 		# if we failed to get a socket then destroy the window and exit
 		if not self.socket:
 			print "failed to get socket connection"
-			self.window.cleanUp()
-			self.window.destroy()
+			self.window.close()
 			return
 
 		# get ready for next contact from server

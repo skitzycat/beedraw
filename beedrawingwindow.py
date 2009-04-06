@@ -23,37 +23,25 @@ from DrawingWindowUI import Ui_DrawingWindowSpec
 from ImageSizeAdjustDialogUi import Ui_CanvasSizeDialog
 from ImageScaleDialog import Ui_CanvasScaleDialog
 
+from beesessionstate import BeeSessionState
+
 from animation import *
 
-class BeeDrawingWindow(qtgui.QMainWindow):
-	def __init__(self,master,width=600,height=400,startlayer=True,type=WindowTypes.singleuser,host="localhost",port=8333):
-		qtgui.QMainWindow.__init__(self,master)
-		# save passed values
-		self.master=master
-		self.docwidth=width
-		self.docheight=height
-		self.type=type
+from canvasadjustpreview import CanvasAdjustPreview
 
-		# set unique ID
-		self.id=master.getNextWindowId()
-
-		# register window so the master can get back to here
-		self.master.registerWindow(self)
+class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
+	""" Represents a window that the user can draw in
+	"""
+	def __init__(self,master,width=600,height=400,startlayer=True,type=WindowTypes.singleuser):
+		BeeSessionState.__init__(self,width,height,type)
+		qtgui.QMainWindow.__init__(self,self.master)
 
 		# initialize values
 		self.zoom=1.0
-		self.log=None
-		self.localcommandstack=CommandStack(self.id)
-		self.remotecommandstacks={}
 		self.ui=Ui_DrawingWindowSpec()
 		self.ui.setupUi(self)
-		self.curlayerkey=None
 		self.activated=False
 		self.backdrop=None
-		self.backdropcolor=0xFFFFFFFF
-
-		self.nextlayerkey=0
-		self.nextlayerkeymutex=qtcore.QMutex()
 
 		self.cursoroverlay=None
 
@@ -62,11 +50,6 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 		self.clippath=None
 
 		self.localcommandqueue=Queue(0)
-		self.remotecommandqueue=Queue(0)
-		self.remoteoutputqueue=Queue(0)
-
-		self.remotedrawingthread=None
-		self.remoteid=0
 
 		# initiate drawing thread
 		if type==WindowTypes.standaloneserver:
@@ -82,9 +65,6 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 
 		self.serverreadingthread=None
 
-		self.layers=[]
-		self.layersmutex=qtcore.QMutex()
-
 		self.image=qtgui.QImage(width,height,qtgui.QImage.Format_ARGB32_Premultiplied)
 		self.imagelock=qtcore.QReadWriteLock()
 
@@ -94,8 +74,7 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 		self.resizeViewToWindow()
 		self.view.setCursor(master.getCurToolDesc().getCursor())
 
-		if type!=WindowTypes.standaloneserver:
-			self.show()
+		self.show()
 
 		# create a backdrop to be put at the bottom of all the layers
 		self.recreateBackdrop()
@@ -114,29 +93,6 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 	#def __del__(self):
 	#	print "DESTRUCTOR: bee drawing window"
 
-	# alternate constructor for serving a network session
-	def startNetworkServer(parent,port="8333"):
-		newwin=BeeDrawingWindow(parent)
-		return newwin
-
-	# make method static
-	startNetworkServer=staticmethod(startNetworkServer)
-
-	# alternate constructor for joining a network session
-	def startNetworkWindow(parent,username,password,host="localhost",port="8333"):
-		print "running startNetworkWindow"
-		newwin=BeeDrawingWindow(parent,startlayer=False,type=WindowTypes.networkclient)
-
-		newwin.username=username
-		newwin.password=password
-		newwin.host=host
-		newwin.port=port
-
-		return newwin
-
-	# make method static
-	startNetworkWindow=staticmethod(startNetworkWindow)
-
 	# alternate constructor for starting an animation playback
 	def newAnimationWindow(master,filename):
 		newwin=BeeDrawingWindow(master,600,400,False,WindowTypes.animation)
@@ -146,14 +102,6 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 	# make method static
 	newAnimationWindow=staticmethod(newAnimationWindow)
 
-	# return false if the layer id passed is owned another client in a network session and true otherwise, should always return true if there is no network session
-	def ownedByMe(self,owner):
-		if owner==0:
-			return True
-		if owner==self.remoteid:
-			return True
-		return False
-
 	# add an event to the undo/redo history
 	def addCommandToHistory(self,command,source=0):
 		# if we don't get a source then assume that it's local
@@ -161,10 +109,10 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 			self.localcommandstack.add(command)
 		# else add it to proper remote command stack, add stack if needed
 		elif source in self.remotecommandstack:
-			self.remotecommandstack[source].addCommand(command)
+			self.remotecommandstack[source].add(command)
 		else:
 			self.remotecommandstack[source]=CommandStack(self.id)
-			self.remotecommandstack[source].addCommand(command)
+			self.remotecommandstack[source].add(command)
 
 	# undo last event in stack for passed client id
 	def undo(self,source=0):
@@ -268,9 +216,6 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 		self.nextlayerkey+=1
 		return key
 
-	def addRemoveLayerRequestToQueue(self,key,source=ThreadTypes.user):
-		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.deletelayer,key),source)
-
 	def queueCommand(self,command,source=ThreadTypes.user,owner=0):
 		#print "queueing command:", command
 		if source==ThreadTypes.user:
@@ -284,67 +229,10 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 			#print "putting command in remote queue"
 			self.remotecommandqueue.put(command)
 
-	# remove layer, but don't add it to history
-	def removeLayerByKey(self,key,history=0):
-		# get a lock so we don't get a collision ever
-		lock=qtcore.QMutexLocker(self.layersmutex)
-		
-		layer=self.getLayerForKey(key)
-		if(layer):
-			index=self.layers.index(layer)
-			if history!=-1:
-				self.addCommandToHistory(DelLayerCommand(layer,index))
-			self.layers.pop(index)
-
-			# try to set current layer to a valid layer
-			if index==0:
-				if len(self.layers) == 0:
-					self.curlayerkey=None
-				else:
-					self.curlayerkey=self.layers[index].key
-			else:
-				self.curlayerkey=self.layers[index-1].key
-
-			self.requestLayerListRefresh()
-			self.reCompositeImage()
-			return (layer,index)
-
-		return (None,None)
-
-	def addLayerDownToQueue(self,key,source=ThreadTypes.user):
-		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.layerdown,key),source)
-
-	def layerDown(self,key):
-		index=self.getLayerIndexForKey(key)
-		if index>0:
-			self.layers[index],self.layers[index-1]=self.layers[index-1],self.layers[index]
-			self.reCompositeImage()
-			self.requestLayerListRefresh()
-
-			# if we are only running locally add command to local history
-			# otherwise do nothing
-			if self.type==WindowTypes.singleuser:
-				self.addCommandToHistory(LayerDownCommand(key))
-
-	def addLayerUpToQueue(self,key,source=ThreadTypes.user):
-		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.layerup,key),source)
-
 	# send event to GUI to update the list of current layers
 	def requestLayerListRefresh(self):
 		event=qtcore.QEvent(BeeCustomEventTypes.refreshlayerslist)
 		self.master.app.postEvent(self.master,event)
-
-	def layerUp(self,key):
-		index=self.getLayerIndexForKey(key)
-		if index<len(self.layers)-1:
-			self.layers[index],self.layers[index+1]=self.layers[index+1],self.layers[index]
-			self.reCompositeImage()
-			self.requestLayerListRefresh()
-
-			# if we are only running locally add command to local history
-			# otherwise do nothing
-			if self.type==WindowTypes.singleuser:
-				self.addCommandToHistory(LayerUpCommand(key))
 
 	# recomposite all layers together into the displayed image
 	# when a thread calls this method it shouldn't have a lock on any layers
@@ -393,29 +281,28 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 		else:
 			return qtgui.QColor()
 
+	def startRemoteDrawingThreads(self):
+		if self.type==WindowTypes.singleuser:
+			self.remotedrawingthread=None
+		elif self.type==WindowTypes.animation:
+			self.remotedrawingthread=DrawingThread(self.remotecommandqueue,self.id,ThreadTypes.animation)
+			self.remotedrawingthread.start()
+		else:
+			self.remotedrawingthread=DrawingThread(self.remotecommandqueue,self.id,ThreadTypes.network)
+			self.remotedrawingthread.start()
+
 	# handle a few events that don't have easy function over loading front ends
 	def event(self,event):
 		# when the window is resized change the view to match
 		if event.type()==qtcore.QEvent.Resize:
 			self.resizeViewToWindow()
-		# do the last part of setup when the window is done being created
+		# do the last part of setup when the window is done being created, this is so nothing starts drawing on the screen before it is ready
 		elif event.type()==qtcore.QEvent.WindowActivate:
 			if self.activated==False:
 				self.activated=True
 				self.reCompositeImage()
-				if self.type==WindowTypes.singleuser:
-					self.remotedrawingthread=None
-				elif self.type==WindowTypes.animation:
-					self.remotedrawingthread=DrawingThread(self.remotecommandqueue,self.id,ThreadTypes.animation)
-					self.remotedrawingthread.start()
-				elif self.type==WindowTypes.networkclient:
-					self.startNetworkThreads(self.username,self.password,self.host,self.port)
-					self.remotedrawingthread=DrawingThread(self.remotecommandqueue,self.id,ThreadTypes.network)
-					self.remotedrawingthread.start()
-				else:
-					self.remotedrawingthread=DrawingThread(self.remotecommandqueue,self.id,ThreadTypes.network)
-					self.remotedrawingthread.start()
-			self.master.takeFocus(self)
+				self.startRemoteDrawingThreads()
+				self.master.takeFocus(self)
 
 		# once the window has received a deferred delete it needs to have all it's references removed so memory can be freed up
 		elif event.type()==qtcore.QEvent.DeferredDelete:
@@ -436,33 +323,11 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 		self.curtool=self.master.getCurToolInst(self)
 		self.curtool.penDown(x,y,pressure)
 
-	def addPenDownToQueue(self,x,y,pressure,layerkey=None,tool=None,source=ThreadTypes.user):
-		if not tool:
-			tool=self.master.getCurToolInst(self)
-			self.curtool=tool
-
-		if layerkey==None:
-			layerkey=self.getCurLayerKey()
-
-		self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.pendown,layerkey,x,y,pressure,tool),source)
-
 	def penMotion(self,x,y,pressure):
 		self.curtool.penMotion(x,y,pressure)
 
-	def addPenMotionToQueue(self,x,y,pressure,layerkey=None,source=ThreadTypes.user):
-		if layerkey==None:
-			layerkey=self.curlayerkey
-
-		self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.penmotion,layerkey,x,y,pressure),source)
-
 	def penUp(self,x,y,source=0):
 		self.curtool.penUp(x,y,source)
-
-	def addPenUpToQueue(self,x,y,layerkey=None,source=ThreadTypes.user):
-		if not layerkey:
-			layerkey=self.curlayerkey
-
-		self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.penup,self.curlayerkey,x,y),source)
 
 	# not sure how useful these will be, but just in case a tool wants to do something special when it leaves the drawable area they are here
 	def penEnter(self):
@@ -545,6 +410,10 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 			dialog=qtgui.QDialog()
 			dialog.ui=Ui_CanvasSizeDialog()
 			dialog.ui.setupUi(dialog)
+			dialog.ui.image_preview=CanvasAdjustPreview(dialog.ui.image_preview,self)
+
+			# if the canvas is in any way shared don't allow changing the top or left
+			# so no other lines in queue will be messed up
 			if self.type!=WindowTypes.singleuser:
 				dialog.ui.Left_Adjust_Box.setDisabled(True)
 				dialog.ui.Top_Adjust_Box.setDisabled(True)
@@ -590,7 +459,7 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 		self.reCompositeImage()
 
 		# update all layer preview thumbnails
-		self.master.refreshLayerThumb()
+		self.master.refreshLayerThumb(self.id)
 
 	# create backdrop for bottom of all layers, eventually I'd like this to be configurable, but for now it just fills in all white
 	def recreateBackdrop(self):
@@ -863,3 +732,19 @@ class BeeDrawingWindow(qtgui.QMainWindow):
 		self.layers=[]
 		self.requestLayerListRefresh()
 		self.reCompositeImage()
+
+class NetworkClientDrawingWindow(BeeDrawingWindow):
+	""" Represents a window that the user can draw in
+	"""
+	def __init__(self,parent,username,password,host,port):
+		print "initializign network window"
+		BeeDrawingWindow.__init__(self,parent,startlayer=False,type=WindowTypes.networkclient)
+		self.username=username
+		self.password=password
+		self.host=host
+		self.port=port
+
+	def startRemoteDrawingThreads(self):
+		self.startNetworkThreads(self.username,self.password,self.host,self.port)
+		self.remotedrawingthread=DrawingThread(self.remotecommandqueue,self.id,ThreadTypes.network)
+		self.remotedrawingthread.start()

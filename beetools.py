@@ -11,6 +11,8 @@ from PencilOptionsDialogUi import *
 from BrushOptionsDialogUi import *
 from EraserOptionsDialogUi import *
 from PaintBucketOptionsDialogUi import *
+
+from beeapp import BeeApp
  
 # Class to manage tools and make instances as needed
 class BeeToolBox:
@@ -351,7 +353,7 @@ class DrawingTool(AbstractTool):
 		command=DrawingCommand(self.layer.key,oldimage,dirtyrect)
 		self.window.addCommandToHistory(command,source)
  
-		self.window.master.refreshLayerThumb(self.layer.key)
+		BeeApp().master.refreshLayerThumb(self.window.id,self.layer.key)
  
 # basic tool for drawing fuzzy edged stuff on the canvas
 class PaintBrushTool(DrawingTool):

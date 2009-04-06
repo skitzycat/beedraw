@@ -8,7 +8,7 @@ from Queue import Queue
 
 from beeutil import *
 
-import beemaster
+from beeapp import BeeApp
 
 class DrawingThread(qtcore.QThread):
 	def __init__(self,queue,windowid,type=ThreadTypes.user):
@@ -16,7 +16,6 @@ class DrawingThread(qtcore.QThread):
 		self.queue=queue
 		self.windowid=windowid
 		self.type=type
-		self.windowtype=beemaster.BeeMasterWindow().getWindowById(windowid).type
 
 		# this will be keyed on a layer key, value will be the tool
 		# object so it retains information throughout the stroke
@@ -28,6 +27,8 @@ class DrawingThread(qtcore.QThread):
 		self.queue.put((DrawingCommandTypes.quit,))
 
 	def run(self):
+		self.windowtype=BeeApp().master.getWindowById(self.windowid).type
+
 		#print "starting drawing thread"
 		while 1:
 			command=self.queue.get()
@@ -57,7 +58,7 @@ class DrawingThread(qtcore.QThread):
 					self.processServerNetworkCommand(command)
 
 	def processNonLayerCommand(self,command):
-		window=beemaster.BeeMasterWindow().getWindowById(self.windowid)
+		window=BeeApp().master.getWindowById(self.windowid)
 		subtype=command[1]
 		if subtype==NonLayerCommandTypes.startlog:
 			pass
@@ -77,7 +78,7 @@ class DrawingThread(qtcore.QThread):
 		window.logCommand(command)
 
 	def processLayerCommand(self,command):
-		window=beemaster.BeeMasterWindow().getWindowById(self.windowid)
+		window=BeeApp().master.getWindowById(self.windowid)
 		subtype=command[1]
 		if subtype==LayerCommandTypes.alpha:
 			layer=window.getLayerForKey(command[2])
@@ -145,7 +146,7 @@ class DrawingThread(qtcore.QThread):
 			print "unknown processLayerCommand subtype:", subtype
 
 	def processAllLayerCommand(self,command):
-		window=beemaster.BeeMasterWindow().getWindowById(self.windowid)
+		window=BeeApp().master.getWindowById(self.windowid)
 		subtype=command[1]
 		if subtype==AllLayerCommandTypes.resize:
 			window.adjustCanvasSize(command[2],command[3],command[4],command[5])
@@ -185,19 +186,19 @@ class DrawingThread(qtcore.QThread):
 		self.sendToServer(command)
 
 	def processClientNetworkCommand(self,command):
-		window=beemaster.BeeMasterWindow().getWindowById(self.windowid)
+		window=BeeApp().master.getWindowById(self.windowid)
 		subtype=command[1]
 		if subtype==NetworkControlCommandTypes.resyncstart:
 			window.clearAllLayers()
 
 	def processServerNetworkCommand(self,command):
-		window=beemaster.BeeMasterWindow().getWindowById(self.windowid)
+		window=BeeApp().master.getWindowById(self.windowid)
 		subtype=command[1]
 		if subtype==NetworkControlCommandTypes.resyncrequest:
 			window.sendResyncToClient(command[2]*-1)
 
 	def sendToServer(self,command):
-		window=beemaster.BeeMasterWindow().getWindowById(self.windowid)
+		window=BeeApp().master.getWindowById(self.windowid)
 		if command[0]==DrawingCommandTypes.alllayer and command[1]==AllLayerCommandTypes.insertlayer:
 			command=(command[0],command[1],command[2],command[3],window.remoteid)
 		window.remoteoutputqueue.put(command)

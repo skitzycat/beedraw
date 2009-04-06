@@ -54,6 +54,19 @@ class HiveMasterWindow(qtgui.QMainWindow):
 		# drawing window which holds the current state of the network session
 		self.window=BeeDrawingWindow(self,600,400,False,WindowTypes.standaloneserver)
 
+	# since there should only be one window just return 1
+	def getNextWindowId(self):
+		return 1
+
+	def getWindowById(self,id):
+		return self.window
+
+	def getLayerById(self,win_id,layer_id):
+		return self.window.getLayerByKey()
+
+	def registerWindow(self,window):
+		pass
+
 	# needs to be implemented so this can be a window controller
 	def refreshThumb(self):
 		return

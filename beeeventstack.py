@@ -4,8 +4,7 @@ import PyQt4.QtCore as qtcore
 import PyQt4.QtGui as qtgui
 
 from beeutil import *
-
-import beemaster
+from beeapp import BeeApp
 
 # object to handle the undo/redo history
 class CommandStack:
@@ -40,6 +39,7 @@ class CommandStack:
 
 		self.index-=1
 		self.commandstack[self.index].undo(self.windowid)
+		BeeApp().master.refreshLayerThumb(self.windowid)
 
 	def redo(self):
 		if self.index>=len(self.commandstack):
@@ -47,6 +47,7 @@ class CommandStack:
 
 		self.commandstack[self.index].redo(self.windowid)
 		self.index+=1
+		BeeApp().master.refreshLayerThumb(self.windowid)
 
 # parent class for all commands that get put in undo/redo stack
 class AbstractCommand:
@@ -64,13 +65,13 @@ class DrawingCommand(AbstractCommand):
 		self.location=location
 
 	def undo(self,windowid):
-		layer=beemaster.BeeMasterWindow().getLayerById(windowid,self.layerkey)
+		layer=BeeApp().master.getLayerById(windowid,self.layerkey)
 		if layer:
 			self.newimage=layer.image.copy(self.location)
 			layer.compositeFromCorner(self.oldimage,self.location.x(),self.location.y(),qtgui.QPainter.CompositionMode_Source)
 
 	def redo(self,windowid):
-		layer=beemaster.BeeMasterWindow().getLayerById(windowid,self.layerkey)
+		layer=BeeApp().master.getLayerById(windowid,self.layerkey)
 		if layer:
 			layer.compositeFromCorner(self.newimage,self.location.x(),self.location.y(),qtgui.QPainter.CompositionMode_Source)
 
@@ -79,11 +80,11 @@ class AddLayerCommand(AbstractCommand):
 		self.layerkey=layerkey
 
 	def undo(self,windowid):
-		window=beemaster.BeeMasterWindow().getWindowById(windowid)
+		window=BeeApp().master.getWindowById(windowid)
 		(self.oldlayer,self.index)=window.removeLayerByKey(self.layerkey,history=-1)
 
 	def redo(self,windowid):
-		window=beemaster.BeeMasterWindow().getWindowById(windowid)
+		window=BeeApp().master.getWindowById(windowid)
 		window.insertRawLayer(self.oldlayer,self.index,history=-1)
 
 class DelLayerCommand(AbstractCommand):
@@ -92,11 +93,11 @@ class DelLayerCommand(AbstractCommand):
 		self.index=index
 
 	def undo(self,windowid):
-		window=beemaster.BeeMasterWindow().getWindowById(windowid)
+		window=BeeApp().master.getWindowById(windowid)
 		window.insertRawLayer(self.layer,self.index,history=-1)
 
 	def redo(self,windowid):
-		window=beemaster.BeeMasterWindow().getWindowById(windowid)
+		window=BeeApp().master.getWindowById(windowid)
 		window.removeLayerByKey(self.layer.key,history=-1)
 
 class LayerUpCommand(AbstractCommand):
@@ -104,11 +105,11 @@ class LayerUpCommand(AbstractCommand):
 		self.layerkey=layerkey
 
 	def undo(self,windowid):
-		window=beemaster.BeeMasterWindow().getWindowById(windowid)
+		window=BeeApp().master.getWindowById(windowid)
 		window.layerDown(self.layerkey)
 
 	def redo(self,windowid):
-		window=beemaster.BeeMasterWindow().getWindowById(windowid)
+		window=BeeApp().master.getWindowById(windowid)
 		window.layerUp(self.layerkey)
 
 class LayerDownCommand(AbstractCommand):
@@ -116,9 +117,9 @@ class LayerDownCommand(AbstractCommand):
 		self.layerkey=layerkey
 
 	def undo(self,windowid):
-		window=beemaster.BeeMasterWindow().getWindowById(windowid)
+		window=BeeApp().master.getWindowById(windowid)
 		window.layerUp(self.layerkey)
 
 	def redo(self,windowid):
-		window=beemaster.BeeMasterWindow().getWindowById(windowid)
+		window=BeeApp().master.getWindowById(windowid)
 		window.layerDown(self.layerkey)

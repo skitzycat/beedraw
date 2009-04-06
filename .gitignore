@@ -1,4 +1,5 @@
 designer/*.py
+designer/*.pyc
 *.pyc
 *.png
 .*.swp

@@ -4,7 +4,7 @@ import math
 
 from beeutil import *
 
-import beemaster
+from beeapp import BeeApp
 
 # widget that we actually draw the image on for the user to see
 class BeeViewDisplayWidget(qtgui.QWidget):
@@ -21,7 +21,7 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 		self.setAttribute(qtcore.Qt.WA_PaintOnScreen)
 
 	def newZoom(self):
-		window=beemaster.BeeMasterWindow().getWindowById(self.windowid)
+		window=BeeApp().master.getWindowById(self.windowid)
 		# set up a transformation to do all the zoomming
 		self.transform=qtgui.QTransform()
 		self.transform=self.transform.scale(window.zoom,window.zoom)
@@ -36,7 +36,7 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 		self.update()
 
 	def paintEvent(self,event):
-		window=beemaster.BeeMasterWindow().getWindowById(self.windowid)
+		window=BeeApp().master.getWindowById(self.windowid)
 		dirtyregion=event.region()
 
 		if dirtyregion.isEmpty():
@@ -86,7 +86,7 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 
 	# draw overlay things on the image, like selections
 	def drawViewOverlay(self,painter):
-		window=beemaster.BeeMasterWindow().getWindowById(self.windowid)
+		window=BeeApp().master.getWindowById(self.windowid)
 		# this section will highlight selections if there is one
 		selection=window.selection
 
@@ -132,7 +132,7 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 
 	# these are called regardless of if a mouse or tablet event was used
 	def cursorPressEvent(self,x,y,pressure=1,subx=0,suby=0):
-		window=beemaster.BeeMasterWindow().getWindowById(self.windowid)
+		window=BeeApp().master.getWindowById(self.windowid)
 		# if the window has no layers in it's layers list then just return
 		if not window.layers:
 			return
@@ -140,7 +140,7 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 		if self.pendown:
 			window.addPenUpToQueue(x,y)
 		
-		self.setCursor(beemaster.BeeMasterWindow().getCurToolDesc().getDownCursor())
+		self.setCursor(BeeApp().master.getCurToolDesc().getDownCursor())
 
 		self.pendown=True
 		x=x+subx
@@ -149,7 +149,7 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 		window.addPenDownToQueue(x,y,pressure)
 
 	def cursorMoveEvent(self,x,y,pressure=1,subx=0,suby=0):
-		window=beemaster.BeeMasterWindow().getWindowById(self.windowid)
+		window=BeeApp().master.getWindowById(self.windowid)
 		if self.pendown:
 			#print "cursorMoveEvent at:",x,y,subx,suby
 			x=x+subx
@@ -159,7 +159,7 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 			window.addPenMotionToQueue(x,y,pressure)
 
 	def cursorReleaseEvent(self,x,y,pressure=1,subx=0,suby=0):
-		window=beemaster.BeeMasterWindow().getWindowById(self.windowid)
+		window=BeeApp().master.getWindowById(self.windowid)
 		if self.pendown:
 			self.setCursor(window.master.getCurToolDesc().getCursor())
 			x,y=self.viewCoordsToImage(x,y)
@@ -167,17 +167,17 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 		self.pendown=False
 
 	def leaveEvent(self,event):
-		window=beemaster.BeeMasterWindow().getWindowById(self.windowid)
+		window=BeeApp().master.getWindowById(self.windowid)
 		if self.pendown:
 			window.penLeave()
 
 	def enterEvent(self,event):
-		window=beemaster.BeeMasterWindow().getWindowById(self.windowid)
+		window=BeeApp().master.getWindowById(self.windowid)
 		if self.pendown:
 			window.penEnter()
 
 	def viewCoordsToImage(self,x,y):
-		window=beemaster.BeeMasterWindow().getWindowById(self.windowid)
+		window=BeeApp().master.getWindowById(self.windowid)
 		#print "translating coords:",x,y
 		visible=self.visibleRegion().boundingRect()
 

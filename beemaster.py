@@ -12,19 +12,25 @@ from beetypes import *
 from BeeMasterUI import Ui_BeeMasterSpec
 from ConnectionDialogUi import Ui_ConnectionInfoDialog
 from colorswatch import *
-from beedrawingwindow import BeeDrawingWindow
 from beelayer import BeeLayersWindow
 from beeutil import getSupportedReadFileFormats
 import beetools
 
 import sip
 
+from beedrawingwindow import BeeDrawingWindow, NetworkClientDrawingWindow
+
+
 class BeeMasterWindow(qtgui.QMainWindow,object):
 	instances = {}
 	def __new__(cls, *args, **kwargs):
+		""" this redefinition of new is here to make the object a singleton
+		"""
+		# if there is no instance of this class just make a new one and save what the init function was
 		if BeeMasterWindow.instances.get(cls) is None:
 			cls.__original_init__ = cls.__init__
 			BeeMasterWindow.instances[cls] = sip.wrapper.__new__(cls, *args, **kwargs)
+		# if there already was an instance and the init function is the same then make init do nothing so it's not run again and return the already created instance
 		elif cls.__init__ == cls.__original_init__:
 			def nothing(*args, **kwargs):
 				pass
@@ -235,7 +241,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object):
 		username=dialogui.usernamefield.text()
 		password=dialogui.passwordfield.text()
 
-		self.curwindow=BeeDrawingWindow.startNetworkWindow(self,username,password,hostname,port)
+		self.curwindow=NetworkClientDrawingWindow(self,username,password,hostname,port)
 		self.refreshLayersList()
 
 	def on_action_File_Start_Server_triggered(self,accept=True):
@@ -258,8 +264,8 @@ class BeeMasterWindow(qtgui.QMainWindow,object):
 		tmplist=self.drawingwindows[:]
 
 		# sending close will cause the windows to remove themselves from the window list
-		#for window in tmplist:
-		#	window.close()
+		for window in tmplist:
+			window.close()
 
 		self.layerswindow.close()
 		self.layerswindow=None
@@ -285,8 +291,8 @@ class BeeMasterWindow(qtgui.QMainWindow,object):
 			self.layerswindow.refreshLayerHighlight(key)
 
 	# refresh thumbnail of layer with inidcated key
-	def refreshLayerThumb(self,key=None):
-		if self.layerswindow:
+	def refreshLayerThumb(self,windowid,key=None):
+		if self.curwindow and self.curwindow.id==windowid:
 			self.layerswindow.refreshLayerThumb(key)
 
 	# handle the custom event I created to trigger refreshing the list of layers
