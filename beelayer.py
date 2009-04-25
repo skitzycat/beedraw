@@ -116,7 +116,12 @@ class BeeLayer:
 
 		dirtyregion=qtgui.QRegion(rect)
 		win=BeeApp().master.getWindowById(self.windowid)
-		dirtyregion=dirtyregion.intersect(qtgui.QRegion(win.image.rect()))
+
+		sizelock=qtcore.QReadLocker(win.docsizelock)
+		# not every type of window actually has a full image representation so just calculate what the image rectangle would be
+		imagerect=qtcore.QRect(0,0,win.docwidth,win.docheight)
+
+		dirtyregion=dirtyregion.intersect(qtgui.QRegion(imagerect))
 		lock.unlock()
 		win.reCompositeImage(dirtyregion.boundingRect())
 
@@ -272,10 +277,11 @@ class LayerConfigWidget(qtgui.QWidget):
 
 	def on_visibility_box_toggled(self,state):
 		layer=BeeApp().master.getLayerById(self.windowid,self.layerkey)
+		window=layer.getWindow()
 		# change visibility
 		layer.visible=state
 		# recomposite whole image
-		layer.window.reCompositeImage()
+		window.reCompositeImage()
 
 	def on_opacity_box_valueChanged(self,value):
 		# there are two events, one with a flota and one with a string, we only need one

@@ -6,9 +6,12 @@ import PyQt4.QtGui as qtgui
 
 from beeapp import BeeApp
 
+import pdb
+
 if __name__ == "__main__":
 	beeapp = BeeApp()
 	app = qtgui.QApplication(sys.argv)
 	beeapp.app = app
-	beeapp.master = HiveMasterWindow.standAloneServer(app)
+	beeapp.master = HiveMasterWindow()
+	print "set bee app master"
 	app.exec_()

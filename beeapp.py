@@ -23,6 +23,5 @@ class BeeApp(object):
 		return BeeApp.instances[cls]
 
 	def __init__(self):
-		print "running Bee App original constructor"
 		self.master=None
 		self.app=None

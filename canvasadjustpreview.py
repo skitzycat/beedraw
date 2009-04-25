@@ -23,11 +23,6 @@ class CanvasAdjustPreview(qtgui.QWidget):
 
 		self.drawrect=qtcore.QRectF(self.xoffset,self.yoffset,self.previewimage.width(),self.previewimage.height())
 
-		pencolor=qtgui.QColor()
-		pencolor.setNamedColor("blueviolet")
-		self.rectpen=qtgui.QPen(pencolor)
-		self.rectpen.setWidth(3)
-
 		self.show()
 
 	def paintEvent(self,event):
@@ -36,9 +31,6 @@ class CanvasAdjustPreview(qtgui.QWidget):
 		painter.begin(self)
 
 		painter.drawImage(self.xoffset,self.yoffset,self.previewimage)
-
-		painter.setPen(self.rectpen)
-		painter.drawRect(self.drawrect)
 
 		painter.end()
 

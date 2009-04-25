@@ -13,10 +13,14 @@ class XmlToQueueEventsConverter:
 	"""  Represents a parser to to turn an incomming xml stream into drawing events
 	"""
 	def __init__(self,device,window,stepdelay,type=ThreadTypes.animation,id=0):
+		self.xml=qtxml.QXmlStreamReader()
+
+		#turn off namespace processing
+		self.xml.setNamespaceProcessing(False)
+
 		if device:
-			self.xml=qtxml.QXmlStreamReader(device)
-		else:
-			self.xml=qtxml.QXmlStreamReader()
+			self.xml.setDevice(device)
+
 		self.id=id
 		self.window=window
 		self.type=type
@@ -70,6 +74,7 @@ class XmlToQueueEventsConverter:
 			(height,ok)=attrs.value('height').toString().toInt()
 			self.window.addSetCanvasSizeRequestToQueue(width,height,type)
 
+
 		elif name == 'addlayer':
 			if self.type==ThreadTypes.server:
 				# create our own key data in this case
@@ -119,10 +124,19 @@ class XmlToQueueEventsConverter:
 			mode=BlendTranslations.intToMode(attrs.value('mode').toString().toInt())
 			self.window.addBlendModeChangeToQueue(self.translateKey(index),mode,type)
 
+		elif name == 'undo':
+			(owner,ok)=attrs.value('owner').toString().toInt()
+			self.window.addUndoToQueue(owner,type)
+
+		elif name == 'redo':
+			(owner,ok)=attrs.value('owner').toString().toInt()
+			self.window.addRedoToQueue(owner,type)
+
 		elif name == 'toolevent':
 			self.strokestart=False
 			toolname="%s" % attrs.value('name').toString()
 			(layerkey,ok)=attrs.value('layerkey').toString().toInt()
+			(owner,ok)=attrs.value('owner').toString().toInt()
 			self.curlayer=self.translateKey(layerkey)
 
 			tool=self.window.master.getToolClassByName(toolname.strip())
@@ -134,6 +148,7 @@ class XmlToQueueEventsConverter:
 
 			self.curtool=tool.setupTool(self.window)
 			self.curtool.layerkey=self.curlayer
+			self.curtool.owner=owner
 
 		elif name == 'fgcolor':
 			(r,ok)=attrs.value('r').toString().toInt()
@@ -189,24 +204,27 @@ class XmlToQueueEventsConverter:
 				#print "Adding tool motion event to queue on layer", self.curlayer
 				self.window.addPenMotionToQueue(x,y,pressure,self.curlayer,type)
 		elif name == 'resyncrequest':
-			owner=self.id
-			self.window.addResyncRequestToQueue(owner)
+			self.window.addResyncRequestToQueue(self.id)
 		elif name == 'resyncstart':
-			self.window.addResyncStartToQueue()
-		elif name == 'resyncend':
-			pass
+			(width,ok)=attrs.value('width').toString().toInt()
+			(height,ok)=attrs.value('height').toString().toInt()
+			(remoteid,ok)=attrs.value('remoteid').toString().toInt()
+			self.window.addResyncStartToQueue(width,height,remoteid)
 
 		elif name == 'event':
 			pass
 
+		elif name == 'sketchlog':
+			print "DEBUG: got document start tag"
+
 		else:
-			print "WARNING: Don't know how to handle tag: %s" % name.string()
+			print "WARNING: Don't know how to handle tag: %s" % name.toString()
 
 	def processEndElement(self):
 		name=self.xml.name()
 		if name == 'toolevent':
-			#print "Adding end tool event to queue on layer", self.curlayer
-			self.window.addPenUpToQueue(self.curlayer,self.lastx,self.lasty,type)
+			print "Adding end tool event to queue on layer", self.curlayer
+			self.window.addPenUpToQueue(self.lastx,self.lasty,self.curlayer,type)
 			self.curtool=None
 		elif name == 'rawevent':
 			return
@@ -259,7 +277,7 @@ class NetworkListenerThread (qtcore.QThread):
 	def run(self):
 		print "attempting to get socket:"
 		# setup initial connection
-		self.socket,width,height,id=getServerConnection(self.username,self.password,self.host,self.port)
+		self.socket=getServerConnection(self.username,self.password,self.host,self.port)
 
 		# if we failed to get a socket then destroy the window and exit
 		if not self.socket:
@@ -273,7 +291,6 @@ class NetworkListenerThread (qtcore.QThread):
 		qtcore.QObject.connect(self.socket, qtcore.SIGNAL("disconnected()"), self.disconnected)
 
 		print "got socket connection"
-		self.window.remoteid=id
 		sendingthread=NetworkWriterThread(self.window,self.socket)
 		self.window.sendingthread=sendingthread
 		print "created thread, about to start sending thread"
@@ -290,11 +307,16 @@ class NetworkListenerThread (qtcore.QThread):
 		return
 
 	def readyRead(self):
-		while self.socket.bytesAvailable():
-			data=self.socket.read(1024)
+		readybytes=self.socket.bytesAvailable()
+		print "Ready to read bytes:", readybytes
+
+		if readybytes>0:
+			data=self.socket.read(readybytes)
 			print "got animation data from socket: %s" % qtcore.QString(data)
 			self.parser.xml.addData(data)
 			self.parser.read()
+		else:
+			print "WARNING: error when reading from socket"
 
 class NetworkWriterThread (qtcore.QThread):
 	def __init__(self,window,socket):
@@ -304,15 +326,14 @@ class NetworkWriterThread (qtcore.QThread):
 
 		self.window=window
 		self.queue=window.remoteoutputqueue
+		# the first thing we want sent out is a resync request
+		self.queue.put((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.resyncrequest))
 
 	def run(self):
-		# start off by sending initial request to sync up with session
-		syncrequest=(DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.resyncrequest)
-		self.gen.logCommand(syncrequest)
-
 		while 1:
 			print "attempting to get item from queue"
 			command=self.queue.get()
+			print "Network Writer Thread got command from queue:", command
 			if command[0]==DrawingCommandTypes.quit:
 				return
 			self.gen.logCommand(command)

@@ -322,8 +322,7 @@ class DrawingTool(AbstractTool):
  
 		self.lastpoint=(path[-1][0],path[-1][1])
  
-	# record this event in the history
-	def penUp(self,x=None,y=None,source=0):
+	def penUp(self,x=None,y=None):
 		radius=int(math.ceil(self.options["maxdiameter"]))
  
 		# get maximum bounds of whole brush stroke
@@ -351,7 +350,8 @@ class DrawingTool(AbstractTool):
 		oldimage=self.oldlayerimage.copy(dirtyrect)
  
 		command=DrawingCommand(self.layer.key,oldimage,dirtyrect)
-		self.window.addCommandToHistory(command,source)
+
+		self.window.addCommandToHistory(command,self.layer.owner)
  
 		BeeApp().master.refreshLayerThumb(self.window.id,self.layer.key)
  

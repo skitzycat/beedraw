@@ -9,10 +9,10 @@ class BeeCustomEventTypes:
 
 # custom enumerated types
 class DrawingCommandTypes:
-	quit, nonlayer, layer, alllayer, networkcontrol = range(5)
+	quit, history, layer, alllayer, networkcontrol = range(5)
 
 # events that may effect one or more layers
-class NonLayerCommandTypes:
+class HistoryCommandTypes:
 	undo, redo = range(2)
 
 # events that effect only one layer
@@ -25,8 +25,13 @@ class AllLayerCommandTypes:
 
 # commands that are only used to communicate when in a network session
 class NetworkControlCommandTypes:
-	""" Represents types of network control commands"""
-	resyncrequest, resyncstart, resyncend = range(3)
+	""" resyncrequest: a client requesting to get all information on the current session
+      resyncstart: sent from the server to client, tells client to delete all layers and undo history
+      changelayerowner: indicating a change of layer, sent to server and then to all other clients
+      revokelayer: server telling a client to send a changelayer request
+      claimlayer: client requesting to take ownership of unowned layer
+  """
+	resyncrequest, resyncstart, changelayerowner, revokelayer, claimlayer = range(5)
 
 class LayerTypes:
 	""" Represents types of layers:
@@ -42,7 +47,7 @@ class WindowTypes:
         animation: The window has at least some layers that are reading events out of a file
         networkclient: The window is connected to a server in a network session
         standaloneserver: The window being used to keep the master internal state for a network session
-        integratedserver: A window running as both a client and keeping track of server state (Note that this is not supported yet and may never be
+        integratedserver: A window running as both a client and keeping track of server state (Note that this is not supported yet and may never be)
 	"""
 	singleuser, animation, networkclient, integratedserver, standaloneserver = range(5)
 

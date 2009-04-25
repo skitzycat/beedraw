@@ -4,6 +4,7 @@ from beetypes import *
 
 class SketchLogWriter:
 	def __init__(self, output):
+		print "Creating SketchLogWriter"
 		self.output=output
 
 		self.log=qtxml.QXmlStreamWriter(output)
@@ -16,11 +17,12 @@ class SketchLogWriter:
 		# add parent element
 		self.log.writeStartElement('sketchlog')
 
-	def logCommand(self,command):
+	def logCommand(self,command,owner=0):
+		self.startEvent(owner)
 		type=command[0]
 
-		if type==DrawingCommandTypes.nonlayer:
-			self.logNonLayerCommand(command)
+		if type==DrawingCommandTypes.history:
+			self.logHistoryCommand(command)
 
 		elif type==DrawingCommandTypes.layer:
 			self.logLayerCommand(command)
@@ -31,25 +33,24 @@ class SketchLogWriter:
 		elif type==DrawingCommandTypes.networkcontrol:
 			self.logNetworkControl(command)
 
+		self.endEvent()
+
+		# flush right away so network sessions won't have a delay here
 		bytestowrite=self.output.bytesToWrite()
 		while self.output.bytesToWrite()>0:
 			self.output.flush()
 			bytestowrite=self.output.bytesToWrite()
 		self.output.flush()
 
-	def logNonLayerCommand(self,command):
+	def logHistoryCommand(self,command):
 		subtype=command[1]
-		if subtype==NonLayerCommandTypes.startlog:
-			pass
+		if subtype==HistoryCommandTypes.undo:
+			self.log.writeStartElement('undo')
+			self.log.writeAttribute('owner',str(command[2]))
 
-		elif subtype==NonLayerCommandTypes.endlog:
-			pass
-
-		elif subtype==NonLayerCommandTypes.undo:
-			pass
-
-		elif subtype==NonLayerCommandTypes.redo:
-			pass
+		elif subtype==HistoryCommandTypes.redo:
+			self.log.writeStartElement('redo')
+			self.log.writeAttribute('owner',str(command[2]))
 
 	def logLayerCommand(self,command):
 		subtype=command[1]
@@ -64,7 +65,7 @@ class SketchLogWriter:
 			self.logRawEvent(command[3],command[4],layer,command[5],command[6])
 
 		elif subtype==LayerCommandTypes.tool:
-			self.logToolEvent(command[3])
+			self.logToolEvent(layer,command[3])
 
 		else:
 			print "WARNING: don't know how to log layer command type:", subtype
@@ -95,9 +96,9 @@ class SketchLogWriter:
 			self.logResyncRequest()
 
 		elif subtype==NetworkControlCommandTypes.resyncstart:
-			self.logResyncStart()
+			self.logResyncStart(command[2],command[3],command[4])
 
-	def startEvent(self):
+	def startEvent(self,owner):
 		self.log.writeStartElement('event')
 
 	def endEvent(self):
@@ -106,10 +107,6 @@ class SketchLogWriter:
 
 	def logLayerAdd(self, position, key, owner=0):
 		lock=qtcore.QMutexLocker(self.mutex)
-		self.startEvent()
-
-		# start layer event
-		self.log.writeStartElement('layerevent')
 
 		# start addlayer event
 		self.log.writeStartElement('addlayer')
@@ -120,17 +117,8 @@ class SketchLogWriter:
 		# end addlayer event
 		self.log.writeEndElement()
 
-		# end layer event
-		self.log.writeEndElement()
-
-		self.endEvent()
-
 	def logLayerSub(self, index):
 		lock=qtcore.QMutexLocker(self.mutex)
-		self.startEvent()
-
-		# start layer event
-		self.log.writeStartElement('layerevent')
 
 		# start sublayer event
 		self.log.writeStartElement('sublayer')
@@ -139,17 +127,8 @@ class SketchLogWriter:
 		# end sublayer event
 		self.log.writeEndElement()
 
-		# end layer event
-		self.log.writeEndElement()
-
-		self.endEvent()
-
 	def logLayerModeChange(self, index, mode):
 		lock=qtcore.QMutexLocker(self.mutex)
-		self.startEvent()
-
-		# start layer event
-		self.log.writeStartElement('layerevent')
 
 		self.log.writeStartElement('layermode')
 		self.log.writeAttribute('index',str(index))
@@ -158,17 +137,8 @@ class SketchLogWriter:
 		# end sublayer event
 		self.log.writeEndElement()
 
-		# end layer event
-		self.log.writeEndElement()
-
-		self.endEvent()
-
 	def logLayerAlphaChange(self, key, alpha):
 		lock=qtcore.QMutexLocker(self.mutex)
-		self.startEvent()
-
-		# start layer event
-		self.log.writeStartElement('layerevent')
 
 		self.log.writeStartElement('layeralpha')
 		self.log.writeAttribute('key',str(key))
@@ -177,18 +147,9 @@ class SketchLogWriter:
 		# end sublayer event
 		self.log.writeEndElement()
 
-		# end layer event
-		self.log.writeEndElement()
-
-		self.endEvent()
-
 	# log a move with index and number indicating change (ie -1 for 1 down)
 	def logLayerMove(self, index, change):
 		lock=qtcore.QMutexLocker(self.mutex)
-		self.startEvent()
-
-		# start layer event
-		self.log.writeStartElement('layerevent')
 
 		# start sublayer event
 		self.log.writeStartElement('movelayer')
@@ -198,21 +159,15 @@ class SketchLogWriter:
 		# end sublayer event
 		self.log.writeEndElement()
 
-		# end layer event
-		self.log.writeEndElement()
-
-		self.endEvent()
-		
-	def logToolEvent(self,tool):
+	def logToolEvent(self,layerkey,tool):
 		lock=qtcore.QMutexLocker(self.mutex)
-		self.startEvent()
 
 		points=tool.pointshistory
 
 		# start tool event
 		self.log.writeStartElement('toolevent')
 		self.log.writeAttribute('name',tool.name)
-		self.log.writeAttribute('layerkey',str(tool.layer.key))
+		self.log.writeAttribute('layerkey',str(layerkey))
 
 		if tool.fgcolor:
 			self.log.writeStartElement('fgcolor')
@@ -259,12 +214,9 @@ class SketchLogWriter:
 		# end tool event
 		self.log.writeEndElement()
 
-		self.endEvent()
-
 	def logCreateDocument(self,width,height):
 		lock=qtcore.QMutexLocker(self.mutex)
 
-		#attrs=AttributesNSImpl(attr_vals, attr_qnames)
 		self.log.writeStartElement('createdoc')
 		self.log.writeAttribute('width',str(width))
 		self.log.writeAttribute('height',str(height))
@@ -274,7 +226,6 @@ class SketchLogWriter:
 
 	def logRawEvent(self,x,y,layerkey,image,path=None):
 		lock=qtcore.QMutexLocker(self.mutex)
-		self.startEvent()
 
 		x=str(x)
 		y=str(y)
@@ -313,26 +264,21 @@ class SketchLogWriter:
 		self.log.writeCharacters(rawstring)
 		self.log.writeEndElement()
 
-		self.endEvent()
-
 	def logResyncRequest(self):
 		print "DEBUG: logging resync"
 		lock=qtcore.QMutexLocker(self.mutex)
-		self.startEvent()
 
 		self.log.writeStartElement('resyncrequest')
 		self.log.writeEndElement()
 
-		self.endEvent()
-
-	def logResyncStart(self):
+	def logResyncStart(self,width,height,remoteid):
 		lock=qtcore.QMutexLocker(self.mutex)
-		self.startEvent()
 
 		self.log.writeStartElement('resyncstart')
+		self.log.writeAttribute('width',str(width))
+		self.log.writeAttribute('height',str(height))
+		self.log.writeAttribute('remoteid',str(remoteid))
 		self.log.writeEndElement()
-
-		self.endEvent()
 
 	def endLog(self):
 		lock=qtcore.QMutexLocker(self.mutex)

@@ -14,45 +14,26 @@ from ConnectionDialogUi import Ui_ConnectionInfoDialog
 from colorswatch import *
 from beelayer import BeeLayersWindow
 from beeutil import getSupportedReadFileFormats
-import beetools
+
+from beeapp import BeeApp
 
 import sip
 
+from abstractbeemaster import AbstractBeeMaster
 from beedrawingwindow import BeeDrawingWindow, NetworkClientDrawingWindow
 
-
-class BeeMasterWindow(qtgui.QMainWindow,object):
-	instances = {}
-	def __new__(cls, *args, **kwargs):
-		""" this redefinition of new is here to make the object a singleton
-		"""
-		# if there is no instance of this class just make a new one and save what the init function was
-		if BeeMasterWindow.instances.get(cls) is None:
-			cls.__original_init__ = cls.__init__
-			BeeMasterWindow.instances[cls] = sip.wrapper.__new__(cls, *args, **kwargs)
-		# if there already was an instance and the init function is the same then make init do nothing so it's not run again and return the already created instance
-		elif cls.__init__ == cls.__original_init__:
-			def nothing(*args, **kwargs):
-				pass
-			cls.__init__ = nothing
-		return BeeMasterWindow.instances[cls]
-
-	def __init__(self,app):
+class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
+	def __init__(self):
 		qtgui.QMainWindow.__init__(self)
+		AbstractBeeMaster.__init__(self)
 
 		# setup interface according to designer code
 		self.ui=Ui_BeeMasterSpec()
 		self.ui.setupUi(self)
 		self.show()
 
-		self.app=app
-
-		self.curwindow=None
-
 		# list to hold drawing windows created
 		self.drawingwindows=[]
-
-		self.toolbox=beetools.BeeToolBox()
 
 		# add list of tools to tool choice drop down
 		for tool in self.toolbox.toolNameGenerator():
@@ -60,6 +41,8 @@ class BeeMasterWindow(qtgui.QMainWindow,object):
 
 		# set signal so we know when the tool changes
 		self.connect(self.ui.toolChoiceBox,qtcore.SIGNAL("activated(int)"),self.on_tool_changed)
+
+		self.curwindow=None
 
 		# set initial tool
 		self.curtoolindex=0
@@ -101,6 +84,8 @@ class BeeMasterWindow(qtgui.QMainWindow,object):
 		win=self.getWindowById(win_id)
 		if win:
 			return win.getLayerForKey(layer_id)
+		else:
+			print "Warning: can't find layer with id:", layer_id, "in window:", win_id
 		return None
 
 	def removeWindow(self,window):
@@ -247,7 +232,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object):
 	def on_action_File_Start_Server_triggered(self,accept=True):
 		if not accept:
 			return
-		self.serverwin=HiveMasterWindow(app)
+		self.serverwin=HiveMasterWindow(BeeApp().app)
 		self.curwindow=BeeDrawingWindow.startNetworkServer(self)
 		self.refreshLayersList()
 
@@ -299,6 +284,3 @@ class BeeMasterWindow(qtgui.QMainWindow,object):
 	def customEvent(self,event):
 		if event.type()==BeeCustomEventTypes.refreshlayerslist:
 			self.refreshLayersList()
-
-	def getToolClassByName(self,name):
-		return self.toolbox.getToolDescByName(name)

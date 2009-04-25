@@ -3,6 +3,8 @@
 #import PyQt4.QtGui as qtgui
 import PyQt4.QtCore as qtcore
 
+import copy
+
 from beetypes import *
 from Queue import Queue
 
@@ -10,12 +12,19 @@ from beeutil import *
 
 from beeapp import BeeApp
 
+from hivecache import *
+
 class DrawingThread(qtcore.QThread):
-	def __init__(self,queue,windowid,type=ThreadTypes.user):
+	def __init__(self,queue,windowid,type=ThreadTypes.user,master=None):
 		qtcore.QThread.__init__(self)
 		self.queue=queue
 		self.windowid=windowid
 		self.type=type
+
+		if not master:
+			self.master=BeeApp().master
+		else:
+			self.master=master
 
 		# this will be keyed on a layer key, value will be the tool
 		# object so it retains information throughout the stroke
@@ -27,7 +36,7 @@ class DrawingThread(qtcore.QThread):
 		self.queue.put((DrawingCommandTypes.quit,))
 
 	def run(self):
-		self.windowtype=BeeApp().master.getWindowById(self.windowid).type
+		self.windowtype=self.master.getWindowById(self.windowid).type
 
 		#print "starting drawing thread"
 		while 1:
@@ -39,8 +48,8 @@ class DrawingThread(qtcore.QThread):
 			if type==DrawingCommandTypes.quit:
 				return
 
-			elif type==DrawingCommandTypes.nonlayer:
-				self.processNonLayerCommand(command)
+			elif type==DrawingCommandTypes.history:
+				self.processHistoryCommand(command)
 
 			elif type==DrawingCommandTypes.layer:
 				self.processLayerCommand(command)
@@ -52,45 +61,34 @@ class DrawingThread(qtcore.QThread):
 					self.processAllLayerCommand(command)
 
 			elif type==DrawingCommandTypes.networkcontrol:
-				if self.type==ThreadTypes.user and self.windowtype==WindowTypes.networkclient:
-					self.processClientNetworkCommand(command)
-				else:
-					self.processServerNetworkCommand(command)
+				self.processNetworkCommand(command)
 
-	def processNonLayerCommand(self,command):
-		window=BeeApp().master.getWindowById(self.windowid)
+	def processHistoryCommand(self,command):
+		window=self.master.getWindowById(self.windowid)
 		subtype=command[1]
-		if subtype==NonLayerCommandTypes.startlog:
-			pass
-		elif subtype==NonLayerCommandTypes.endlog:
-			pass
-		elif subtype==NonLayerCommandTypes.undo:
+		if subtype==HistoryCommandTypes.undo:
 			window.undo(command[2])
-			if self.type==ThreadTypes.user and window.type==WindowTypes.networkclient:
-				self.sendToServer(command)
-		elif subtype==NonLayerCommandTypes.redo:
+		elif subtype==HistoryCommandTypes.redo:
 			window.redo(command[2])
-			if self.type==ThreadTypes.user and window.type==WindowTypes.networkclient:
-				self.sendToServer(command)
 		else:
-			print "unknown processNonLayerCommand subtype:", subtype
+			print "unknown processHistoryCommand subtype:", subtype
 
-		window.logCommand(command)
+		window.logCommand(command,self.type)
 
 	def processLayerCommand(self,command):
-		window=BeeApp().master.getWindowById(self.windowid)
+		window=self.master.getWindowById(self.windowid)
 		subtype=command[1]
 		if subtype==LayerCommandTypes.alpha:
 			layer=window.getLayerForKey(command[2])
 			if layer:
 				layer.setOptions(opacity=command[3])
-				window.logCommand(command)
+				window.logCommand(command,self.type)
 
 		elif subtype==LayerCommandTypes.mode:
 			layer=window.getLayerForKey(command[2])
 			if layer:
 				layer.setOptions(compmode=command[3])
-				window.logCommand(command)
+				window.logCommand(command,self.type)
 
 		elif subtype==LayerCommandTypes.pendown:
 			#print "Pen down event:", command
@@ -104,7 +102,7 @@ class DrawingThread(qtcore.QThread):
 				self.inprocesstools[int(command[2])]=tool
 				tool.penDown(x,y,pressure)
 			else:
-				print "WARNING: no vaid layer selected"
+				print "WARNING: no valid layer selected, remote id:", window.remoteid
 
 		elif subtype==LayerCommandTypes.penmotion:
 			if command[2]==None:
@@ -118,17 +116,19 @@ class DrawingThread(qtcore.QThread):
 				tool.penMotion(x,y,pressure)
 
 		elif subtype==LayerCommandTypes.penup:
+			print "Pen up event in client thread:", command
 			if command[2]==None:
 				return
 			#print "Pen up event:", command
 			x=command[3]
 			y=command[4]
 			if int(command[2]) in self.inprocesstools:
+				print "found in process tool for pen up command"
 				tool=self.inprocesstools[int(command[2])]
 				tool.penUp(x,y)
 
 				# send to server and log file if needed
-				window.logStroke(tool,int(command[2]))
+				window.logStroke(tool,int(command[2]),self.type)
 
 				tool.cleanUp()
 				del self.inprocesstools[int(command[2])]
@@ -141,12 +141,12 @@ class DrawingThread(qtcore.QThread):
 			path=command[6]
 			compmode=qtgui.QPainter.CompositionMode_Source
 			layer.compositeFromCorner(image,x,y,compmode,path)
-			window.logCommand(command)
+			window.logCommand(command,self.type)
 		else:
 			print "unknown processLayerCommand subtype:", subtype
 
 	def processAllLayerCommand(self,command):
-		window=BeeApp().master.getWindowById(self.windowid)
+		window=self.master.getWindowById(self.windowid)
 		subtype=command[1]
 		if subtype==AllLayerCommandTypes.resize:
 			window.adjustCanvasSize(command[2],command[3],command[4],command[5])
@@ -180,25 +180,172 @@ class DrawingThread(qtcore.QThread):
 				else:
 					window.insertLayer(key,index,LayerTypes.network,owner=owner)
 
-		window.logServerCommand(command)
-
 	def requestAllLayerCommand(self,command):
 		self.sendToServer(command)
 
-	def processClientNetworkCommand(self,command):
-		window=BeeApp().master.getWindowById(self.windowid)
+	def processNetworkCommand(self,command):
+		window=self.master.getWindowById(self.windowid)
 		subtype=command[1]
 		if subtype==NetworkControlCommandTypes.resyncstart:
+			width=command[2]
+			height=command[3]
+			remoteid=command[4]
 			window.clearAllLayers()
-
-	def processServerNetworkCommand(self,command):
-		window=BeeApp().master.getWindowById(self.windowid)
-		subtype=command[1]
-		if subtype==NetworkControlCommandTypes.resyncrequest:
-			window.sendResyncToClient(command[2]*-1)
+			window.setCanvasSize(width,height)
+			window.setRemoteId(remoteid)
 
 	def sendToServer(self,command):
-		window=BeeApp().master.getWindowById(self.windowid)
+		window=self.master.getWindowById(self.windowid)
 		if command[0]==DrawingCommandTypes.alllayer and command[1]==AllLayerCommandTypes.insertlayer:
 			command=(command[0],command[1],command[2],command[3],window.remoteid)
 		window.remoteoutputqueue.put(command)
+
+class RemoteDrawingThread(DrawingThread):
+	def __init__(self,queue,windowid,type=ThreadTypes.network,master=None,historysize=20):
+		DrawingThread.__init__(self,queue,windowid,type=ThreadTypes.network,master=master)
+
+class ServerDrawingThread(DrawingThread):
+	def __init__(self,queue,windowid,type=ThreadTypes.user,master=None,historysize=20):
+		DrawingThread.__init__(self,queue,windowid,type=ThreadTypes.server,master=master)
+		self.commandcaches={}
+		self.commandindexes={}
+		self.historysize=historysize
+
+	def processNetworkCommand(self,command):
+		print "processeing network control command:", command
+		window=self.master.getWindowById(self.windowid)
+		subtype=command[1]
+		requester=command[2]
+		if subtype==NetworkControlCommandTypes.resyncrequest:
+			self.sendResyncToClient(requester,window)
+
+	def sendResyncToClient(self,requester,window):
+		print "sending resync with requester:", requester
+		# first tell client to get rid of list of layers
+		resynccommand=(DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.resyncstart,window.docwidth,window.docheight,requester)
+		dest=-1*requester
+		self.master.routinginput.put((resynccommand,dest))
+
+		window.sendLayersToClient(requester)
+
+		#send event cache to client
+		for c in self.commandcaches.keys():
+			for command in self.commandcaches[c]:
+				command.send(requester,self.master.routinginput)
+
+	def processLayerCommand(self,command):
+		cachedcommand=None
+		window=self.master.getWindowById(self.windowid)
+		subtype=command[1]
+		layer=window.getLayerForKey(command[2])
+		if not layer:
+			return
+		owner=layer.owner
+		# if the layer is owned locally then no one should be able to change it since this is a server session
+		if owner==0:
+			print "Error: recieved layer command for unowned layer in server session:", command
+			return
+
+		if subtype==LayerCommandTypes.alpha:
+			cachedcommand=CachedAlphaEvent(layer,command[3])
+			self.master.routinginput.put((command,layer.owner))
+
+		elif subtype==LayerCommandTypes.mode:
+			cachedcommand=CachedModeEvent(layer,command[3])
+			self.master.routinginput.put((command,layer.owner))
+
+		elif subtype==LayerCommandTypes.pendown:
+			x=command[3]
+			y=command[4]
+			pressure=command[5]
+			tool=command[6]
+
+			self.inprocesstools[command[2]]=CachedToolEvent(layer,tool)
+			self.inprocesstools[command[2]].points=[(x,y,pressure)]
+
+		elif subtype==LayerCommandTypes.penmotion:
+			#print "Pen motion event:", command
+			x=command[3]
+			y=command[4]
+			pressure=command[5]
+
+			self.inprocesstools[command[2]].points.append((x,y,pressure))
+
+		elif subtype==LayerCommandTypes.penup:
+			print "Pen up event in server thread:", command
+			x=command[3]
+			y=command[4]
+
+			cachedcommand=self.inprocesstools[command[2]]
+
+			# make a shallow copy so that the points history won't get changed in the middle of any operations
+			tool=copy.copy(cachedcommand.tool)
+			tool.pointshistory=cachedcommand.points
+
+			toolcommand=(DrawingCommandTypes.layer,LayerCommandTypes.tool,cachedcommand.layer.key,tool)
+
+			self.master.routinginput.put((toolcommand,cachedcommand.layer.owner))
+
+			del self.inprocesstools[command[2]]
+
+		elif subtype==LayerCommandTypes.rawevent:
+			layer=window.getLayerForKey(command[2])
+			x=command[3]
+			y=command[4]
+			image=command[5]
+			path=command[6]
+			compmode=qtgui.QPainter.CompositionMode_Source
+			layer.compositeFromCorner(image,x,y,compmode,path)
+			window.logCommand(command,self.type)
+		else:
+			sendcommand=False
+			print "unknown processLayerCommand subtype:", subtype
+
+		if cachedcommand:
+			self.addToServerCache(cachedcommand)
+
+	def addToServerCache(self,command):
+		owner=command.layer.owner
+		if not owner in self.commandcaches:
+			self.commandcaches[owner]=[]
+			self.commandindexes[owner]=0
+
+		# if there are commands ahead of this one delete them
+		if self.commandindexes[owner] > len(self.commandcaches[owner]):
+			self.commandcaches[owner]=self.commandcaches[owner][0:self.commandindexes[owner]]
+
+		# if the command stack is full, execute and delete the oldest one
+		if self.commandindexes[owner] > self.historysize:
+			self.commandcaches[owner][0].process()
+			self.commandcaches[owner]=self.commandcaches[owner][1:]
+
+		self.commandcaches[owner].append(command)
+		self.commandindexes[owner]=len(self.commandcaches[owner])
+
+	def processHistoryCommand(self,command):
+		""" Handles undo and redo commands sent from clients by updating local history counter and sending the commands out to all other clients, all of the print statements here should never trigger, but I'm putting them in for debugging purposes in case something goes wrong
+		"""
+		subtype=command[1]
+		owner=command[2]
+
+		if not owner in self.commandindexes:
+			self.commandcaches[owner]=[]
+			self.commandindexes[owner]=0
+
+		if subtype==HistoryCommandTypes.undo:
+			# test to make sure there should be some history to undo
+			if self.commandindexes[owner]>0:
+				self.commandindexes[owner]-=1
+				self.master.routinginput.put((command,owner))
+			else:
+				print "Error, got undo but no more past history for client", owner
+		elif subtype==HistoryCommandTypes.redo:
+			if self.commandindexes[owner]<len(self.commandcaches[owner]):
+				self.commandindexes[owner]+=1
+				self.master.routinginput.put((command,owner))
+			else:
+				print "Error, got redo but no more future history for client", owner
+
+	def processAllLayerCommand(self,command):
+		DrawingThread.processAllLayerCommand(self,command)
+		self.master.routinginput.put((command,0))

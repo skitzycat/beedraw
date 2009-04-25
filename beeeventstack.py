@@ -8,17 +8,12 @@ from beeapp import BeeApp
 
 # object to handle the undo/redo history
 class CommandStack:
-	def __init__(self,windowid):
+	def __init__(self,windowid,maxundo=20):
 		self.commandstack=[]
 		self.index=0
 		self.changessincesave=0
-		self.maxundo=20
+		self.maxundo=maxundo
 		self.windowid=windowid
-
-	def cleanUp(self):
-		print "cleaning up command stack"
-		commandstack=[]
-		self.window=None
 
 	def add(self,command):
 		# if there are commands ahead of this one delete them
@@ -65,6 +60,7 @@ class DrawingCommand(AbstractCommand):
 		self.location=location
 
 	def undo(self,windowid):
+		print "running undo in drawing command"
 		layer=BeeApp().master.getLayerById(windowid,self.layerkey)
 		if layer:
 			self.newimage=layer.image.copy(self.location)
