@@ -58,6 +58,8 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 		# drawing window which holds the current state of the network session
 		self.curwindow=HiveSessionState(self,600,400,WindowTypes.standaloneserver,20)
 
+		self.curwindow.startRemoteDrawingThreads()
+
 		self.layers=[]
 		self.serverthread=None
 
@@ -230,16 +232,29 @@ class HiveClientListener(qtcore.QThread):
 		# wait for client to respond so it doesn't get confused and mangle the setup data with the start of the XML file
 		self.socket.waitForReadyRead(-1)
 		print "got client response"
-		qtcore.QObject.connect(self.socket, qtcore.SIGNAL("readyRead()"), self.readyRead)
-		qtcore.QObject.connect(self.socket, qtcore.SIGNAL("disconnected()"), self.disconnected)
+
+		#qtcore.QObject.connect(self.socket, qtcore.SIGNAL("readyRead()"), self.readyRead)
+		#qtcore.QObject.connect(self.socket, qtcore.SIGNAL("disconnected()"), self.disconnected)
 
 		# start writing thread
 		newwriter=HiveClientWriter(self,self.socket,self.master,self.id)
 		newwriter.start()
 
-		# start event loop
-		print "starting event loop"
-		self.exec_()
+		# while the "correct" way to do this might be to start an event loop, but for some reason that causes the socket to not read correctly.   It was reading the same data multiple times like it was reading before it had a chance to reset.
+		while 1:
+			# make sure we've waited long enough
+			self.socket.waitForReadyRead()
+			self.readyRead()
+			if self.socket.atEnd()
+				break
+
+
+		# after the socket has closed make sure there isn't more to read
+		self.readyRead()
+
+		# this should be run when the socket is disconnected
+		self.disconnected()
+
 
 # this thread will write to a specific client
 class HiveClientWriter(qtcore.QThread):

@@ -252,6 +252,11 @@ class LayerConfigWidget(qtgui.QWidget):
 	# update the gui to reflect the values of the layer
 	def updateValuesFromLayer(self):
 		layer=BeeApp().master.getLayerById(self.windowid,self.layerkey)
+
+		if not layer:
+			print "updateValueFromLayer could not find layer with key", self.layerkey
+			return
+
 		# update visibility box
 		self.ui.visibility_box.setChecked(layer.visible)
 

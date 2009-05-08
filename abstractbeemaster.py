@@ -26,3 +26,6 @@ class AbstractBeeMaster:
 
 	def getLayerById(self,win_id,layer_id):
 		return self.curwindow.getLayerByKey()
+
+	def startRemoteDrawingThreads(self):
+		pass

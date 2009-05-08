@@ -10,9 +10,11 @@ class HiveSessionState(BeeSessionState):
 		self.commandcaches={}
 		self.commandindexes={}
 		self.historysize=maxundo
+		self.master=master
 
+	def startRemoteDrawingThreads(self):
 		# start remote command thread
-		self.remotedrawingthread=ServerDrawingThread(self.remotecommandqueue,self.id,ThreadTypes.server,master=master)
+		self.remotedrawingthread=ServerDrawingThread(self.remotecommandqueue,self.id,ThreadTypes.server,master=self.master)
 		self.remotedrawingthread.start()
 
 	# send full resync to client with given ID

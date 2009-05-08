@@ -2,12 +2,18 @@ import PyQt4.QtCore as qtcore
 import PyQt4.QtXml as qtxml
 from beetypes import *
 
+# changed locations between versions
+try:
+	from PyQt4.QtCore import QXmlStreamWriter
+except:
+	from PyQt4.QtXml import QXmlStreamWriter
+
 class SketchLogWriter:
 	def __init__(self, output):
 		print "Creating SketchLogWriter"
 		self.output=output
 
-		self.log=qtxml.QXmlStreamWriter(output)
+		self.log=QXmlStreamWriter(output)
 
 		# mutex so we don't write to file from mulitple sources at once
 		self.mutex=qtcore.QMutex()

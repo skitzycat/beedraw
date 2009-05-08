@@ -9,11 +9,17 @@ import PyQt4.QtCore as qtcore
 import PyQt4.QtGui as qtgui
 import PyQt4.QtXml as qtxml
 
+# for some reason the location changed between versions
+try:
+	from PyQt4.QtXml import QXmlStreamReader
+except:
+	from PyQt4.QtCore import QXmlStreamReader
+
 class XmlToQueueEventsConverter:
 	"""  Represents a parser to to turn an incomming xml stream into drawing events
 	"""
 	def __init__(self,device,window,stepdelay,type=ThreadTypes.animation,id=0):
-		self.xml=qtxml.QXmlStreamReader()
+		self.xml=QXmlStreamReader()
 
 		#turn off namespace processing
 		self.xml.setNamespaceProcessing(False)
@@ -51,15 +57,15 @@ class XmlToQueueEventsConverter:
 		"""
 		while not self.xml.atEnd():
 			tokentype=self.xml.readNext()
-			if tokentype==qtxml.QXmlStreamReader.StartElement:
+			if tokentype==QXmlStreamReader.StartElement:
 				self.processStartElement()
-			elif tokentype==qtxml.QXmlStreamReader.EndElement:
+			elif tokentype==QXmlStreamReader.EndElement:
 				self.processEndElement()
-			elif tokentype==qtxml.QXmlStreamReader.Characters:
+			elif tokentype==QXmlStreamReader.Characters:
 				self.processCharacterData()
 
 		# if it's an error that might actually be a problem then print it out
-		if self.xml.hasError() and self.xml.error() != qtxml.QXmlStreamReader.PrematureEndOfDocumentError:
+		if self.xml.hasError() and self.xml.error() != QXmlStreamReader.PrematureEndOfDocumentError:
 				print "error while parsing XML:", self.xml.errorString()
 
 	def processStartElement(self):
@@ -287,8 +293,8 @@ class NetworkListenerThread (qtcore.QThread):
 
 		# get ready for next contact from server
 		self.parser=XmlToQueueEventsConverter(None,self.window,0,type=ThreadTypes.network)
-		qtcore.QObject.connect(self.socket, qtcore.SIGNAL("readyRead()"), self.readyRead)
-		qtcore.QObject.connect(self.socket, qtcore.SIGNAL("disconnected()"), self.disconnected)
+		#qtcore.QObject.connect(self.socket, qtcore.SIGNAL("readyRead()"), self.readyRead)
+		#qtcore.QObject.connect(self.socket, qtcore.SIGNAL("disconnected()"), self.disconnected)
 
 		print "got socket connection"
 		sendingthread=NetworkWriterThread(self.window,self.socket)
@@ -296,8 +302,20 @@ class NetworkListenerThread (qtcore.QThread):
 		print "created thread, about to start sending thread"
 		sendingthread.start()
 
-		# enter control loop
-		self.exec_()
+		# enter read loop, read till socket gets closed
+		while 1:
+			# make sure we've waited long enough
+			self.socket.waitForReadyRead()
+			self.readyRead()
+			if self.socket.atEnd()
+				break
+
+
+		# after the socket has closed make sure there isn't more to read
+		self.readyRead()
+
+		# this should be run when the socket is disconnected and the buffer is empty
+		self.disconnected()
 
 	# what to do when a disconnected signal is recieved
 	def disconnected(self):
