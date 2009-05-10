@@ -280,6 +280,9 @@ class NetworkListenerThread (qtcore.QThread):
 		self.host=host
 		self.port=port
 
+		# during the destructor this seems to forget about qtnet so keep this around to check aginst it then
+		self.connectedstate=qtnet.QAbstractSocket.ConnectedState
+
 	def run(self):
 		print "attempting to get socket:"
 		# setup initial connection
@@ -304,12 +307,10 @@ class NetworkListenerThread (qtcore.QThread):
 
 		# enter read loop, read till socket gets closed
 		while 1:
-			# make sure we've waited long enough
-			self.socket.waitForReadyRead()
-			self.readyRead()
-			if self.socket.atEnd()
+			# make sure we've waited long enough and if something goes wrong just disconnect
+			if not self.socket.waitForReadyRead(-1):
 				break
-
+			self.readyRead()
 
 		# after the socket has closed make sure there isn't more to read
 		self.readyRead()
@@ -326,15 +327,12 @@ class NetworkListenerThread (qtcore.QThread):
 
 	def readyRead(self):
 		readybytes=self.socket.bytesAvailable()
-		print "Ready to read bytes:", readybytes
 
 		if readybytes>0:
 			data=self.socket.read(readybytes)
 			print "got animation data from socket: %s" % qtcore.QString(data)
 			self.parser.xml.addData(data)
 			self.parser.read()
-		else:
-			print "WARNING: error when reading from socket"
 
 class NetworkWriterThread (qtcore.QThread):
 	def __init__(self,window,socket):
@@ -345,7 +343,7 @@ class NetworkWriterThread (qtcore.QThread):
 		self.window=window
 		self.queue=window.remoteoutputqueue
 		# the first thing we want sent out is a resync request
-		self.queue.put((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.resyncrequest))
+		# self.queue.put((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.resyncrequest))
 
 	def run(self):
 		while 1:
@@ -355,3 +353,5 @@ class NetworkWriterThread (qtcore.QThread):
 			if command[0]==DrawingCommandTypes.quit:
 				return
 			self.gen.logCommand(command)
+			self.socket.flush()
+			self.socket.waitForBytesWritten(-1)

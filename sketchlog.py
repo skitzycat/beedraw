@@ -47,6 +47,8 @@ class SketchLogWriter:
 			self.output.flush()
 			bytestowrite=self.output.bytesToWrite()
 		self.output.flush()
+		self.output.waitForBytesWritten(-1)
+		print "finished writing output"
 
 	def logHistoryCommand(self,command):
 		subtype=command[1]
@@ -109,7 +111,6 @@ class SketchLogWriter:
 
 	def endEvent(self):
 		self.log.writeEndElement()
-		#self.output.flush()
 
 	def logLayerAdd(self, position, key, owner=0):
 		lock=qtcore.QMutexLocker(self.mutex)

@@ -79,6 +79,9 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 		self.clientnames[id]=username
 		self.ui.clientsList.addItem(username)
 
+		command=(DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.resyncrequest)
+		self.curwindow.addResyncRequestToQueue(id)
+
 	def unregisterClient(self,id):
 		lock=qtcore.QReadLocker(self.clientslistmutex)
 		if not id in self.clientnames:
@@ -195,19 +198,17 @@ class HiveClientListener(qtcore.QThread):
 		self.master.registerClient(self.username,self.id)
 
 	def disconnected(self):
+		print "disconnecting client with ID:", self.id
 		self.master.unregisterClient(self.id)
 
 	def readyRead(self):
 		readybytes=self.socket.bytesAvailable()
-		print "Ready to read bytes:", readybytes
 
 		if readybytes>0:
 			data=self.socket.read(readybytes)
 			print "got animation data from socket: %s" % qtcore.QString(data)
 			self.parser.xml.addData(data)
 			self.parser.read()
-		else:
-			print "WARNING: error when reading from socket"
 
 	def run(self):
 		# try to authticate user
@@ -243,11 +244,10 @@ class HiveClientListener(qtcore.QThread):
 		# while the "correct" way to do this might be to start an event loop, but for some reason that causes the socket to not read correctly.   It was reading the same data multiple times like it was reading before it had a chance to reset.
 		while 1:
 			# make sure we've waited long enough
-			self.socket.waitForReadyRead()
+			self.socket.waitForReadyRead(-1)
 			self.readyRead()
-			if self.socket.atEnd()
+			if self.socket.state() != qtnet.QAbstractSocket.ConnectedState:
 				break
-
 
 		# after the socket has closed make sure there isn't more to read
 		self.readyRead()
@@ -272,7 +272,6 @@ class HiveClientWriter(qtcore.QThread):
 		self.xmlgenerator=SketchLogWriter(self.socket)
 
 	def run(self):
-		self.xmlgenerator.logCreateDocument(self.master.curwindow.docwidth,self.master.curwindow.docheight)
 		while 1:
 			data=self.queue.get()
 			self.xmlgenerator.logCommand(data)

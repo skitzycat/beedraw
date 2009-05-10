@@ -177,7 +177,7 @@ class BeeSessionState:
 
 		# lock for reading the size of the document
 		sizelocker=ReadWriteLocker(self.docsizelock)
-		log.logCreateDocument(self.docwidth,self.docheight)
+		log.logResyncStart(self.docwidth,self.docheight,0)
 		# log everything to get upto this point
 		pos=0
 		for layer in self.layers:
