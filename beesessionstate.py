@@ -364,7 +364,10 @@ class BeeSessionState:
 		self.queueCommand(command,source)
 
 	def addRedoToQueue(self,owner=0,source=ThreadTypes.user):
-		self.queueCommand((DrawingCommandTypes.history,HistoryCommandTypes.redo,owner),source)
+		if not owner:
+			owner=self.remoteid
+		command=(DrawingCommandTypes.history,HistoryCommandTypes.redo,owner)
+		self.queueCommand(command,source)
 
 	# undo last event in stack for passed client id
 	def undo(self,source=0):
@@ -379,10 +382,12 @@ class BeeSessionState:
 
 	# redo last event in stack for passed client id
 	def redo(self,source=0):
+		print "Undo called on source:", source
 		# if we don't get a source then assume that it's local
-		if source==0:
+		if self.ownedByMe(source):
 			self.localcommandstack.redo()
 		else:
+			print "attempting to redo command from remote source:", source
 			self.remotecommandstacks[source].redo()
 
 	def refreshLayerThumb(self,window,id):
