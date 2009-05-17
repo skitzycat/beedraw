@@ -26,6 +26,7 @@ class BeeLayer:
 		#print "creating layer with owner:", owner
 		# this is a lock for locking access to the layer image when needed
 		self.imagelock=qtcore.QReadWriteLock()
+		self.propertieslock=qtcore.QReadWriteLock()
 
 		self.type=type
 
@@ -58,28 +59,27 @@ class BeeLayer:
 	def getWindow(self):
 		return BeeApp().master.getWindowById(self.windowid)
 
-	# this will set things up to be pickled
-	def __getstate__(self):
-		state=self.__dict__.copy()
-		# mutex objects can't be pickled
-		del state["mutex"]
-		# don't pickle window with each layer
-		del state["window"]
-		return state
-
-	# this will get things back from being pickled
-	def __setstate__(self,state):
-		self.__dict__.update(state)
-		# make new mutex
-		self.mutex=QMutex()
-
 	def changeName(self,newname):
+		proplock=qtcore.QWriteLocker(self.propertieslock)
+
 		#print "setting layer name to:", newname
 		if self.type==LayerTypes.animation:
 			newname+=" (Animation)"
 		elif self.type==LayerTypes.network:
 			newname+=" (Network)"
 		self.name=newname
+
+		proplock.unlock()
+
+		if self.configwidget:
+			self.configwidget.updateValuesFromLayer()
+
+	def changeOwner(self,owner):
+		proplock=qtcore.QWriteLocker(self.propertieslock)
+
+		self.owner=owner
+
+		proplock.unlock()
 
 		if self.configwidget:
 			self.configwidget.updateValuesFromLayer()
@@ -137,11 +137,12 @@ class BeeLayer:
 
 	# get color of pixel at specified point, or average color in range
 	def getPixelColor(self,x,y,size):
-		lock=ReadWriteLocker(self.imagelock,False)
+		lock=qtcore.QReadLocker(self.imagelock)
 		return self.image.pixel(x,y)
 
 	# return copy of image
 	def getImageCopy(self):
+		lock=qtcore.QReadLocker(self.imagelock)
 		retimage=self.image.copy()
 		return retimage
 
@@ -150,6 +151,8 @@ class BeeLayer:
 		# if layer is not visible just return
 		if not self.visible:
 			return
+
+		proplock=qtcore.QReadLocker(self.propertieslock)
 
 		painter.setOpacity(self.opacity)
 		painter.setCompositionMode(self.compmode)
@@ -173,6 +176,8 @@ class BeeLayer:
 
 	# set any passed layer options
 	def setOptions(self,opacity=None,visibility=None,compmode=None):
+		proplock=qtcore.QWriteLocker(self.propertieslock)
+
 		if opacity!=None:
 			self.opacity=opacity
 
@@ -181,6 +186,8 @@ class BeeLayer:
 
 		if compmode!=None:
 			self.compmode=compmode
+
+		proplock.unlock()
 
 		if self.configwidget:
 			self.configwidget.updateValuesFromLayer()
@@ -252,10 +259,13 @@ class LayerConfigWidget(qtgui.QWidget):
 	# update the gui to reflect the values of the layer
 	def updateValuesFromLayer(self):
 		layer=BeeApp().master.getLayerById(self.windowid,self.layerkey)
+		win=BeeApp().master.getWindowById(self.windowid)
 
 		if not layer:
 			print "updateValueFromLayer could not find layer with key", self.layerkey
 			return
+
+		proplock=qtcore.QReadLocker(layer.propertieslock)
 
 		# update visibility box
 		self.ui.visibility_box.setChecked(layer.visible)
@@ -268,6 +278,23 @@ class LayerConfigWidget(qtgui.QWidget):
 
 		# update blend mode box
 		self.ui.blend_mode_box.setCurrentIndex(self.ui.blend_mode_box.findText(BlendTranslations.modeToName(layer.compmode)))
+
+		netbuttonstate=False
+		netbuttontext=""
+
+		print "layer type:", layer.type
+		# only need text on the button if it's a network layer
+		if win.type==WindowTypes.networkclient:
+			if win.ownedByMe(layer.owner):
+				netbuttontext="Give Up Ownership"
+				netbuttonstate=True
+			elif win.ownedByNobody(layer.owner):
+				netbuttontext="Claim ownership"
+				netbuttonstate=True
+
+		print "updating network button specs"
+		self.ui.network_control_button.setText(netbuttontext)
+		self.ui.network_control_button.setEnabled(netbuttonstate)
 
 	def refreshThumb(self):
 		self.ui.layerThumb.update()
@@ -303,6 +330,20 @@ class LayerConfigWidget(qtgui.QWidget):
 		if newmode!=None:
 			layer=BeeApp().master.getLayerById(self.windowid,self.layerkey)
 			layer.window.addBlendModeChangeToQueue(layer.key,newmode)
+
+	def on_network_control_button_pressed(self):
+		layer=BeeApp().master.getLayerById(self.windowid,self.layerkey)
+		win=layer.getWindow()
+
+		proplock=qtcore.QReadLocker(layer.propertieslock)
+
+		# the layer is owned locally so change it to be owned by no one
+		if win.ownedByMe(layer.owner):
+			win.addGiveUpLayerToQueue(layer.key)
+
+		# if the layer is owned by nobody then request it
+		if win.ownedByNobody(layer.owner):
+			win.addRequestLayerToQueue(layer.key)
 
 	def mousePressEvent(self,event):
 		layer=BeeApp().master.getLayerById(self.windowid,self.layerkey)

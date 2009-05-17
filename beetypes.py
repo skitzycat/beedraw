@@ -1,7 +1,8 @@
 import PyQt4.QtCore as qtcore
 
 # Global variables
-fileformatversion=1
+BEE_FILE_FORMAT_VERSION=1
+BEE_NETWORK_PROTOCOL_VERSION=1
 
 # custom event types
 class BeeCustomEventTypes:
@@ -27,11 +28,12 @@ class AllLayerCommandTypes:
 class NetworkControlCommandTypes:
 	""" resyncrequest: a client requesting to get all information on the current session
       resyncstart: sent from the server to client, tells client to delete all layers and undo history
-      changelayerowner: indicating a change of layer, sent to server and then to all other clients
-      revokelayer: server telling a client to send a changelayer request
+      revokelayer: server telling a client to send a giveuplayer
+      requestlayer: sent from client to server to request ownership of layer
+      giveuplayer: set layer to be unowned
       claimlayer: client requesting to take ownership of unowned layer
   """
-	resyncrequest, resyncstart, changelayerowner, revokelayer, claimlayer = range(5)
+	resyncrequest, resyncstart, requestlayer, giveuplayer, revokelayer, claimlayer = range(6)
 
 class LayerTypes:
 	""" Represents types of layers:
@@ -62,7 +64,7 @@ class SelectionModTypes:
 class BrushShapes:
 	ellipse = range(1)
 
-# types of stamp mode
+# types of stamp mode, currently only overlay is supported, eventually I'd like to support drawing with making each pixel the match that of the least opaque pixel, but there doesn't seem to be a blend mode for that
 class DrawingToolStampMode:
 	darkest, overlay = range(2)
 

@@ -51,9 +51,9 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		# default foreground to black and background to white
 		self.fgcolor=qtgui.QColor(0,0,0)
 		self.bgcolor=qtgui.QColor(255,255,255)
-		self.ui.BGSwatch=ColorSwatch(self.ui.BGSwatch)
+		self.ui.BGSwatch=BGSwatch(self.ui.BGSwatch,self)
 		self.ui.BGSwatch.updateColor(self.bgcolor)
-		self.ui.FGSwatch=ColorSwatch(self.ui.FGSwatch)
+		self.ui.FGSwatch=FGSwatch(self.ui.FGSwatch,self)
 		self.ui.FGSwatch.updateColor(self.fgcolor)
 
 		# vars for dialog windows that there should only be one of each
@@ -112,20 +112,10 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		self.getCurToolDesc().runOptionsDialog(self)
 
 	def on_backgroundbutton_pressed(self):
-		color=qtgui.QColorDialog.getColor(self.bgcolor,self)
-		if color.isValid():
-			self.bgcolor=color
-			self.ui.BGSwatch.updateColor(self.bgcolor)
+		self.ui.BGSwatch.changeColorDialog()
 
 	def on_foregroundbutton_pressed(self):
-		color=qtgui.QColorDialog.getColor(self.fgcolor,self)
-		if color.isValid():
-			self.updateFGColor(color)
-
-	# update the foreground color and refresh the swatch widget on screen
-	def updateFGColor(self,color):
-		self.fgcolor=color
-		self.ui.FGSwatch.updateColor(self.fgcolor)
+		self.ui.FGSwatch.changeColorDialog()
 
 	def on_action_File_Exit_triggered(self,accept=True):
 		if not accept:

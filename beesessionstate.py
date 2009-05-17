@@ -60,6 +60,12 @@ class BeeSessionState:
 		lock=qtcore.QWriteLocker(self.remoteidlock)
 		self.remoteid=id
 
+	def ownedByNobody(self,owner):
+		if self.type==WindowTypes.networkclient or self.type==WindowTypes.standaloneserver or self.type==WindowTypes.integratedserver:
+			if owner==0:
+				return True
+		return False
+
 	def ownedByMe(self,owner):
 		""" return True if the layer is under the control of this state keeper or false if it's under the control of something else (ie an animation process or a network client
 		"""
@@ -67,6 +73,12 @@ class BeeSessionState:
 		if owner==0 or owner==self.remoteid:
 			return True
 		return False
+
+	def addGiveUpLayerToQueue(self,key,source=ThreadTypes.user):
+		self.queueCommand((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.giveuplayer,key),source)
+
+	def addRequestLayerToQueue(self,key,source=ThreadTypes.user):
+		self.queueCommand((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.requestlayer,key),source)
 
 	def addRemoveLayerRequestToQueue(self,key,source=ThreadTypes.user):
 		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.deletelayer,key),source)
