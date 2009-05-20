@@ -5,8 +5,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>692</width>
-    <height>507</height>
+    <width>619</width>
+    <height>447</height>
    </rect>
   </property>
   <property name="sizePolicy" >
@@ -35,21 +35,15 @@
     <item>
      <widget class="QWidget" native="1" name="PictureViewWidget" >
       <property name="sizePolicy" >
-       <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
+       <sizepolicy vsizetype="MinimumExpanding" hsizetype="MinimumExpanding" >
         <horstretch>0</horstretch>
         <verstretch>0</verstretch>
        </sizepolicy>
       </property>
       <property name="minimumSize" >
        <size>
-        <width>600</width>
-        <height>400</height>
-       </size>
-      </property>
-      <property name="maximumSize" >
-       <size>
-        <width>600</width>
-        <height>400</height>
+        <width>100</width>
+        <height>100</height>
        </size>
       </property>
      </widget>
@@ -61,7 +55,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>692</width>
+     <width>619</width>
      <height>35</height>
     </rect>
    </property>

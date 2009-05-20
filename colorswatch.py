@@ -6,14 +6,19 @@ import PyQt4.QtCore as qtcore
 # this class is meant to replace a Qwidget that was put into the designer
 
 class ColorSwatch(qtgui.QWidget):
-	def __init__(self,replacingwidget,master):
-		qtgui.QWidget.__init__(self,replacingwidget.parentWidget())
+	def __init__(self,master,replacingwidget=None,parent=None):
 		self.master=master
-
 		self.color=qtgui.QColor(0,0,0)
 
-		self.setGeometry(replacingwidget.frameGeometry())
-		self.setObjectName(replacingwidget.objectName())
+		if replacingwidget:
+			qtgui.QWidget.__init__(self,replacingwidget.parentWidget())
+			self.setGeometry(replacingwidget.frameGeometry())
+			self.setObjectName(replacingwidget.objectName())
+
+		else:
+			qtgui.QWidget.__init__(self,parent)
+			self.setFixedWidth(30)
+			self.setFixedHeight(30)
 
 		self.show()
 

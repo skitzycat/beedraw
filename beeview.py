@@ -202,7 +202,8 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 # this is meant to replace a QWidget in the designer
 class BeeViewScrollArea(qtgui.QScrollArea):
 	def __init__(self,oldwidget,window):
-		qtgui.QScrollArea.__init__(self,oldwidget.parentWidget())
+		parent=oldwidget.parentWidget()
+		qtgui.QScrollArea.__init__(self,parent)
 		self.pendown=False
 
 		self.setHorizontalScrollBarPolicy(qtcore.Qt.ScrollBarAlwaysOn)
@@ -211,7 +212,10 @@ class BeeViewScrollArea(qtgui.QScrollArea):
 
 		self.setWidget(BeeViewDisplayWidget(window))
 
-		self.setGeometry(oldwidget.geometry())
+		index=parent.layout().indexOf(oldwidget)
+		parent.layout().removeWidget(oldwidget)
+		parent.layout().insertWidget(index,self)
+
 		self.setSizePolicy(oldwidget.sizePolicy())
 		self.setObjectName(oldwidget.objectName())
 

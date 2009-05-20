@@ -315,11 +315,8 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 
 	# handle a few events that don't have easy function over loading front ends
 	def event(self,event):
-		# when the window is resized change the view to match
-		if event.type()==qtcore.QEvent.Resize:
-			self.resizeViewToWindow()
 		# do the last part of setup when the window is done being created, this is so nothing starts drawing on the screen before it is ready
-		elif event.type()==qtcore.QEvent.WindowActivate:
+		if event.type()==qtcore.QEvent.WindowActivate:
 			if self.activated==False:
 				self.activated=True
 				self.reCompositeImage()

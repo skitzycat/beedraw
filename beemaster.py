@@ -22,6 +22,38 @@ import sip
 from abstractbeemaster import AbstractBeeMaster
 from beedrawingwindow import BeeDrawingWindow, NetworkClientDrawingWindow
 
+class BeeSwatchScrollArea(qtgui.QScrollArea):
+	def __init__(self,master,oldwidget):
+		parent=oldwidget.parentWidget()
+		qtgui.QScrollArea.__init__(self,parent)
+
+
+		self.setHorizontalScrollBarPolicy(qtcore.Qt.ScrollBarAlwaysOn)
+		self.setVerticalScrollBarPolicy(qtcore.Qt.ScrollBarAlwaysOn)
+
+		self.swatchrows=10
+		self.swatchcolumns=10
+
+		# steal attributes from old widget
+		self.setSizePolicy(oldwidget.sizePolicy())
+		self.setObjectName(oldwidget.objectName())
+
+		# remove old widget and insert this one
+		index=parent.layout().indexOf(oldwidget)
+		parent.layout().removeWidget(oldwidget)
+		parent.layout().insertWidget(index,self)
+
+		self.setLayout(qtgui.QGridLayout(self))
+
+		self.show()
+
+		self.resetSwatches()
+
+	def resetSwatches(self):
+		for i in range(self.swatchrows):
+			for j in range(self.swatchcolumns):
+				self.layout().addWidget(ColorSwatch(self,parent=self),i,j)
+
 class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 	def __init__(self):
 		qtgui.QMainWindow.__init__(self)
@@ -51,9 +83,9 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		# default foreground to black and background to white
 		self.fgcolor=qtgui.QColor(0,0,0)
 		self.bgcolor=qtgui.QColor(255,255,255)
-		self.ui.BGSwatch=BGSwatch(self.ui.BGSwatch,self)
+		self.ui.BGSwatch=BGSwatch(self,self.ui.BGSwatch)
 		self.ui.BGSwatch.updateColor(self.bgcolor)
-		self.ui.FGSwatch=FGSwatch(self.ui.FGSwatch,self)
+		self.ui.FGSwatch=FGSwatch(self,self.ui.FGSwatch)
 		self.ui.FGSwatch.updateColor(self.fgcolor)
 
 		# vars for dialog windows that there should only be one of each
@@ -61,6 +93,9 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 		# keep track of current ID so each window gets a unique ID
 		self.nextwindowid=0
+
+		# replace widget with scroll area to hold them
+		self.ui.swatch_frame=BeeSwatchScrollArea(self,self.ui.swatch_frame)
 
 	def registerWindow(self,window):
 		self.drawingwindows.append(window)
