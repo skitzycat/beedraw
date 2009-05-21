@@ -6,9 +6,9 @@ import PyQt4.QtCore as qtcore
 # this class is meant to replace a Qwidget that was put into the designer
 
 class ColorSwatch(qtgui.QWidget):
-	def __init__(self,master,replacingwidget=None,parent=None):
+	def __init__(self,master,replacingwidget=None,parent=None,boxsize=20):
 		self.master=master
-		self.color=qtgui.QColor(0,0,0)
+		self.color=qtgui.QColor(255,255,255)
 
 		if replacingwidget:
 			qtgui.QWidget.__init__(self,replacingwidget.parentWidget())
@@ -17,8 +17,8 @@ class ColorSwatch(qtgui.QWidget):
 
 		else:
 			qtgui.QWidget.__init__(self,parent)
-			self.setFixedWidth(30)
-			self.setFixedHeight(30)
+			self.setFixedWidth(boxsize)
+			self.setFixedHeight(boxsize)
 
 		self.show()
 
@@ -37,9 +37,9 @@ class ColorSwatch(qtgui.QWidget):
 
 	def mousePressEvent(self,event):
 		if event.button()==qtcore.Qt.LeftButton:
-			self.changeColorDialog()
-		elif event.button()==qtcore.Qt.RightButton:
 			self.setFGToCurrent()
+		elif event.button()==qtcore.Qt.RightButton:
+			self.changeColorDialog()
 		elif event.button()==qtcore.Qt.MidButton:
 			self.setCurrentToFG()
 
@@ -49,10 +49,15 @@ class ColorSwatch(qtgui.QWidget):
 			self.updateColor(color)
 
 	def setFGToCurrent(self):
-		pass
+		self.master.setFGColor(self.color)
 
 	def setCurrentToFG(self):
-		pass
+		self.updateColor(self.master.fgcolor)
+
+	def swapFGandBG(self):
+		tmp=self.master.fgcolor
+		self.master.setFGColor(self.master.bgcolor)
+		self.master.setBGColor(tmp)
 
 class FGSwatch(ColorSwatch):
 	def mousePressEvent(self,event):
@@ -61,27 +66,27 @@ class FGSwatch(ColorSwatch):
 		else:
 			self.swapFGandBG()
 
+	def changeColorDialog(self):
+		color=qtgui.QColorDialog.getColor(self.master.fgcolor,self)
+		if color.isValid():
+			self.updateColor(color)
+
 	def updateColor(self,color):
-		self.color=color
+		ColorSwatch.updateColor(self,color)
 		self.master.fgcolor=color
-		self.update()
 
 class BGSwatch(ColorSwatch):
 	def mousePressEvent(self,event):
 		if event.button()==qtcore.Qt.LeftButton:
 			self.changeColorDialog()
-		elif event.button()==qtcore.Qt.RightButton:
-			self.setFGToCurrent()
-		elif event.button()==qtcore.Qt.MidButton:
-			self.setCurrentToFG()
+		else:
+			self.swapFGandBG()
+
+	def changeColorDialog(self):
+		color=qtgui.QColorDialog.getColor(self.master.bgcolor,self)
+		if color.isValid():
+			self.updateColor(color)
 
 	def updateColor(self,color):
-		self.color=color
+		ColorSwatch.updateColor(self,color)
 		self.master.bgcolor=color
-		self.update()
-
-	def setFGToCurrent(self):
-		pass
-
-	def setCurrentToFG(self):
-		pass

@@ -11,8 +11,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>281</width>
-    <height>365</height>
+    <width>348</width>
+    <height>516</height>
    </rect>
   </property>
   <property name="sizePolicy" >
@@ -138,6 +138,13 @@
      </layout>
     </item>
     <item>
+     <widget class="QPushButton" name="tooloptionsbutton" >
+      <property name="text" >
+       <string>Configure Tool</string>
+      </property>
+     </widget>
+    </item>
+    <item>
      <widget class="QFrame" name="swatch_frame" >
       <property name="sizePolicy" >
        <sizepolicy vsizetype="MinimumExpanding" hsizetype="MinimumExpanding" >
@@ -154,11 +161,22 @@
      </widget>
     </item>
     <item>
-     <widget class="QPushButton" name="tooloptionsbutton" >
-      <property name="text" >
-       <string>Configure Tool</string>
-      </property>
-     </widget>
+     <layout class="QHBoxLayout" >
+      <item>
+       <widget class="QPushButton" name="pushButton_4" >
+        <property name="text" >
+         <string>Load Palette</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButton_5" >
+        <property name="text" >
+         <string>Save Palette</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </item>
    </layout>
   </widget>
@@ -167,7 +185,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>281</width>
+     <width>348</width>
      <height>35</height>
     </rect>
    </property>

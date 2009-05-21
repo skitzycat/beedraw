@@ -23,16 +23,15 @@ from abstractbeemaster import AbstractBeeMaster
 from beedrawingwindow import BeeDrawingWindow, NetworkClientDrawingWindow
 
 class BeeSwatchScrollArea(qtgui.QScrollArea):
-	def __init__(self,master,oldwidget):
+	def __init__(self,master,oldwidget,rows=15,columns=12,boxsize=15):
 		parent=oldwidget.parentWidget()
 		qtgui.QScrollArea.__init__(self,parent)
 
+		self.master=master
 
-		self.setHorizontalScrollBarPolicy(qtcore.Qt.ScrollBarAlwaysOn)
-		self.setVerticalScrollBarPolicy(qtcore.Qt.ScrollBarAlwaysOn)
-
-		self.swatchrows=10
-		self.swatchcolumns=10
+		self.boxsize=boxsize
+		self.swatchrows=rows
+		self.swatchcolumns=columns
 
 		# steal attributes from old widget
 		self.setSizePolicy(oldwidget.sizePolicy())
@@ -43,16 +42,35 @@ class BeeSwatchScrollArea(qtgui.QScrollArea):
 		parent.layout().removeWidget(oldwidget)
 		parent.layout().insertWidget(index,self)
 
-		self.setLayout(qtgui.QGridLayout(self))
+		self.setWidget(qtgui.QFrame(self))
+		self.widget().setLayout(qtgui.QGridLayout(self.widget()))
+		self.widget().layout().setSpacing(0)
 
 		self.show()
 
 		self.resetSwatches()
 
 	def resetSwatches(self):
+		widget=self.widget()
+		layout=widget.layout()
 		for i in range(self.swatchrows):
 			for j in range(self.swatchcolumns):
-				self.layout().addWidget(ColorSwatch(self,parent=self),i,j)
+				# just to make it look better, but each swatch in a frame with a border
+				curframe=qtgui.QFrame(widget)
+				curframe.setFrameShape(qtgui.QFrame.StyledPanel)
+				curframe.setLayout(qtgui.QHBoxLayout(curframe))
+				curframe.layout().addWidget(ColorSwatch(self.master,parent=curframe,boxsize=self.boxsize))
+				curframe.layout().setMargin(0)
+
+				# readjust subframe size to swatch size
+				curframe.adjustSize()
+				curframe.show()
+
+				# add the widget at the right place
+				layout.addWidget(curframe,i,j)
+
+		# readjust the whole palette widget to the right size
+		widget.adjustSize()
 
 class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 	def __init__(self):
@@ -81,12 +99,11 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 		# setup foreground and background swatches
 		# default foreground to black and background to white
-		self.fgcolor=qtgui.QColor(0,0,0)
-		self.bgcolor=qtgui.QColor(255,255,255)
-		self.ui.BGSwatch=BGSwatch(self,self.ui.BGSwatch)
-		self.ui.BGSwatch.updateColor(self.bgcolor)
-		self.ui.FGSwatch=FGSwatch(self,self.ui.FGSwatch)
-		self.ui.FGSwatch.updateColor(self.fgcolor)
+		self.ui.FGSwatch=FGSwatch(self,replacingwidget=self.ui.FGSwatch)
+		self.setFGColor(qtgui.QColor(0,0,0))
+
+		self.ui.BGSwatch=BGSwatch(self,replacingwidget=self.ui.BGSwatch)
+		self.setBGColor(qtgui.QColor(255,255,255))
 
 		# vars for dialog windows that there should only be one of each
 		self.layerswindow=BeeLayersWindow(self)
@@ -151,6 +168,12 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 	def on_foregroundbutton_pressed(self):
 		self.ui.FGSwatch.changeColorDialog()
+
+	def setFGColor(self,color):
+		self.ui.FGSwatch.updateColor(color)
+
+	def setBGColor(self,color):
+		self.ui.BGSwatch.updateColor(color)
 
 	def on_action_File_Exit_triggered(self,accept=True):
 		if not accept:
