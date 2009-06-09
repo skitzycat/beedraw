@@ -10,7 +10,6 @@ except:
 
 class SketchLogWriter:
 	def __init__(self, output):
-		print "Creating SketchLogWriter"
 		self.output=output
 
 		self.log=QXmlStreamWriter(output)

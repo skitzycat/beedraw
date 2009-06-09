@@ -30,8 +30,9 @@ class NetworkControlCommandTypes:
       resyncstart: sent from the server to client, tells client to delete all layers and undo history
       revokelayer: server telling a client to send a giveuplayer
       requestlayer: sent from client to server to request ownership of layer
-      giveuplayer: set layer to be unowned
-      claimlayer: client requesting to take ownership of unowned layer
+      giveuplayer: sent from client to server to change layer to unowned
+      claimlayer: sent from client to server requesting to take ownership of unowned layer
+			layerowner: sent from server to all clients to show change of a layer owner
   """
 	resyncrequest, resyncstart, requestlayer, giveuplayer, revokelayer, claimlayer = range(6)
 

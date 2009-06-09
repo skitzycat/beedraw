@@ -205,7 +205,7 @@ class RemoteDrawingThread(DrawingThread):
 		DrawingThread.__init__(self,queue,windowid,type=ThreadTypes.network,master=master)
 
 class ServerDrawingThread(DrawingThread):
-	def __init__(self,queue,windowid,type=ThreadTypes.user,master=None,historysize=20):
+	def __init__(self,queue,windowid,master=None,historysize=20):
 		DrawingThread.__init__(self,queue,windowid,type=ThreadTypes.server,master=master)
 		self.commandcaches={}
 		self.commandindexes={}
@@ -218,6 +218,10 @@ class ServerDrawingThread(DrawingThread):
 		requester=command[2]
 		if subtype==NetworkControlCommandTypes.resyncrequest:
 			self.sendResyncToClient(requester,window)
+		elif subtype==NetworkControlCommandTypes.giveuplayer:
+			layerkey=command[3]
+			self.layerOwnerChangeCommand(layerkey,0)
+			
 
 	def sendResyncToClient(self,requester,window):
 		print "sending resync with requester:", requester
@@ -232,6 +236,21 @@ class ServerDrawingThread(DrawingThread):
 		for c in self.commandcaches.keys():
 			for command in self.commandcaches[c]:
 				command.send(requester,self.master.routinginput)
+
+	def layerOwnerChangeCommand(self,layerkey,newowner):
+		layer=getLayerForKey(layerkey)
+		proplock=qtcore.QWriteLocker(layer.proplock)
+		oldowner=layer.owner
+		if oldowner and oldowner in self.commandcaches:
+			# go through the command stack for the owner to remove commands that relate to that layer
+			for command in self.commandcaches[oldowner]:
+				if command.layer.key==layerkey:
+					# if the command is before the current index then decrement the index
+					if self.commandcaches[oldowner].index(command)<self.commandindexes[owner]:
+						self.commandindexes[oldowner]-=1
+					self.commandcaches[oldowner].remove(command)
+
+		layer.owner=newowner
 
 	def processLayerCommand(self,command):
 		cachedcommand=None
@@ -302,9 +321,9 @@ class ServerDrawingThread(DrawingThread):
 			print "unknown processLayerCommand subtype:", subtype
 
 		if cachedcommand:
-			self.addToServerCache(cachedcommand)
+			self.master.addToCache(cachedcommand)
 
-	def addToServerCache(self,command):
+	def addToCache(self,command):
 		owner=command.layer.owner
 		if not owner in self.commandcaches:
 			self.commandcaches[owner]=[]

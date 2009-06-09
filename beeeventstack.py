@@ -15,6 +15,12 @@ class CommandStack:
 		self.maxundo=maxundo
 		self.windowid=windowid
 
+	def removeLayerRefs(self,layerkey):
+		""" remove all references to given layer in history """
+		for c in self.commandstack:
+			if c.layerkey==layerkey:
+				self.commandstack.remove(c)
+
 	def add(self,command):
 		# if there are commands ahead of this one delete them
 		if self.index>=len(self.commandstack):
@@ -46,6 +52,8 @@ class CommandStack:
 
 # parent class for all commands that get put in undo/redo stack
 class AbstractCommand:
+	def __init__(self):
+		self.layerkey=0
 	def undo(self):
 		pass
 
@@ -55,6 +63,7 @@ class AbstractCommand:
 # this class is for any command that changes the image on a layer
 class DrawingCommand(AbstractCommand):
 	def __init__(self,layerkey,oldimage,location):
+		AbstractCommand.__init__(self)
 		self.layerkey=layerkey
 		self.oldimage=oldimage
 		self.location=location
@@ -73,6 +82,7 @@ class DrawingCommand(AbstractCommand):
 
 class AddLayerCommand(AbstractCommand):
 	def __init__(self,layerkey):
+		AbstractCommand.__init__(self)
 		self.layerkey=layerkey
 
 	def undo(self,windowid):
@@ -85,6 +95,8 @@ class AddLayerCommand(AbstractCommand):
 
 class DelLayerCommand(AbstractCommand):
 	def __init__(self,layer,index):
+		AbstractCommand.__init__(self)
+		self.layerkey=layer.key
 		self.layer=layer
 		self.index=index
 
@@ -98,6 +110,7 @@ class DelLayerCommand(AbstractCommand):
 
 class LayerUpCommand(AbstractCommand):
 	def __init__(self,layerkey):
+		AbstractCommand.__init__(self)
 		self.layerkey=layerkey
 
 	def undo(self,windowid):
@@ -110,6 +123,7 @@ class LayerUpCommand(AbstractCommand):
 
 class LayerDownCommand(AbstractCommand):
 	def __init__(self,layerkey):
+		AbstractCommand.__init__(self)
 		self.layerkey=layerkey
 
 	def undo(self,windowid):

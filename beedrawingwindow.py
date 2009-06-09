@@ -13,7 +13,6 @@ from beelayer import BeeLayer
 from beeutil import *
 from beeeventstack import *
 from datetime import datetime
-from sketchlog import SketchLogWriter
 from beeglobals import *
 
 from Queue import Queue
@@ -443,6 +442,8 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		"""
 		if state:
 			filename=qtgui.QFileDialog.getSaveFileName(self,"Choose File Name",".","Logfiles (*.slg)")
+			if not filename:
+				return
 			self.startLog(filename)
 		else:
 			self.endLog()
@@ -537,3 +538,14 @@ class NetworkClientDrawingWindow(BeeDrawingWindow):
 		self.startNetworkThreads(self.username,self.password,self.host,self.port)
 		self.remotedrawingthread=DrawingThread(self.remotecommandqueue,self.id,ThreadTypes.network,master=self.master)
 		self.remotedrawingthread.start()
+
+	def changeOwner(self,newowner,layerkey):
+		for layer in self.layers:
+			if layerkey==layer.key:
+				imagelock=None
+				if layerkey==layer.key:
+					proplock=qtcore.QWriteLocker(layer.propertieslock)
+					# don't think I really need this lock, but just in case
+					imagelock=qtcore.QWriteLocker(layer.imagelock)
+					self.localcommandstack.removeLayerRefs(layerkey)
+					layer.owner=newowner

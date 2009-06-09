@@ -7,10 +7,9 @@ from beeapp import BeeApp
 
 from beetypes import *
 
-from beeeventstack import CommandStack
+from beeeventstack import *
 
 from beelayer import BeeLayer
-from beeeventstack import *
 
 from Queue import Queue
 
@@ -54,6 +53,7 @@ class BeeSessionState:
 		self.remotedrawingthread=None
 
 		self.layers=[]
+		# mutex for messing with the list of layer: adding, removing or rearranging
 		self.layersmutex=qtcore.QMutex()
 
 	def setRemoteId(self,id):
@@ -404,3 +404,9 @@ class BeeSessionState:
 
 	def refreshLayerThumb(self,window,id):
 		pass
+
+	def removeOwner(self,id):
+		""" find all layers with indicated owner and set them to be unowned, also remove all history for those layers, needs to be reimplemented in the subclass """
+		pass
+
+	

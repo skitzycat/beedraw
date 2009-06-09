@@ -2,6 +2,7 @@
 import sys
 sys.path.append("designer")
 
+import os
 import PyQt4.QtGui as qtgui
 import PyQt4.QtCore as qtcore
 
@@ -14,6 +15,8 @@ from ConnectionDialogUi import Ui_ConnectionInfoDialog
 from colorswatch import *
 from beelayer import BeeLayersWindow
 from beeutil import getSupportedReadFileFormats
+from beesave import PaletteXmlWriter
+from beeload import PaletteParser
 
 from beeapp import BeeApp
 
@@ -38,28 +41,44 @@ class BeeSwatchScrollArea(qtgui.QScrollArea):
 		self.setObjectName(oldwidget.objectName())
 
 		# remove old widget and insert this one
+		self.replaceWidget(oldwidget)
+
+		self.setWidget(qtgui.QFrame(self))
+
+		self.show()
+
+	def replaceWidget(self,oldwidget):
+		parent=oldwidget.parentWidget()
 		index=parent.layout().indexOf(oldwidget)
 		parent.layout().removeWidget(oldwidget)
 		parent.layout().insertWidget(index,self)
 
-		self.setWidget(qtgui.QFrame(self))
+	def setupSwatches(self,colors):
 		self.widget().setLayout(qtgui.QGridLayout(self.widget()))
 		self.widget().layout().setSpacing(0)
+		if colors:
+			self.rows=len(colors)
+			self.columns=len(colors[0])
+		# keep around pointer to all the swatches to read from them all later if needed
 
-		self.show()
-
-		self.resetSwatches()
-
-	def resetSwatches(self):
+		curcolor=None
+		self.swatches=[]
 		widget=self.widget()
 		layout=widget.layout()
 		for i in range(self.swatchrows):
+			curswatchrow=[]
 			for j in range(self.swatchcolumns):
-				# just to make it look better, but each swatch in a frame with a border
+				if colors:
+					rownum=len(curswatchrow)
+					colnum=len(self.swatches)
+					curcolor=colors[colnum][rownum]
+				# just to make it look better, put each swatch in a frame with a border
 				curframe=qtgui.QFrame(widget)
 				curframe.setFrameShape(qtgui.QFrame.StyledPanel)
 				curframe.setLayout(qtgui.QHBoxLayout(curframe))
-				curframe.layout().addWidget(ColorSwatch(self.master,parent=curframe,boxsize=self.boxsize))
+				curswatch=ColorSwatch(self.master,parent=curframe,boxsize=self.boxsize,color=curcolor)
+				curframe.layout().addWidget(curswatch)
+				curswatchrow.append(curswatch)
 				curframe.layout().setMargin(0)
 
 				# readjust subframe size to swatch size
@@ -68,6 +87,8 @@ class BeeSwatchScrollArea(qtgui.QScrollArea):
 
 				# add the widget at the right place
 				layout.addWidget(curframe,i,j)
+
+			self.swatches.append(curswatchrow)
 
 		# readjust the whole palette widget to the right size
 		widget.adjustSize()
@@ -113,6 +134,17 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 		# replace widget with scroll area to hold them
 		self.ui.swatch_frame=BeeSwatchScrollArea(self,self.ui.swatch_frame)
+
+		palfilename=os.path.join(BEE_CONFIG_DIR,"config/default.pal")
+		palfile=qtcore.QFile(palfilename)
+		if palfile.exists():
+			palfile.open(qtcore.QIODevice.ReadOnly)
+			reader=PaletteParser(palfile)
+			colors=reader.getColors()
+		else:
+			colors=[]
+
+		self.ui.swatch_frame.setupSwatches(colors)
 
 	def registerWindow(self,window):
 		self.drawingwindows.append(window)
@@ -162,6 +194,28 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 	def on_tooloptionsbutton_pressed(self):
 		self.getCurToolDesc().runOptionsDialog(self)
+
+	def on_save_palette_button_pressed(self):
+		filename=qtgui.QFileDialog.getSaveFileName(self,"Choose File Name",".","Palette save (*.pal)")
+		if not filename:
+			return
+		if filename[-4:] != ".pal":
+			filename+=".pal"
+		outfile=qtcore.QFile(filename)
+		outfile.open(qtcore.QIODevice.WriteOnly)
+		writer=PaletteXmlWriter(outfile)
+		writer.logPalette(self.ui.swatch_frame.swatches)
+
+	def on_load_palette_button_pressed(self):
+		filename=qtgui.QFileDialog.getOpenFileName(self,"Choose Palette File To Load",".","Palette save (*.pal)")
+		if not filename:
+			return
+
+		infile=qtcore.QFile(filename)
+		infile.open(qtcore.QIODevice.ReadOnly)
+		reader=PaletteParser(infile)
+		colors=reader.getColors()
+		self.ui.swatch_frame.setupSwatches(colors)
 
 	def on_backgroundbutton_pressed(self):
 		self.ui.BGSwatch.changeColorDialog()

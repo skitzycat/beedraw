@@ -11,8 +11,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>348</width>
-    <height>516</height>
+    <width>281</width>
+    <height>503</height>
    </rect>
   </property>
   <property name="sizePolicy" >
@@ -163,14 +163,14 @@
     <item>
      <layout class="QHBoxLayout" >
       <item>
-       <widget class="QPushButton" name="pushButton_4" >
+       <widget class="QPushButton" name="load_palette_button" >
         <property name="text" >
          <string>Load Palette</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="pushButton_5" >
+       <widget class="QPushButton" name="save_palette_button" >
         <property name="text" >
          <string>Save Palette</string>
         </property>
@@ -185,7 +185,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>348</width>
+     <width>281</width>
      <height>35</height>
     </rect>
    </property>
