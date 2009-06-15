@@ -217,6 +217,17 @@ class XmlToQueueEventsConverter:
 			(remoteid,ok)=attrs.value('remoteid').toString().toInt()
 			self.window.addResyncStartToQueue(width,height,remoteid)
 
+		elif name == 'giveuplayer':
+			(layerkey,ok)=attrs.value('key').toString().toInt()
+
+			# make sure command is legit from this source
+			layer=self.window.getLayerForKey(layerkey)
+			proplock=qtcore.QReadLocker(layer.propertieslock)
+			if layer.owner!=self.id:
+				print "ERROR: got bad give up layer command from client:", self.id, "for layer key:", layerkey
+			else:
+				self.window.addGiveUpLayerToQueue(layerkey,self.id,type)
+
 		elif name == 'event':
 			pass
 
@@ -342,8 +353,6 @@ class NetworkWriterThread (qtcore.QThread):
 
 		self.window=window
 		self.queue=window.remoteoutputqueue
-		# the first thing we want sent out is a resync request
-		# self.queue.put((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.resyncrequest))
 
 	def run(self):
 		while 1:

@@ -62,11 +62,6 @@ class BeeLayer:
 	def changeName(self,newname):
 		proplock=qtcore.QWriteLocker(self.propertieslock)
 
-		#print "setting layer name to:", newname
-		if self.type==LayerTypes.animation:
-			newname+=" (Animation)"
-		elif self.type==LayerTypes.network:
-			newname+=" (Network)"
 		self.name=newname
 
 		proplock.unlock()
@@ -76,8 +71,21 @@ class BeeLayer:
 
 	def changeOwner(self,owner):
 		proplock=qtcore.QWriteLocker(self.propertieslock)
+		win=self.getWindow()
 
 		self.owner=owner
+
+		print "Window Type:"
+
+		if win.type==WindowTypes.networkclient or win.type==WindowTypes.standaloneserver or win.type==WindowTypes.integratedserver:
+			if win.ownedByNobody(owner):
+				self.type=LayerTypes.network
+			elif win.ownedByMe(owner):
+				self.type=LayerTypes.user
+			else:
+				self.type=LayerTypes.network
+		else:
+			self.type=LayerTypes.user
 
 		proplock.unlock()
 
@@ -274,7 +282,14 @@ class LayerConfigWidget(qtgui.QWidget):
 		self.ui.opacity_box.setValue(layer.opacity)
 
 		# update name
-		self.ui.layer_name_label.setText(layer.name)
+		displayname=layer.name
+
+		if layer.type==LayerTypes.animation:
+			displayname+=" (Animation)"
+		elif layer.type==LayerTypes.network:
+			displayname+=" (Network)"
+
+		self.ui.layer_name_label.setText(displayname)
 
 		# update blend mode box
 		self.ui.blend_mode_box.setCurrentIndex(self.ui.blend_mode_box.findText(BlendTranslations.modeToName(layer.compmode)))
@@ -285,11 +300,11 @@ class LayerConfigWidget(qtgui.QWidget):
 		print "layer type:", layer.type
 		# only need text on the button if it's a network layer
 		if win.type==WindowTypes.networkclient:
-			if win.ownedByMe(layer.owner):
-				netbuttontext="Give Up Ownership"
-				netbuttonstate=True
-			elif win.ownedByNobody(layer.owner):
+			if win.ownedByNobody(layer.owner):
 				netbuttontext="Claim ownership"
+				netbuttonstate=True
+			elif win.ownedByMe(layer.owner):
+				netbuttontext="Give Up Ownership"
 				netbuttonstate=True
 
 		print "updating network button specs"

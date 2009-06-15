@@ -105,6 +105,9 @@ class SketchLogWriter:
 		elif subtype==NetworkControlCommandTypes.resyncstart:
 			self.logResyncStart(command[2],command[3],command[4])
 
+		elif subtype==NetworkControlCommandTypes.giveuplayer:
+			self.logGiveUpLayer(command[2])
+
 	def startEvent(self,owner):
 		self.log.writeStartElement('event')
 
@@ -284,6 +287,11 @@ class SketchLogWriter:
 		self.log.writeAttribute('width',str(width))
 		self.log.writeAttribute('height',str(height))
 		self.log.writeAttribute('remoteid',str(remoteid))
+		self.log.writeEndElement()
+
+	def logGiveUpLayer(self,key):
+		self.log.writeStartElement('giveuplayer')
+		self.log.writeAttribute('key',str(key))
 		self.log.writeEndElement()
 
 	def endLog(self):

@@ -193,6 +193,10 @@ class DrawingThread(qtcore.QThread):
 			window.clearAllLayers()
 			window.setCanvasSize(width,height)
 			window.setRemoteId(remoteid)
+		elif subtype==NetworkControlCommandTypes.giveuplayer:
+			layer=window.getLayerForKey(command[2])
+			layer.changeOwner(0)
+			window.logCommand(command,self.type)
 
 	def sendToServer(self,command):
 		window=self.master.getWindowById(self.windowid)
@@ -262,7 +266,7 @@ class ServerDrawingThread(DrawingThread):
 		owner=layer.owner
 		# if the layer is owned locally then no one should be able to change it since this is a server session
 		if owner==0:
-			print "Error: recieved layer command for unowned layer in server session:", command
+			print "ERROR: recieved layer command for unowned layer in server session:", command
 			return
 
 		if subtype==LayerCommandTypes.alpha:
@@ -321,7 +325,7 @@ class ServerDrawingThread(DrawingThread):
 			print "unknown processLayerCommand subtype:", subtype
 
 		if cachedcommand:
-			self.master.addToCache(cachedcommand)
+			self.addToCache(cachedcommand)
 
 	def addToCache(self,command):
 		owner=command.layer.owner
