@@ -320,7 +320,8 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 				self.activated=True
 				self.reCompositeImage()
 				self.startRemoteDrawingThreads()
-				self.master.takeFocus(self)
+
+			self.master.takeFocus(self)
 
 		# once the window has received a deferred delete it needs to have all it's references removed so memory can be freed up
 		elif event.type()==qtcore.QEvent.DeferredDelete:

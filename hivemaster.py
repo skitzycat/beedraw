@@ -44,6 +44,7 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 
 		# this will be keyed on the client ids and values will be queue objects
 		self.clientwriterqueues={}
+		self.socketsmap={}
 
 		# this dictionary will be keyed on id and map to the username
 		self.clientnames={}
@@ -73,11 +74,12 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 	def getToolClassByName(self,name):
 		return self.toolbox.getToolDescByName(name)
 
-	def registerClient(self,username,id):
+	def registerClient(self,username,id,socket):
 		lock=qtcore.QWriteLocker(self.clientslistmutex)
 		self.clientwriterqueues[id]=Queue(100)
 		self.clientnames[id]=username
 		self.ui.clientsList.addItem(username)
+		self.socketsmap[id]=socket
 
 		command=(DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.resyncrequest)
 		self.curwindow.addResyncRequestToQueue(id)
@@ -125,20 +127,14 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 		# if there are any items in the list that means that something was selected
 		if curselection:
 			target=curselection[0].data().toString()
-			print "should kick off:", target
 			self.kickClient(target)
 
-	def kickClient(name):
-		# first find the ID of the client
-		id=None
+	def kickClient(self,name):
 		for i in self.clientnames.keys():
 			if self.clientnames[i]==name:
-				id=i
+				# todo: figure out what goes here to kick off client
+				#self.socketsmap[i].close()
 				break
-
-		# if the client isn't in the list just do nothing
-		if not id:
-			return
 
 	def on_actionStart_triggered(self,accept=True):
 		if accept:
@@ -195,7 +191,7 @@ class HiveClientListener(qtcore.QThread):
 
 	def register(self):
 		# register this new connection
-		self.master.registerClient(self.username,self.id)
+		self.master.registerClient(self.username,self.id,self.socket)
 
 	def disconnected(self):
 		print "disconnecting client with ID:", self.id
@@ -280,7 +276,6 @@ class HiveClientWriter(qtcore.QThread):
 class HiveServerThread(qtcore.QThread):
 	def __init__(self,master,port=8333):
 		qtcore.QThread.__init__(self,master)
-		self.sockets=[]
 		self.threads=[]
 		self.port=port
 		self.master=master
@@ -310,7 +305,6 @@ class HiveServerThread(qtcore.QThread):
 		print "found new connection"
 		while self.server.hasPendingConnections():
 			newsock=self.server.nextPendingConnection()
-			self.sockets.append(newsock)
 
 			# start the listener, that will authenticate client and finish setup
 			newlistener=HiveClientListener(self,newsock,self.master,self.nextid)

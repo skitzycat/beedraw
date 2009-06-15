@@ -439,21 +439,6 @@ class BeeLayersWindow(qtgui.QMainWindow):
 			vbox.addWidget(newwidget)
 			newwidget.show()
 
-		if newwidget:
-			frame.setGeometry(qtcore.QRect(0,0,newwidget.width,newwidget.height*vbox.count()))
-		else:
-			frame.setGeometry(qtcore.QRect(0,0,0,0))
-
-		# go through all items setting vertical offset higher each time
-		item = 0
-		for widget in frame.children():
-			# skip items of wrong type
-			if not type(widget) is LayerConfigWidget:
-				continue
-			widget.setGeometry(0,(vbox.count()-item-1)*widget.height,widget.width,widget.height)
-			widget.show()
-			item+=1
-
 	# rebuild layers window by removing all the layers widgets and then adding them back in order
 	def refreshLayersList(self,layers,curlayerkey):
 		lock=qtcore.QMutexLocker(self.mutex)
@@ -488,15 +473,6 @@ class BeeLayersWindow(qtgui.QMainWindow):
 			frame.setGeometry(qtcore.QRect(0,0,0,0))
 
 		return
-		# go through all items setting vertical offset higher each time
-		item = 0
-		for widget in frame.children():
-			# skip items of wrong type
-			if not type(widget) is LayerConfigWidget:
-				continue
-			widget.setGeometry(0,(vbox.count()-item-1)*widget.height,widget.width,widget.height)
-			widget.show()
-			item+=1
 
 	# set proper highlight for layer with passed key
 	def refreshLayerHighlight(self,key):
