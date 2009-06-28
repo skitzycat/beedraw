@@ -80,6 +80,10 @@ class BeeSessionState:
 	def addGiveUpLayerToQueue(self,key,id=0,source=ThreadTypes.user):
 		self.queueCommand((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.giveuplayer,id,key),source)
 
+	def addChangeLayerOwnerToQueue(self,key,owner,source=ThreadTypes.user):
+		print "adding Change Layer Owner To Queue:"
+		self.queueCommand((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.layerowner,key,owner),source)
+
 	def addRequestLayerToQueue(self,key,source=ThreadTypes.user):
 		self.queueCommand((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.requestlayer,key),source)
 

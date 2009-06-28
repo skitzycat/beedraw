@@ -193,9 +193,15 @@ class DrawingThread(qtcore.QThread):
 			window.clearAllLayers()
 			window.setCanvasSize(width,height)
 			window.setRemoteId(remoteid)
+
 		elif subtype==NetworkControlCommandTypes.giveuplayer:
 			layer=window.getLayerForKey(command[2])
 			layer.changeOwner(0)
+			window.logCommand(command,self.type)
+
+		elif subtype==NetworkControlCommandTypes.layerowner:
+			layer=window.getLayerForKey(command[2])
+			layer.changeOwner(command[3])
 			window.logCommand(command,self.type)
 
 	def sendToServer(self,command):
@@ -242,19 +248,22 @@ class ServerDrawingThread(DrawingThread):
 				command.send(requester,self.master.routinginput)
 
 	def layerOwnerChangeCommand(self,layerkey,newowner):
-		layer=getLayerForKey(layerkey)
-		proplock=qtcore.QWriteLocker(layer.proplock)
+		window=self.master.getWindowById(self.windowid)
+		layer=window.getLayerForKey(layerkey)
+		proplock=qtcore.QWriteLocker(layer.propertieslock)
 		oldowner=layer.owner
 		if oldowner and oldowner in self.commandcaches:
 			# go through the command stack for the owner to remove commands that relate to that layer
 			for command in self.commandcaches[oldowner]:
 				if command.layer.key==layerkey:
 					# if the command is before the current index then decrement the index
-					if self.commandcaches[oldowner].index(command)<self.commandindexes[owner]:
+					if self.commandcaches[oldowner].index(command)<self.commandindexes[oldowner]:
 						self.commandindexes[oldowner]-=1
 					self.commandcaches[oldowner].remove(command)
 
 		layer.owner=newowner
+		command=(DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.layerowner,layerkey,newowner)
+		self.master.routinginput.put((command,oldowner))
 
 	def processLayerCommand(self,command):
 		cachedcommand=None

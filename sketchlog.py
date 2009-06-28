@@ -108,6 +108,9 @@ class SketchLogWriter:
 		elif subtype==NetworkControlCommandTypes.giveuplayer:
 			self.logGiveUpLayer(command[2])
 
+		elif subtype==NetworkControlCommandTypes.layerowner:
+			self.logLayerOwnerChange(command[2],command[3])
+
 	def startEvent(self,owner):
 		self.log.writeStartElement('event')
 
@@ -291,6 +294,12 @@ class SketchLogWriter:
 
 	def logGiveUpLayer(self,key):
 		self.log.writeStartElement('giveuplayer')
+		self.log.writeAttribute('key',str(key))
+		self.log.writeEndElement()
+
+	def logLayerOwnerChange(self,key,owner):
+		self.log.writeStartElement('changelayerowner')
+		self.log.writeAttribute('owner',str(owner))
 		self.log.writeAttribute('key',str(key))
 		self.log.writeEndElement()
 

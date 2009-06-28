@@ -228,6 +228,11 @@ class XmlToQueueEventsConverter:
 			else:
 				self.window.addGiveUpLayerToQueue(layerkey,self.id,type)
 
+		elif name == 'changelayerowner':
+			(layerkey,ok)=attrs.value('key').toString().toInt()
+			(owner,ok)=attrs.value('owner').toString().toInt()
+			self.window.addChangeLayerOwnerToQueue(layerkey,owner,type)
+
 		elif name == 'event':
 			pass
 
