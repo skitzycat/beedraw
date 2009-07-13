@@ -241,7 +241,7 @@ class XmlToQueueEventsConverter:
 			pass
 
 		elif name == 'sketchlog':
-			print "DEBUG: got document start tag"
+			print_debug("DEBUG: got document start tag")
 
 		else:
 			print "WARNING: Don't know how to handle tag: %s" % name.toString()
@@ -249,7 +249,7 @@ class XmlToQueueEventsConverter:
 	def processEndElement(self):
 		name=self.xml.name()
 		if name == 'toolevent':
-			print "Adding end tool event to queue on layer", self.curlayer
+			print_debug("Adding end tool event to queue on layer %d" % self.curlayer)
 			self.window.addPenUpToQueue(self.lastx,self.lasty,self.curlayer,type)
 			self.curtool=None
 		elif name == 'rawevent':
@@ -258,7 +258,6 @@ class XmlToQueueEventsConverter:
 
 			# convert data out of base 64 then uncompress
 			data=qtcore.QByteArray()
-			print "%s" % self.rawstring
 			data=data.append(self.rawstring)
 			data=qtcore.QByteArray.fromBase64(data)
 			data=qtcore.qUncompress(data)
@@ -304,13 +303,13 @@ class NetworkListenerThread (qtcore.QThread):
 		self.connectedstate=qtnet.QAbstractSocket.ConnectedState
 
 	def run(self):
-		print "attempting to get socket:"
+		print_debug("attempting to get socket:")
 		# setup initial connection
 		self.socket=getServerConnection(self.username,self.password,self.host,self.port)
 
 		# if we failed to get a socket then destroy the window and exit
 		if not self.socket:
-			print "failed to get socket connection"
+			print_debug("failed to get socket connection")
 			self.window.close()
 			return
 
@@ -319,10 +318,10 @@ class NetworkListenerThread (qtcore.QThread):
 		#qtcore.QObject.connect(self.socket, qtcore.SIGNAL("readyRead()"), self.readyRead)
 		#qtcore.QObject.connect(self.socket, qtcore.SIGNAL("disconnected()"), self.disconnected)
 
-		print "got socket connection"
+		print_debug("got socket connection")
 		sendingthread=NetworkWriterThread(self.window,self.socket)
 		self.window.sendingthread=sendingthread
-		print "created thread, about to start sending thread"
+		print_debug("created thread, about to start sending thread")
 		sendingthread.start()
 
 		# enter read loop, read till socket gets closed
@@ -340,7 +339,7 @@ class NetworkListenerThread (qtcore.QThread):
 
 	# what to do when a disconnected signal is recieved
 	def disconnected(self):
-		print "disconnected from server"
+		print_debug("disconnected from server")
 		self.window.switchAllLayersToLocal()
 		self.exit()
 		return
@@ -350,7 +349,7 @@ class NetworkListenerThread (qtcore.QThread):
 
 		if readybytes>0:
 			data=self.socket.read(readybytes)
-			print "got animation data from socket: %s" % qtcore.QString(data)
+			print_debug("got animation data from socket: %s" % qtcore.QString(data))
 
 			self.parser.xml.addData(data)
 			self.parser.read()
@@ -368,9 +367,9 @@ class NetworkWriterThread (qtcore.QThread):
 
 	def run(self):
 		while 1:
-			print "attempting to get item from queue"
+			print_debug("attempting to get item from queue")
 			command=self.queue.get()
-			print "Network Writer Thread got command from queue:", command
+			print_debug("Network Writer Thread got command from queue: %s" % str(command))
 			if command[0]==DrawingCommandTypes.quit:
 				return
 			self.gen.logCommand(command)

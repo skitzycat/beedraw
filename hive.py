@@ -13,5 +13,4 @@ if __name__ == "__main__":
 	app = qtgui.QApplication(sys.argv)
 	beeapp.app = app
 	beeapp.master = HiveMasterWindow()
-	print "set bee app master"
 	app.exec_()

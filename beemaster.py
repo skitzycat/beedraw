@@ -14,7 +14,7 @@ from BeeMasterUI import Ui_BeeMasterSpec
 from ConnectionDialogUi import Ui_ConnectionInfoDialog
 from colorswatch import *
 from beelayer import BeeLayersWindow
-from beeutil import getSupportedReadFileFormats
+from beeutil import *
 from beesave import PaletteXmlWriter
 from beeload import PaletteParser
 
@@ -161,7 +161,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		for win in self.drawingwindows:
 			if win.id==id:
 				return win
-		print "Error: Couldn't find window with ID:", id
+		print "WARNING: Couldn't find window with ID:", id
 		return None
 
 	def getLayerById(self,win_id,layer_id):
@@ -169,7 +169,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		if win:
 			return win.getLayerForKey(layer_id)
 		else:
-			print "Warning: can't find layer with id:", layer_id, "in window:", win_id
+			print "WARNING: can't find layer with id:", layer_id, "in window:", win_id
 		return None
 
 	def removeWindow(self,window):
@@ -271,7 +271,8 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			try:
 				l=pickle.load(f)
 			except:
-				print "Error, file dosen't seem to be in bee image format"
+				qtgui.QMessageBox.warning(self,"ERROR when reading file","File does not seem to be in valid bee format")
+				print_debug("Error, file dosen't seem to be in bee image format")
 				return
 
 			self.curwindow=None
@@ -281,7 +282,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			height=l[0][2]
 
 			if version > fileformatversion:
-				print "Error unsuppored file format version, please upgrade bee version"
+				print_debug("Error unsuppored file format version, please upgrade bee draw version")
 
 			self.curwindow=BeeDrawingWindow(self,width,height,False)
 

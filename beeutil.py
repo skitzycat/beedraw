@@ -296,3 +296,6 @@ def op_round(f):
 
 def norme(a,b):
 	return (a*a)+(b*b)
+
+def print_debug(s):
+	print s

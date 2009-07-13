@@ -271,7 +271,7 @@ class LayerConfigWidget(qtgui.QWidget):
 		win=BeeApp().master.getWindowById(self.windowid)
 
 		if not layer:
-			print "updateValueFromLayer could not find layer with key", self.layerkey
+			print "WARNING: updateValueFromLayer could not find layer with key", self.layerkey
 			return
 
 		proplock=qtcore.QReadLocker(layer.propertieslock)
@@ -298,7 +298,6 @@ class LayerConfigWidget(qtgui.QWidget):
 		netbuttonstate=False
 		netbuttontext=""
 
-		print "layer type:", layer.type
 		# only need text on the button if it's a network layer
 		if win.type==WindowTypes.networkclient:
 			if win.ownedByNobody(layer.owner):
@@ -308,7 +307,6 @@ class LayerConfigWidget(qtgui.QWidget):
 				netbuttontext="Give Up Ownership"
 				netbuttonstate=True
 
-		print "updating network button specs"
 		self.ui.network_control_button.setText(netbuttontext)
 		self.ui.network_control_button.setEnabled(netbuttonstate)
 

@@ -8,6 +8,7 @@ import PyQt4.QtNetwork as qtnet
 from HiveMasterUi import Ui_HiveMasterSpec
 from beedrawingwindow import BeeDrawingWindow
 from beetypes import *
+from beeutil import *
 from beetools import BeeToolBox
 from animation import XmlToQueueEventsConverter
 from sketchlog import SketchLogWriter
@@ -196,7 +197,7 @@ class HiveClientListener(qtcore.QThread):
 		self.master.registerClient(self.username,self.id,self.socket)
 
 	def disconnected(self):
-		print "disconnecting client with ID:", self.id
+		print_debug("disconnecting client with ID: %d" % self.id)
 		self.master.unregisterClient(self.id)
 
 	def readyRead(self):
@@ -204,7 +205,7 @@ class HiveClientListener(qtcore.QThread):
 
 		if readybytes>0:
 			data=self.socket.read(readybytes)
-			print "got animation data from socket: %s" % qtcore.QString(data)
+			print_debug("got animation data from socket: %s" % qtcore.QString(data))
 			self.parser.xml.addData(data)
 			self.parser.read()
 
@@ -212,25 +213,25 @@ class HiveClientListener(qtcore.QThread):
 		# try to authticate user
 		if not self.authenticate():
 			# if authentication fails send close socket and exit
-			print "authentication failed"
+			print_debug("authentication failed")
 			self.socket.write(qtcore.QByteArray("Authtication failed\n"))
 			self.socket.disconnectFromHost()
 			self.socket.waitForDisconnected(1000)
 			return
 
-		print "authentication succeded"
+		print_debug("authentication succeded")
 
 		self.register()
-		print "registered"
+		print_debug("registered")
 		self.parser=XmlToQueueEventsConverter(None,self.master.curwindow,0,type=ThreadTypes.server,id=self.id)
-		print "created parser"
+		print_debug("created parser")
 
 		# pass initial data to client here
 		self.socket.write(qtcore.QByteArray("Success\nConnected To Server\n"))
 
 		# wait for client to respond so it doesn't get confused and mangle the setup data with the start of the XML file
 		self.socket.waitForReadyRead(-1)
-		print "got client response"
+		print_debug("got client response")
 
 		#qtcore.QObject.connect(self.socket, qtcore.SIGNAL("readyRead()"), self.readyRead)
 		#qtcore.QObject.connect(self.socket, qtcore.SIGNAL("disconnected()"), self.disconnected)
@@ -297,14 +298,14 @@ class HiveServerThread(qtcore.QThread):
 		ret=self.server.listen(qtnet.QHostAddress("0.0.0.0"),self.port)
 
 	def finished(self):
-		print "in finished"
+		print_debug("running finished")
 
 	def run(self):
 		self.exec_()
 
 	# signal for the server getting a new connection
 	def newConnection(self):
-		print "found new connection"
+		print_debug("found new connection")
 		while self.server.hasPendingConnections():
 			newsock=self.server.nextPendingConnection()
 

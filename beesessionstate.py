@@ -90,7 +90,6 @@ class BeeSessionState:
 		self.queueCommand((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.giveuplayer,id,key),source)
 
 	def addChangeLayerOwnerToQueue(self,key,owner,source=ThreadTypes.user):
-		print "adding Change Layer Owner To Queue:"
 		self.queueCommand((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.layerowner,key,owner),source)
 
 	def addRequestLayerToQueue(self,key,source=ThreadTypes.user):
@@ -238,7 +237,6 @@ class BeeSessionState:
 
 	# insert a layer at a given point in the list of layers
 	def insertLayer(self,key,index,type=LayerTypes.user,image=None,opacity=None,visible=None,compmode=None,owner=0,history=0):
-		#print "calling insertLayer"
 		layer=BeeLayer(self.id,type,key,image,opacity=opacity,visible=visible,compmode=compmode,owner=owner)
 
 		self.layers.insert(index,layer)
@@ -358,14 +356,12 @@ class BeeSessionState:
 		elif self.type==WindowTypes.standaloneserver:
 			layer=self.getLayerForKey(tool.layerkey)
 			if not layer:
-				print "couldn't find layer when logging stroke"
+				print_debug("couldn't find layer when logging stroke")
 				return
-			print "logging stroke from owner:", layer.owner
 			self.master.routinginput.put(((DrawingCommandTypes.layer,LayerCommandTypes.tool,tool.layerkey,tool),layer.owner))
 
 	# add an event to the undo/redo history
 	def addCommandToHistory(self,command,source=0):
-		print "adding command to history from source:", source
 		# if we don't get a source then assume that it's local
 		if self.ownedByMe(source):
 			self.localcommandstack.add(command)
@@ -390,7 +386,6 @@ class BeeSessionState:
 
 	# undo last event in stack for passed client id
 	def undo(self,source=0):
-		print "Undo called on source:", source
 		if self.ownedByMe(source):
 			self.localcommandstack.undo()
 		else:
@@ -401,7 +396,6 @@ class BeeSessionState:
 
 	# redo last event in stack for passed client id
 	def redo(self,source=0):
-		print "Undo called on source:", source
 		# if we don't get a source then assume that it's local
 		if self.ownedByMe(source):
 			self.localcommandstack.redo()

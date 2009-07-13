@@ -502,9 +502,9 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 
 	# do what's needed to start up any network threads
 	def startNetworkThreads(self,username,password,host,port):
-		print "running startNetworkThreads"
+		print_debug("running startNetworkThreads")
 		self.listenerthread=NetworkListenerThread(self,username,password,host,port)
-		print "about to start thread"
+		print_debug("about to start thread")
 		self.listenerthread.start()
 
 	def switchAllLayersToLocal(self):
@@ -528,7 +528,7 @@ class NetworkClientDrawingWindow(BeeDrawingWindow):
 	""" Represents a window that the user can draw in
 	"""
 	def __init__(self,parent,username,password,host,port):
-		print "initializign network window"
+		print_debug("initializign network window")
 		BeeDrawingWindow.__init__(self,parent,startlayer=False,type=WindowTypes.networkclient)
 		self.username=username
 		self.password=password

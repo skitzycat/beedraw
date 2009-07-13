@@ -91,7 +91,6 @@ class DrawingThread(qtcore.QThread):
 				window.logCommand(command,self.type)
 
 		elif subtype==LayerCommandTypes.pendown:
-			print "Pen down event:", command
 			layer=window.getLayerForKey(command[2])
 			x=command[3]
 			y=command[4]
@@ -116,14 +115,12 @@ class DrawingThread(qtcore.QThread):
 				tool.penMotion(x,y,pressure)
 
 		elif subtype==LayerCommandTypes.penup:
-			print "Pen up event in client thread:", command
 			if command[2]==None:
 				return
 			#print "Pen up event:", command
 			x=command[3]
 			y=command[4]
 			if int(command[2]) in self.inprocesstools:
-				print "found in process tool for pen up command"
 				tool=self.inprocesstools[int(command[2])]
 				tool.penUp(x,y)
 
@@ -171,7 +168,6 @@ class DrawingThread(qtcore.QThread):
 			owner = command[4]
 			if self.type==ThreadTypes.server and owner != 0:
 				pass
-				print "calling nextLayerKey from drawingthread.py"
 				window.insertLayer(key,index,owner=owner)
 
 			else:
@@ -226,7 +222,6 @@ class ServerDrawingThread(DrawingThread):
 		self.historysize=historysize
 
 	def processNetworkCommand(self,command):
-		print "processeing network control command:", command
 		window=self.master.getWindowById(self.windowid)
 		subtype=command[1]
 		requester=command[2]
@@ -321,7 +316,6 @@ class ServerDrawingThread(DrawingThread):
 			self.inprocesstools[command[2]].points.append((x,y,pressure))
 
 		elif subtype==LayerCommandTypes.penup:
-			print "Pen up event in server thread:", command
 			x=command[3]
 			y=command[4]
 

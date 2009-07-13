@@ -42,7 +42,6 @@ class CachedToolEvent(CachedLayerEvent):
 		self.points=[]
 
 	def process(self):
-		print "processing cached tool event"
 		self.tool.penDown(self.points[0][0],self.points[0][1],self.points[0][2])
 		for point in self.points[1:]:
 			self.tool.penMotion(point[0],point[1],point[2])
@@ -50,6 +49,5 @@ class CachedToolEvent(CachedLayerEvent):
 		self.tool.penUp(self.points[-1][0],self.points[-1][1])
 
 	def send(self,id,queue):
-		print "Sending cached tool event to client:", id
 		self.tool.pointshistory=self.points
 		queue.put(((DrawingCommandTypes.layer,LayerCommandTypes.tool,self.layer.key,self.tool),id*-1))

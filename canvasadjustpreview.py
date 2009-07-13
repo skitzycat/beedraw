@@ -3,7 +3,6 @@ import PyQt4.QtCore as qtcore
 
 class CanvasAdjustPreview(qtgui.QWidget):
 	def __init__(self,replacingwidget,window):
-		print "creating canvas adjust preview"
 		qtgui.QWidget.__init__(self,replacingwidget.parentWidget())
 
 		self.setGeometry(replacingwidget.frameGeometry())
@@ -26,7 +25,6 @@ class CanvasAdjustPreview(qtgui.QWidget):
 		self.show()
 
 	def paintEvent(self,event):
-		print "starting paint event"
 		painter=qtgui.QPainter()
 		painter.begin(self)
 

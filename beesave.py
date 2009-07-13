@@ -12,7 +12,7 @@ class PaletteXmlWriter:
 
 	def logPalette(self,palettelist):
 		if not palettelist:
-			print "Error, can't find list of colors to write out"
+			print_debug("Error, can't find list of colors to write out")
 			return
 
 		rows=len(palettelist)

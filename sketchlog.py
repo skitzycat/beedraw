@@ -1,6 +1,7 @@
 import PyQt4.QtCore as qtcore
 import PyQt4.QtXml as qtxml
 from beetypes import *
+from beeutil import *
 
 # changed locations between versions
 try:
@@ -47,7 +48,7 @@ class SketchLogWriter:
 			bytestowrite=self.output.bytesToWrite()
 		self.output.flush()
 		self.output.waitForBytesWritten(-1)
-		print "finished writing output"
+		print_debug("finished writing output")
 
 	def logHistoryCommand(self,command):
 		subtype=command[1]
@@ -280,7 +281,7 @@ class SketchLogWriter:
 		self.log.writeEndElement()
 
 	def logResyncRequest(self):
-		print "DEBUG: logging resync"
+		print_debug("DEBUG: logging resync")
 		lock=qtcore.QMutexLocker(self.mutex)
 
 		self.log.writeStartElement('resyncrequest')

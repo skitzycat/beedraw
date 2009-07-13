@@ -17,17 +17,12 @@ class CommandStack:
 
 	def deleteLayerHistory(self,layerkey):
 		""" remove all references to given layer in history """
-		print "DEBUG: info for deleteLayerHistory"
 		# make copy of stack so I can iterate through it correctly while deleting
 		newstack=self.commandstack[:]
-		print newstack
 
 		for c in self.commandstack:
-			print "checking event with layer key:", c.layerkey
 			if c.layerkey==layerkey:
-				print "removing event from history"
 				if newstack.index(c)<self.index:
-					print "decrementing index of history"
 					self.index-=1
 				newstack.remove(c)
 
@@ -81,7 +76,7 @@ class DrawingCommand(AbstractCommand):
 		self.location=location
 
 	def undo(self,windowid):
-		print "running undo in drawing command"
+		print_debug("running undo in drawing command")
 		layer=BeeApp().master.getLayerById(windowid,self.layerkey)
 		if layer:
 			self.newimage=layer.image.copy(self.location)

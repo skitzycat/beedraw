@@ -1026,7 +1026,7 @@ class SketchTool(DrawingTool):
 			return image1
 
 		if t < 0 or t > 1:
-			print "Error: interploate function passed bad t value:", t
+			print  "Error: interploate function passed bad t value:", t
 			raise Exception, "interploate passed bad t value"
 			return image1
 
@@ -1071,12 +1071,6 @@ class SketchTool(DrawingTool):
 			print "Error: interploate function passed bad t value:", t
 			raise Exception, "interploate passed bad t value"
 			return image1
-
-		print "interploate passed t value:", t
-		print "and images:"
-		printImage(image1)
-		print ""
-		printImage(image2)
 
 		width=image1.width()
 		height=image1.height()
