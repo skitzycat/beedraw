@@ -69,13 +69,14 @@ class BeeLayer:
 		if self.configwidget:
 			self.configwidget.updateValuesFromLayer()
 
+	# change the ownership of a layer and remove all undo/redo history for that layer
 	def changeOwner(self,owner):
-		proplock=qtcore.QWriteLocker(self.propertieslock)
 		win=self.getWindow()
 
-		self.owner=owner
+		win.deleteLayerHistory(self.key)
 
-		print "Window Type:"
+		proplock=qtcore.QWriteLocker(self.propertieslock)
+		self.owner=owner
 
 		if win.type==WindowTypes.networkclient or win.type==WindowTypes.standaloneserver or win.type==WindowTypes.integratedserver:
 			if win.ownedByNobody(owner):
@@ -410,34 +411,6 @@ class BeeLayersWindow(qtgui.QMainWindow):
 		frame.setLayout(vbox)
 
 		self.layersListArea=layersListArea
-
-	# rebuild layers window by removing all the layers widgets and then adding them back in order
-	def refreshLayersList_backup(self,layers,curlayerkey):
-		lock=qtcore.QMutexLocker(self.mutex)
-
-		frame=self.layersListArea.widget()
-
-		vbox=frame.layout()
-
-		# remove widgets from layout
-		for widget in frame.children():
-			# skip items of wrong type
-			if not type(widget) is LayerConfigWidget:
-				continue
-			widget.setParent(None)
-			vbox.removeWidget(widget)
-
-		newwidget=None
-
-		# ask each layer for it's widget and add it
-		for layer in layers:
-			newwidget=layer.getConfigWidget()
-			if layer.key==curlayerkey:
-				newwidget.highlight()
-			else:
-				newwidget.unhighlight()
-			vbox.addWidget(newwidget)
-			newwidget.show()
 
 	# rebuild layers window by removing all the layers widgets and then adding them back in order
 	def refreshLayersList(self,layers,curlayerkey):

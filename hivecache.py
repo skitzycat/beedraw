@@ -42,6 +42,7 @@ class CachedToolEvent(CachedLayerEvent):
 		self.points=[]
 
 	def process(self):
+		print "processing cached tool event"
 		self.tool.penDown(self.points[0][0],self.points[0][1],self.points[0][2])
 		for point in self.points[1:]:
 			self.tool.penMotion(point[0],point[1],point[2])

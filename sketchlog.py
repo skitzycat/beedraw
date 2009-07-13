@@ -111,6 +111,9 @@ class SketchLogWriter:
 		elif subtype==NetworkControlCommandTypes.layerowner:
 			self.logLayerOwnerChange(command[2],command[3])
 
+		elif subtype==NetworkControlCommandTypes.requestlayer:
+			self.logLayerRequest(command[2])
+
 	def startEvent(self,owner):
 		self.log.writeStartElement('event')
 
@@ -300,6 +303,11 @@ class SketchLogWriter:
 	def logLayerOwnerChange(self,key,owner):
 		self.log.writeStartElement('changelayerowner')
 		self.log.writeAttribute('owner',str(owner))
+		self.log.writeAttribute('key',str(key))
+		self.log.writeEndElement()
+
+	def logLayerRequest(self,key):
+		self.log.writeStartElement('layerrequest')
 		self.log.writeAttribute('key',str(key))
 		self.log.writeEndElement()
 

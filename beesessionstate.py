@@ -77,6 +77,15 @@ class BeeSessionState:
 			return True
 		return False
 
+	def deleteLayerHistory(self,key):
+		layer=self.getLayerForKey(key)
+		proplock=qtcore.QReadLocker(layer.propertieslock)
+
+		if self.ownedByMe(layer.owner):
+			self.localcommandstack.deleteLayerHistory(key)
+		elif layer.owner in self.remotecommandstacks:
+			self.remotecommandstacks[layer.owner].deleteLayerHistory(key)
+
 	def addGiveUpLayerToQueue(self,key,id=0,source=ThreadTypes.user):
 		self.queueCommand((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.giveuplayer,id,key),source)
 
@@ -160,21 +169,12 @@ class BeeSessionState:
 			tool=self.master.getCurToolInst(self)
 			self.curtool=tool
 
-		if layerkey==None:
-			layerkey=self.getCurLayerKey()
-
 		self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.pendown,layerkey,x,y,pressure,tool),source)
 
 	def addPenMotionToQueue(self,x,y,pressure,layerkey=None,source=ThreadTypes.user):
-		if layerkey==None:
-			layerkey=self.curlayerkey
-
 		self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.penmotion,layerkey,x,y,pressure),source)
 
 	def addPenUpToQueue(self,x,y,layerkey=None,source=ThreadTypes.user):
-		if layerkey==None:
-			layerkey=self.curlayerkey
-
 		self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.penup,layerkey,x,y),source)
 
 	def recreateBackdrop(self):
@@ -410,6 +410,9 @@ class BeeSessionState:
 			self.remotecommandstacks[source].redo()
 
 	def refreshLayerThumb(self,window,id):
+		pass
+
+	def refreshLayersList(self):
 		pass
 
 	def removeOwner(self,id):

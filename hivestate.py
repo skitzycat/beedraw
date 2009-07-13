@@ -52,6 +52,9 @@ class HiveSessionState(BeeSessionState):
 		rawcommand=(DrawingCommandTypes.layer,LayerCommandTypes.rawevent,key,0,0,image,None)
 		self.master.routinginput.put((rawcommand,id*-1))
 
+	def addLayerRequestToQueue(self,layerkey,owner=0,source=ThreadTypes.network):
+		self.queueCommand((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.requestlayer,owner,layerkey),source)
+
 	def addResyncRequestToQueue(self,owner=0,source=ThreadTypes.network):
 		self.queueCommand((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.resyncrequest,owner),source)
 

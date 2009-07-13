@@ -182,7 +182,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 	def getCurToolInst(self,window):
 		curtool=self.getCurToolDesc()
-		return curtool.setupTool(window)
+		return curtool.setupTool(window,window.getCurLayerKey())
 
 	def getCurToolDesc(self):
 		return self.toolbox.getCurToolDesc()

@@ -60,8 +60,6 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 		self.curwindow=HiveSessionState(self,600,400,WindowTypes.standaloneserver,20)
 
 		self.curwindow.startRemoteDrawingThreads()
-
-		self.layers=[]
 		self.serverthread=None
 
 	# since there should only be one window just return 1
@@ -99,7 +97,11 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 			index=self.ui.clientsList.row(item)
 			self.ui.clientsList.takeItem(index)
 
-		# set layers owned by that client to unowned (do this eventually)
+		# set layers owned by that client to unowned
+		layerlistlock=qtcore.QMutexLocker(self.curwindow.layersmutex)
+		for layer in self.curwindow.layers:
+			if layer.owner==id:
+				self.curwindow.addGiveUpLayerToQueue(layer.key,id)
 
 	def closeEvent(self,event):
 		qtgui.QMainWindow.closeEvent(self,event)

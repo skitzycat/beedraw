@@ -91,7 +91,7 @@ class DrawingThread(qtcore.QThread):
 				window.logCommand(command,self.type)
 
 		elif subtype==LayerCommandTypes.pendown:
-			#print "Pen down event:", command
+			print "Pen down event:", command
 			layer=window.getLayerForKey(command[2])
 			x=command[3]
 			y=command[4]
@@ -204,6 +204,10 @@ class DrawingThread(qtcore.QThread):
 			layer.changeOwner(command[3])
 			window.logCommand(command,self.type)
 
+		elif subtype==NetworkControlCommandTypes.requestlayer:
+			layer=window.getLayerForKey(command[2])
+			window.logCommand(command,self.type)
+
 	def sendToServer(self,command):
 		window=self.master.getWindowById(self.windowid)
 		if command[0]==DrawingCommandTypes.alllayer and command[1]==AllLayerCommandTypes.insertlayer:
@@ -230,7 +234,15 @@ class ServerDrawingThread(DrawingThread):
 			self.sendResyncToClient(requester,window)
 		elif subtype==NetworkControlCommandTypes.giveuplayer:
 			layerkey=command[3]
-			self.layerOwnerChangeCommand(layerkey,0)
+			layer=window.getLayerForKey(layerkey)
+			proplock=qtcore.QWriteLocker(layer.propertieslock)
+			self.layerOwnerChangeCommand(layer,0)
+		elif subtype==NetworkControlCommandTypes.requestlayer:
+			layerkey=command[3]
+			layer=window.getLayerForKey(layerkey)
+			proplock=qtcore.QWriteLocker(layer.propertieslock)
+			if layer.owner==0:
+				self.layerOwnerChangeCommand(layer,requester)
 			
 
 	def sendResyncToClient(self,requester,window):
@@ -247,22 +259,27 @@ class ServerDrawingThread(DrawingThread):
 			for command in self.commandcaches[c]:
 				command.send(requester,self.master.routinginput)
 
-	def layerOwnerChangeCommand(self,layerkey,newowner):
-		window=self.master.getWindowById(self.windowid)
-		layer=window.getLayerForKey(layerkey)
-		proplock=qtcore.QWriteLocker(layer.propertieslock)
+	# Change layer owner, must lock down properties layer before calling this
+	def layerOwnerChangeCommand(self,layer,newowner):
 		oldowner=layer.owner
 		if oldowner and oldowner in self.commandcaches:
+			# make copy of list so removing while iterating works
+			newcache=self.commandcaches[oldowner][:]
 			# go through the command stack for the owner to remove commands that relate to that layer
 			for command in self.commandcaches[oldowner]:
-				if command.layer.key==layerkey:
+				if command.layer.key==layer.key:
 					# if the command is before the current index then decrement the index
-					if self.commandcaches[oldowner].index(command)<self.commandindexes[oldowner]:
+					if newcache.index(command)<self.commandindexes[oldowner]:
 						self.commandindexes[oldowner]-=1
-					self.commandcaches[oldowner].remove(command)
+					command.process()
+					newcache.remove(command)
+
+			# update cache of old owner to not include references to that layer
+			self.commandcaches[oldowner]=newcache
 
 		layer.owner=newowner
-		command=(DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.layerowner,layerkey,newowner)
+		command=(DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.layerowner,layer.key,newowner)
+		# if the old owner was 0, meaning it was unowned, then send it to everyone, otherwise the old owner has already changed it locally to 0 and doesn't need it again
 		self.master.routinginput.put((command,oldowner))
 
 	def processLayerCommand(self,command):

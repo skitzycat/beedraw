@@ -152,7 +152,7 @@ class XmlToQueueEventsConverter:
 				print "Error, couldn't find tool with name: ", toolname
 				return
 
-			self.curtool=tool.setupTool(self.window)
+			self.curtool=tool.setupTool(self.window,self.curlayer)
 			self.curtool.layerkey=self.curlayer
 			self.curtool.owner=owner
 
@@ -232,6 +232,10 @@ class XmlToQueueEventsConverter:
 			(layerkey,ok)=attrs.value('key').toString().toInt()
 			(owner,ok)=attrs.value('owner').toString().toInt()
 			self.window.addChangeLayerOwnerToQueue(layerkey,owner,type)
+
+		elif name == 'layerrequest':
+			(layerkey,ok)=attrs.value('key').toString().toInt()
+			self.window.addLayerRequestToQueue(layerkey,self.id,type)
 
 		elif name == 'event':
 			pass
@@ -347,8 +351,11 @@ class NetworkListenerThread (qtcore.QThread):
 		if readybytes>0:
 			data=self.socket.read(readybytes)
 			print "got animation data from socket: %s" % qtcore.QString(data)
+
 			self.parser.xml.addData(data)
 			self.parser.read()
+
+			self.socket.waitForBytesWritten()
 
 class NetworkWriterThread (qtcore.QThread):
 	def __init__(self,window,socket):

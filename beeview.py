@@ -146,7 +146,7 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 		x=x+subx
 		y=y+suby
 		x,y=self.viewCoordsToImage(x,y)
-		window.addPenDownToQueue(x,y,pressure)
+		window.addPenDownToQueue(x,y,pressure,layerkey=window.getCurLayerKey())
 
 	def cursorMoveEvent(self,x,y,pressure=1,subx=0,suby=0):
 		window=BeeApp().master.getWindowById(self.windowid)
@@ -156,14 +156,14 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 			y=y+suby
 			x,y=self.viewCoordsToImage(x,y)
 			#print "translates to image coords:",x,y
-			window.addPenMotionToQueue(x,y,pressure)
+			window.addPenMotionToQueue(x,y,pressure,layerkey=window.getCurLayerKey())
 
 	def cursorReleaseEvent(self,x,y,pressure=1,subx=0,suby=0):
 		window=BeeApp().master.getWindowById(self.windowid)
 		if self.pendown:
 			self.setCursor(window.master.getCurToolDesc().getCursor())
 			x,y=self.viewCoordsToImage(x,y)
-			window.addPenUpToQueue(x,y)
+			window.addPenUpToQueue(x,y,layerkey=window.getCurLayerKey())
 		self.pendown=False
 
 	def leaveEvent(self,event):

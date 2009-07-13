@@ -73,7 +73,8 @@ class AbstractToolDesc:
  
 	# setup needed parts of tool using knowledge of current window
 	# this should be implemented in subclass if needed
-	def setupTool(self,window):
+	def setupTool(self,window,layerkey=None):
+		self.layerkey=layerkey
 		return self.getTool(window)
  
 	def getTool(self,window):
@@ -87,6 +88,8 @@ class AbstractTool:
 		self.clippath=None
 		self.options=options
 		self.window=window
+		self.layer=None
+		self.valid=True
 
 	def setOption(self,key,value):
 		self.options[key]=value
@@ -108,8 +111,10 @@ class AbstractTool:
 		pass
 
 	def cleanUp(self):
-		self.window.curtool=None
 		self.window=None
+
+	def validSetUp(self):
+		return True
  
 class EyeDropperToolDesc(AbstractToolDesc):
 	def __init__(self):
@@ -125,7 +130,8 @@ class EyeDropperToolDesc(AbstractToolDesc):
 		tool.name=self.name
 		return tool
  
-	def setupTool(self,window):
+	def setupTool(self,window,layerkey=None):
+		self.layerkey=layerkey
 		return self.getTool(window)
 
 # eye dropper tool (select color from canvas)
@@ -151,6 +157,12 @@ class DrawingTool(AbstractTool):
 		self.compmode=qtgui.QPainter.CompositionMode_SourceOver
 		self.pointshistory=None
 		self.layer=None
+ 
+	# for drawing tools make sure there is a valid layer before it will work
+	def validSetUp(self):
+		if layer==None:
+			return False
+		return True
  
 	def getColorRGBA(self):
 		return self.fgcolor.rgba()
@@ -512,7 +524,8 @@ class PencilToolDesc(AbstractToolDesc):
 		tool.name=self.name
 		return tool
  
-	def setupTool(self,window):
+	def setupTool(self,window,layerkey=None):
+		self.layerkey=layerkey
 		tool=self.getTool(window)
 		# copy the foreground color
 		tool.fgcolor=qtgui.QColor(window.master.fgcolor)
@@ -619,7 +632,8 @@ class EraserToolDesc(AbstractToolDesc):
 		tool.name=self.name
 		return tool
  
-	def setupTool(self,window):
+	def setupTool(self,window,layerkey=None):
+		self.layerkey=layerkey
 		tool=self.getTool(window)
 		if window.selection:
 			tool.clippath=qtgui.QPainterPath(window.clippath)
@@ -729,7 +743,8 @@ class SelectionTool(AbstractTool):
 class RectSelectionToolDesc(AbstractToolDesc):
 	def __init__(self):
 		AbstractToolDesc.__init__(self,"rectangle select")
-	def setupTool(self,window):
+	def setupTool(self,window,layerkey=None):
+		self.layerkey=layerkey
 		tool=self.getTool(window)
 		return tool
  
@@ -751,13 +766,14 @@ class FeatherSelectToolDesc(AbstractToolDesc):
 		tool.name=self.name
 		return tool
  
-	def setupTool(self,window):
+	def setupTool(self,window,layerkey=None):
+		self.layerkey=layerkey
 		return self.getTool(window)
 
 # fuzzy selection tool
 class FeatherSelectTool(SelectionTool):
 	def __init__(self,options,window):
-		AbstractTool.__init__(self,options,window)
+		SelectionTool.__init__(self,options,window)
 
 	def penDown(self,x,y,pressure=None):
 		newpath=getSimilarColorRegion(self.window.image,x,y,self.options['similarity'])
@@ -777,7 +793,8 @@ class PaintBucketToolDesc(AbstractToolDesc):
 		tool.name=self.name
 		return tool
  
-	def setupTool(self,window):
+	def setupTool(self,window,layerkey=None):
+		self.layerkey=layerkey
 		return self.getTool(window)
 
 	def runOptionsDialog(self,parent):
@@ -821,7 +838,8 @@ class PaintBucketTool(AbstractTool):
 class ElipseSelectionToolDesc(AbstractToolDesc):
 	def __init__(self):
 		AbstractToolDesc.__init__(self,"elipse select")
-	def setupTool(self,window):
+	def setupTool(self,window,layerkey=None):
+		self.layerkey=layerkey
 		tool=self.getTool(window)
 		return tool
  

@@ -15,11 +15,23 @@ class CommandStack:
 		self.maxundo=maxundo
 		self.windowid=windowid
 
-	def removeLayerRefs(self,layerkey):
+	def deleteLayerHistory(self,layerkey):
 		""" remove all references to given layer in history """
+		print "DEBUG: info for deleteLayerHistory"
+		# make copy of stack so I can iterate through it correctly while deleting
+		newstack=self.commandstack[:]
+		print newstack
+
 		for c in self.commandstack:
+			print "checking event with layer key:", c.layerkey
 			if c.layerkey==layerkey:
-				self.commandstack.remove(c)
+				print "removing event from history"
+				if newstack.index(c)<self.index:
+					print "decrementing index of history"
+					self.index-=1
+				newstack.remove(c)
+
+		self.commandstack=newstack
 
 	def add(self,command):
 		# if there are commands ahead of this one delete them
