@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 from beesessionstate import BeeSessionState
-from drawingthread import ServerDrawingThread
+from hivedrawingthread import ServerDrawingThread
 from beetypes import *
 
 class HiveSessionState(BeeSessionState):

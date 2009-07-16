@@ -90,10 +90,10 @@ class BeeSessionState:
 		self.queueCommand((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.giveuplayer,id,key),source)
 
 	def addChangeLayerOwnerToQueue(self,key,owner,source=ThreadTypes.user):
-		self.queueCommand((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.layerowner,key,owner),source)
+		self.queueCommand((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.layerowner,owner,key),source)
 
 	def addRequestLayerToQueue(self,key,source=ThreadTypes.user):
-		self.queueCommand((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.requestlayer,key),source)
+		self.queueCommand((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.requestlayer,0,key),source)
 
 	def addRemoveLayerRequestToQueue(self,key,source=ThreadTypes.user):
 		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.deletelayer,key),source)
@@ -325,8 +325,8 @@ class BeeSessionState:
 	def addRawEventToQueue(self,key,image,x,y,path,source=ThreadTypes.user):
 		self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.rawevent,key,x,y,image,path),source)
 
-	def addResyncStartToQueue(self,width,height,remoteid,source=ThreadTypes.network):
-		self.queueCommand((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.resyncstart,width,height,remoteid),source)
+	def addResyncStartToQueue(self,remoteid,width,height,source=ThreadTypes.network):
+		self.queueCommand((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.resyncstart,remoteid,width,height),source)
 
 	def addOpacityChangeToQueue(self,key,value,source=ThreadTypes.user):
 		self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.alpha,key,value),source)

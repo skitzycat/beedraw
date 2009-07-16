@@ -353,6 +353,7 @@ class LayerConfigWidget(qtgui.QWidget):
 
 		# the layer is owned locally so change it to be owned by no one
 		if win.ownedByMe(layer.owner):
+			print_debug("adding give up layer to queue for layer key: %d" % layer.key)
 			win.addGiveUpLayerToQueue(layer.key)
 
 		# if the layer is owned by nobody then request it

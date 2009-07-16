@@ -215,7 +215,7 @@ class XmlToQueueEventsConverter:
 			(width,ok)=attrs.value('width').toString().toInt()
 			(height,ok)=attrs.value('height').toString().toInt()
 			(remoteid,ok)=attrs.value('remoteid').toString().toInt()
-			self.window.addResyncStartToQueue(width,height,remoteid)
+			self.window.addResyncStartToQueue(remoteid,width,height)
 
 		elif name == 'giveuplayer':
 			(layerkey,ok)=attrs.value('key').toString().toInt()
