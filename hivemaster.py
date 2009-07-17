@@ -214,7 +214,7 @@ class HiveClientListener(qtcore.QThread):
 		if not self.authenticate():
 			# if authentication fails send close socket and exit
 			print_debug("authentication failed")
-			self.socket.write(qtcore.QByteArray("Authtication failed\n"))
+			self.socket.write(qtcore.QByteArray("Authtication failed\nIncorrect Password\n"))
 			self.socket.disconnectFromHost()
 			self.socket.waitForDisconnected(1000)
 			return

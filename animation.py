@@ -302,10 +302,60 @@ class NetworkListenerThread (qtcore.QThread):
 		# during the destructor this seems to forget about qtnet so keep this around to check aginst it then
 		self.connectedstate=qtnet.QAbstractSocket.ConnectedState
 
+	# connect to host and authticate
+	def getServerConnection(self,username,password,host,port):
+		socket=qtnet.QTcpSocket()
+
+		socket.connectToHost(host,port)
+		print_debug("waiting for socket connection:")
+		connected=socket.waitForConnected()
+		print_debug("finished waiting for socket connection")
+
+		# return error if we couldn't get a connection after 30 seconds
+		if not connected:
+			qtgui.QMessageBox.warning(None,"Failed to connect to server",socket.errorString())
+			#qtgui.QMessageBox(qtgui.QMessageBox.Information,"Connection Error","Failed to connect to server",qtgui.QMessageBox.Ok).exec_()
+			return None
+
+		authrequest=qtcore.QByteArray()
+		authrequest=authrequest.append("%s\n%s\n%s\n" % (username,password,PROTOCOL_VERSION))
+		# send authtication info
+		socket.write(authrequest)
+
+		responsestring=qtcore.QString()
+
+		# wait for response
+		while responsestring.count('\n')<2 and len(responsestring)<500:
+			if socket.waitForReadyRead(-1):
+				data=socket.read(500)
+				print "got authentication answer: %s" % qtcore.QString(data)
+				responsestring.append(data)
+
+			# if error exit
+			else:
+				qtgui.QMessageBox.warning(None,"Connection Error","server dropped connection")
+				return None
+
+		# if we get here we have a response that probably wasn't a disconnect
+		responselist=responsestring.split('\n')
+		if len(responselist)>1:
+			answer="%s" % responselist[0]
+			message="%s" % responselist[1]
+		else:
+			answer="Failure"
+			message="Unknown Status"
+
+		if answer=="Success":
+			return socket
+
+		socket.close()
+		qtgui.QMessageBox.warning(None,"Server Refused Connection",message)
+		return None
+
 	def run(self):
 		print_debug("attempting to get socket:")
 		# setup initial connection
-		self.socket=getServerConnection(self.username,self.password,self.host,self.port)
+		self.socket=self.getServerConnection(self.username,self.password,self.host,self.port)
 
 		# if we failed to get a socket then destroy the window and exit
 		if not self.socket:

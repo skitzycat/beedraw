@@ -172,52 +172,6 @@ def getBlankCursor():
 	cursor=qtgui.QCursor(image)
 	return cursor
 
-# connect to host, authticate and get inital size of canvas
-def getServerConnection(username,password,host,port):
-	socket=qtnet.QTcpSocket()
-
-	socket.connectToHost(host,port)
-	print "waiting for socket connection:"
-	connected=socket.waitForConnected()
-	print "finished waiting for socket connection"
-
-	# return error if we couldn't get a connection after 30 seconds
-	if not connected:
-		print "Error: could not connect to server"
-		#qtgui.QMessageBox(qtgui.QMessageBox.Information,"Connection Error","Failed to connect to server",qtgui.QMessageBox.Ok).exec_()
-		return None
-
-	authrequest=qtcore.QByteArray()
-	authrequest=authrequest.append("%s\n%s\n%s\n" % (username,password,PROTOCOL_VERSION))
-	# send authtication info
-	socket.write(authrequest)
-
-	responsestring=qtcore.QString()
-
-	# wait for response
-	while responsestring.count('\n')<2 and len(responsestring)<100:
-		if socket.waitForReadyRead(-1):
-			data=socket.read(100)
-			print "got authentication answer: %s" % qtcore.QString(data)
-			responsestring.append(data)
-
-		# if error exit
-		else:
-			qtgui.QMessageBox(qtgui.QMessageBox.Information,"Connection Error","server dropped connection",qtgui.QMessageBox.Ok).exec_()
-			return None, None, None, None
-
-	# if we get here we have a response that probably wasn't a disconnect
-	responselist=responsestring.split('\n')
-	answer="%s" % responselist[0]
-	message="%s" % responselist[1]
-
-	if answer=="Success":
-		return socket
-
-	print "Connection error:", message
-	socket.close()
-	return None
-
 # make sure point falls within bounds of QRect passed
 def adjustPointToBounds(x,y,rect):
 	if x<rect.x():
