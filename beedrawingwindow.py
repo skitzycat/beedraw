@@ -45,6 +45,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		self.backdrop=None
 
 		self.cursoroverlay=None
+		self.remotedrawingthread=None
 
 		self.selectionoutline=[]
 		self.clippath=None
@@ -82,7 +83,6 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		# don't go through the queue for this layer add because we need it to
 		# be done before the next step
 		if startlayer:
-			#print "calling nextLayerKey from beedrawingwindow constructor"
 			self.addInsertLayerEventToQueue(self.nextLayerKey(),0,source=ThreadTypes.user)
 
 		# have window get destroyed when it gets a close event
@@ -90,16 +90,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 
 	# this is for debugging memory cleanup
 	#def __del__(self):
-	#	print "DESTRUCTOR: bee drawing window"
-
-	# alternate constructor for starting an animation playback
-	def newAnimationWindow(master,filename):
-		newwin=BeeDrawingWindow(master,600,400,False,WindowTypes.animation)
-		newwin.animationthread=PlayBackAnimation(newwin,filename)
-		return newwin
-
-	# make method static
-	newAnimationWindow=staticmethod(newAnimationWindow)
+		#print "DESTRUCTOR: bee drawing window"
 
 	def saveFile(self,filename):
 		""" save current state of session to file
@@ -303,14 +294,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 			return qtgui.QColor()
 
 	def startRemoteDrawingThreads(self):
-		if self.type==WindowTypes.singleuser:
-			self.remotedrawingthread=None
-		elif self.type==WindowTypes.animation:
-			self.remotedrawingthread=DrawingThread(self.remotecommandqueue,self.id,ThreadTypes.animation,master=self.master)
-			self.remotedrawingthread.start()
-		else:
-			self.remotedrawingthread=DrawingThread(self.remotecommandqueue,self.id,ThreadTypes.network,master=self.master)
-			self.remotedrawingthread.start()
+		pass
 
 	# handle a few events that don't have easy function over loading front ends
 	def event(self,event):
@@ -439,7 +423,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 
 	def on_action_File_Log_toggled(self,state):
 		"""If log box is now checked ask user to provide log file name and start a log file for the current session from this point
-       If log box is now unchecked end the current log file
+		If log box is now unchecked end the current log file
 		"""
 		if state:
 			filename=qtgui.QFileDialog.getSaveFileName(self,"Choose File Name",".","Logfiles (*.slg)")
@@ -501,9 +485,9 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		self.master.updateLayerHighlight(oldkey)
 
 	# do what's needed to start up any network threads
-	def startNetworkThreads(self,username,password,host,port):
+	def startNetworkThreads(self,socket):
 		print_debug("running startNetworkThreads")
-		self.listenerthread=NetworkListenerThread(self,username,password,host,port)
+		self.listenerthread=NetworkListenerThread(self,socket)
 		print_debug("about to start thread")
 		self.listenerthread.start()
 
@@ -524,19 +508,29 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		self.requestLayerListRefresh()
 		self.reCompositeImage()
 
-class NetworkClientDrawingWindow(BeeDrawingWindow):
-	""" Represents a window that the user can draw in
+class AnimationDrawingWindow(BeeDrawingWindow):
+	""" Represents a window that plays a log file
 	"""
-	def __init__(self,parent,username,password,host,port):
-		print_debug("initializign network window")
-		BeeDrawingWindow.__init__(self,parent,startlayer=False,type=WindowTypes.networkclient)
-		self.username=username
-		self.password=password
-		self.host=host
-		self.port=port
+	def __init__(self,master,filename):
+		BeeDrawingWindow.__init__(self,master,startlayer=False,type=WindowTypes.animation)
+		self.playfilename=filename
 
 	def startRemoteDrawingThreads(self):
-		self.startNetworkThreads(self.username,self.password,self.host,self.port)
+		self.remotedrawingthread=DrawingThread(self.remotecommandqueue,self.id,ThreadTypes.animation,master=self.master)
+		self.remotedrawingthread.start()
+		self.animationthread=PlayBackAnimation(self,self.playfilename)
+		self.animationthread.start()
+
+class NetworkClientDrawingWindow(BeeDrawingWindow):
+	""" Represents a window that the user can draw in with others in a network session
+	"""
+	def __init__(self,parent,socket):
+		print_debug("initializign network window")
+		BeeDrawingWindow.__init__(self,parent,startlayer=False,type=WindowTypes.networkclient)
+		self.socket=socket
+
+	def startRemoteDrawingThreads(self):
+		self.startNetworkThreads(self.socket)
 		self.remotedrawingthread=DrawingThread(self.remotecommandqueue,self.id,ThreadTypes.network,master=self.master)
 		self.remotedrawingthread.start()
 
@@ -550,3 +544,8 @@ class NetworkClientDrawingWindow(BeeDrawingWindow):
 					imagelock=qtcore.QWriteLocker(layer.imagelock)
 					self.localcommandstack.removeLayerRefs(layerkey)
 					layer.owner=newowner
+
+	def disconnected(self,message):
+		print_debug("disconnected from server")
+		self.window.switchAllLayersToLocal()
+		qtgui.QMessageBox.warning(None,"Network Session has ended",self.disconnectmessage)

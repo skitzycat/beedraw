@@ -20,10 +20,8 @@ from beeload import PaletteParser
 
 from beeapp import BeeApp
 
-import sip
-
 from abstractbeemaster import AbstractBeeMaster
-from beedrawingwindow import BeeDrawingWindow, NetworkClientDrawingWindow
+from beedrawingwindow import BeeDrawingWindow, NetworkClientDrawingWindow, AnimationDrawingWindow
 
 class BeeSwatchScrollArea(qtgui.QScrollArea):
 	def __init__(self,master,oldwidget,rows=15,columns=12,boxsize=15):
@@ -242,8 +240,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		filename=str(qtgui.QFileDialog.getOpenFileName(self,"Select log file to play","","Sketch logfiles (*.slg)"))
 
 		if filename:
-			self.curwin=BeeDrawingWindow.newAnimationWindow(self,filename)
-			newwin.animationthread.start()
+			self.curwin=AnimationDrawingWindow(self,filename)
 
 	def on_action_File_Open_triggered(self,accept=True):
 		if not accept:
@@ -329,8 +326,61 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		username=dialogui.usernamefield.text()
 		password=dialogui.passwordfield.text()
 
-		self.curwindow=NetworkClientDrawingWindow(self,username,password,hostname,port)
-		self.refreshLayersList()
+		socket=self.getServerConnection(username,password,hostname,port)
+
+		if socket:
+			self.curwindow=NetworkClientDrawingWindow(self,socket)
+			self.refreshLayersList()
+
+	# connect to host and authticate
+	def getServerConnection(self,username,password,host,port):
+		socket=qtnet.QTcpSocket()
+
+		socket.connectToHost(host,port)
+		print_debug("waiting for socket connection:")
+		connected=socket.waitForConnected()
+		print_debug("finished waiting for socket connection")
+
+		# return error if we couldn't get a connection after 30 seconds
+		if not connected:
+			qtgui.QMessageBox.warning(None,"Failed to connect to server",socket.errorString())
+			#qtgui.QMessageBox(qtgui.QMessageBox.Information,"Connection Error","Failed to connect to server",qtgui.QMessageBox.Ok).exec_()
+			return None
+
+		authrequest=qtcore.QByteArray()
+		authrequest=authrequest.append("%s\n%s\n%s\n" % (username,password,PROTOCOL_VERSION))
+		# send authtication info
+		socket.write(authrequest)
+
+		responsestring=qtcore.QString()
+
+		# wait for response
+		while responsestring.count('\n')<2 and len(responsestring)<500:
+			if socket.waitForReadyRead(-1):
+				data=socket.read(500)
+				print "got authentication answer: %s" % qtcore.QString(data)
+				responsestring.append(data)
+
+			# if error exit
+			else:
+				qtgui.QMessageBox.warning(None,"Connection Error","server dropped connection")
+				return None
+
+		# if we get here we have a response that probably wasn't a disconnect
+		responselist=responsestring.split('\n')
+		if len(responselist)>1:
+			answer="%s" % responselist[0]
+			message="%s" % responselist[1]
+		else:
+			answer="Failure"
+			message="Unknown Status"
+
+		if answer=="Success":
+			return socket
+
+		socket.close()
+		qtgui.QMessageBox.warning(None,"Server Refused Connection",message)
+		return None
 
 	def on_action_File_Start_Server_triggered(self,accept=True):
 		if not accept:

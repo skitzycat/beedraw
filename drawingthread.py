@@ -176,6 +176,8 @@ class DrawingThread(qtcore.QThread):
 				else:
 					window.insertLayer(key,index,LayerTypes.network,owner=owner)
 
+		window.logCommand(command,self.type)
+
 	def requestAllLayerCommand(self,command):
 		self.sendToServer(command)
 

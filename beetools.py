@@ -707,7 +707,7 @@ class SelectionTool(AbstractTool):
 			dirtyregion=qtgui.QRegion()
  
 		# get modifier keys currently being held down
-		modkeys=self.window.master.app.keyboardModifiers()
+		modkeys=BeeApp().app.keyboardModifiers()
  
 		# change selection according to current modifier keys
 		if modkeys==qtcore.Qt.ShiftModifier:

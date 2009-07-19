@@ -46,8 +46,10 @@ class SketchLogWriter:
 		while self.output.bytesToWrite()>0:
 			self.output.flush()
 			bytestowrite=self.output.bytesToWrite()
+
 		self.output.flush()
 		self.output.waitForBytesWritten(-1)
+
 		print_debug("finished writing output")
 
 	def logHistoryCommand(self,command):

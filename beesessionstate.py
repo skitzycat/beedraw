@@ -3,6 +3,8 @@
 import PyQt4.QtCore as qtcore
 import PyQt4.QtGui as qtgui
 
+from sketchlog import SketchLogWriter
+
 from beeapp import BeeApp
 
 from beetypes import *
@@ -41,6 +43,7 @@ class BeeSessionState:
 		self.log=None
 		self.remotecommandstacks={}
 		self.curlayerkey=None
+		self.curlayerkeymutex=qtcore.QMutex()
 
 		self.imagelock=qtcore.QReadWriteLock()
 		self.docsizelock=qtcore.QReadWriteLock()
@@ -98,12 +101,17 @@ class BeeSessionState:
 	def addRemoveLayerRequestToQueue(self,key,source=ThreadTypes.user):
 		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.deletelayer,key),source)
 
+	def addExitEventToQueue(self,source=ThreadTypes.user):
+		self.queueCommand((DrawingCommandTypes.quit),source)
+
 	def removeLayerByKey(self,key,history=0):
 		""" remove layer with key equal to passed value, each layer should have a unique key so there is no need to check for multiples
       The history argument is 0 if the event should be added to the undo/redo history and -1 if it shouldn't.  This is needed so when running an undo/redo command it doesn't get added again.
 		"""
+		print_debug("calling removeLayerByKey for %d" % key)
 		# get a lock so we don't get a collision ever
 		lock=qtcore.QMutexLocker(self.layersmutex)
+		curlaylock=qtcore.QMutexLocker(self.curlayerkeymutex)
 		
 		layer=self.getLayerForKey(key)
 		if(layer):
@@ -132,6 +140,7 @@ class BeeSessionState:
 
 	def layerDown(self,key):
 		index=self.getLayerIndexForKey(key)
+		self.layersmutex=qtcore.QMutex()
 		if index>0:
 			self.layers[index],self.layers[index-1]=self.layers[index-1],self.layers[index]
 			self.reCompositeImage()
@@ -147,6 +156,7 @@ class BeeSessionState:
 		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.layerup,key),source)
 
 	def layerUp(self,key):
+		self.layersmutex=qtcore.QMutex()
 		index=self.getLayerIndexForKey(key)
 		if index<len(self.layers)-1:
 			self.layers[index],self.layers[index+1]=self.layers[index+1],self.layers[index]
@@ -227,6 +237,7 @@ class BeeSessionState:
 		self.layers.insert(index,layer)
 		self.requestLayerListRefresh()
 		self.reCompositeImage()
+		curlaylock=qtcore.QMutexLocker(self.curlayerkeymutex)
 		# only select it immediately if we can draw on it
 		if layer.type==LayerTypes.user:
 			self.curlayerkey=layer.key
@@ -243,6 +254,7 @@ class BeeSessionState:
 
 		# only select it immediately if we can draw on it
 		if type==LayerTypes.user:
+			lock=qtcore.QMutexLocker(self.curlayerkeymutex)
 			self.curlayerkey=key
 
 		# only add command to history if we are in a local session
@@ -348,7 +360,7 @@ class BeeSessionState:
 
 	def logStroke(self,tool,layer,source=ThreadTypes.network):
 		if self.log:
-			self.log.logToolEvent(tool)
+			self.log.logToolEvent(layer,tool)
 
 		if self.type==WindowTypes.networkclient and source==ThreadTypes.user:
 			self.remoteoutputqueue.put((DrawingCommandTypes.layer,LayerCommandTypes.tool,tool.layerkey,tool))

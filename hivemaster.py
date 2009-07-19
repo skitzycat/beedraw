@@ -6,6 +6,7 @@ import PyQt4.QtGui as qtgui
 import PyQt4.QtNetwork as qtnet
 
 from HiveMasterUi import Ui_HiveMasterSpec
+from HiveOptionsUi import Ui_HiveOptionsDialog
 from beedrawingwindow import BeeDrawingWindow
 from beetypes import *
 from beeutil import *
@@ -147,6 +148,21 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 		if accept:
 			self.stopServer()
 
+	def on_actionOptions_triggered(self,accept=True):
+		if accept:
+			dialog=qtgui.QDialog()
+			dialog.ui=Ui_HiveOptionsDialog()
+			dialog.ui.setupUi(dialog)
+
+			dialog.ui.port_box.setValue(self.port)
+			dialog.ui.password_entry.setText(self.password)
+
+			dialog.exec_()
+
+			if dialog.result():
+				self.port=dialog.ui.port_box.value()
+				self.password=dialog.ui.password_entry.text()
+
 # thread to setup connection, authenticate and then
 # listen to a socket and add incomming client commands to queue
 class HiveClientListener(qtcore.QThread):
@@ -208,6 +224,8 @@ class HiveClientListener(qtcore.QThread):
 			print_debug("got animation data from socket: %s" % qtcore.QString(data))
 			self.parser.xml.addData(data)
 			self.parser.read()
+
+			self.socket.waitForBytesWritten()
 
 	def run(self):
 		# try to authticate user
@@ -273,6 +291,11 @@ class HiveClientWriter(qtcore.QThread):
 	def run(self):
 		while 1:
 			data=self.queue.get()
+			if self.socket.state()==qtnet.QAbstractSocket.UnconnectedState:
+				print "ERROR: Client Writer found that socket is unconnected"
+				self.master.unregisterClient(self.id)
+				return
+
 			self.xmlgenerator.logCommand(data)
 
 # class to handle running the TCP server and handling new connections
