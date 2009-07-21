@@ -526,8 +526,8 @@ class NetworkClientDrawingWindow(BeeDrawingWindow):
 	"""
 	def __init__(self,parent,socket):
 		print_debug("initializign network window")
-		BeeDrawingWindow.__init__(self,parent,startlayer=False,type=WindowTypes.networkclient)
 		self.socket=socket
+		BeeDrawingWindow.__init__(self,parent,startlayer=False,type=WindowTypes.networkclient)
 
 	def startRemoteDrawingThreads(self):
 		self.startNetworkThreads(self.socket)
