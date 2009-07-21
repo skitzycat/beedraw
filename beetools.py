@@ -23,13 +23,12 @@ class BeeToolBox:
  
 	def loadDefaultTools(self):
 		self.toolslist.append(PencilToolDesc())
-		self.toolslist.append(PaintBrushToolDesc())
+		self.toolslist.append(SketchToolDesc())
 		self.toolslist.append(EraserToolDesc())
 		self.toolslist.append(RectSelectionToolDesc())
 		self.toolslist.append(EyeDropperToolDesc())
 		self.toolslist.append(FeatherSelectToolDesc())
 		self.toolslist.append(PaintBucketToolDesc())
-		self.toolslist.append(SketchToolDesc())
  
 	def toolNameGenerator(self):
 		for tool in self.toolslist:
@@ -502,7 +501,7 @@ class PaintBrushTool(DrawingTool):
 # this is the most basic drawing tool
 class PencilToolDesc(AbstractToolDesc):
 	def __init__(self):
-		AbstractToolDesc.__init__(self,"Pencil")
+		AbstractToolDesc.__init__(self,"Hard Edge Brush")
  
 	def getCursor(self):
 		return qtcore.Qt.CrossCursor
@@ -848,10 +847,11 @@ class ElipseSelectionToolDesc(AbstractToolDesc):
 
 class SketchToolDesc(PencilToolDesc):
 	def __init__(self):
-		AbstractToolDesc.__init__(self,"sketch brush")
+		AbstractToolDesc.__init__(self,"Soft Edge Brush")
  
 	def setDefaultOptions(self):
 		PencilToolDesc.setDefaultOptions(self)
+		self.options["mindiameter"]=0
 		self.options["maxdiameter"]=7
 		self.options["step"]=1
 		self.options["blur"]=30
@@ -898,7 +898,7 @@ class SketchTool(DrawingTool):
 
 	# return how much to scale down the brush for the current pressure
 	def scaleForPressure(self,pressure):
-		minsize=0
+		minsize=self.options["mindiameter"]
 		maxsize=self.options["maxdiameter"]
 
 		#unroundedscale=(((maxsize-minsize)/maxsize)*pressure) + ((minsize/maxsize) * pressure)

@@ -1,9 +1,5 @@
 import PyQt4.QtCore as qtcore
 
-# Global variables
-BEE_FILE_FORMAT_VERSION=1
-BEE_NETWORK_PROTOCOL_VERSION=1
-
 # custom event types
 class BeeCustomEventTypes:
 	refreshlayerslist = qtcore.QEvent.User
@@ -32,8 +28,10 @@ class NetworkControlCommandTypes:
       requestlayer: sent from client to server to request ownership of unowned layer
       giveuplayer: sent from client to server to change layer to unowned
       layerowner: sent from server to all clients to show change of a layer owner
+      layerowner: sent from server to all clients to show change of a layer owner
+      fatalerror: sent from server to client to indicate error occured and that session should end
   """
-	resyncrequest, resyncstart, requestlayer, giveuplayer, revokelayer, layerowner= range(6)
+	resyncrequest, resyncstart, requestlayer, giveuplayer, revokelayer, layerowner, fatalerror= range(7)
 
 class LayerTypes:
 	""" Represents types of layers:

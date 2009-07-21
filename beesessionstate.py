@@ -340,6 +340,10 @@ class BeeSessionState:
 	def addResyncStartToQueue(self,remoteid,width,height,source=ThreadTypes.network):
 		self.queueCommand((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.resyncstart,remoteid,width,height),source)
 
+	def addFatalErrorNotificationToQueue(self,remoteid,errormessage,source=ThreadTypes.network):
+		self.queueCommand((DrawingCommandTypes.quit),source)
+		qtgui.QMessageBox.warning(None,"Network Session Ended","Server has severed connection due to: %s" % errormessage)
+
 	def addOpacityChangeToQueue(self,key,value,source=ThreadTypes.user):
 		self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.alpha,key,value),source)
 
@@ -412,7 +416,6 @@ class BeeSessionState:
 		if self.ownedByMe(source):
 			self.localcommandstack.redo()
 		else:
-			print "attempting to redo command from remote source:", source
 			self.remotecommandstacks[source].redo()
 
 	def refreshLayerThumb(self,window,id):

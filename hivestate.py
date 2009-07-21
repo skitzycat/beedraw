@@ -52,6 +52,9 @@ class HiveSessionState(BeeSessionState):
 		rawcommand=(DrawingCommandTypes.layer,LayerCommandTypes.rawevent,key,0,0,image,None)
 		self.master.routinginput.put((rawcommand,id*-1))
 
+	def addFatalErrorNotificationToQueue(self,owner,errormessage,source=ThreadTypes.network):
+		self.queueCommand((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.fatalerror,owner,errormessage),source)
+
 	def addLayerRequestToQueue(self,layerkey,owner=0,source=ThreadTypes.network):
 		self.queueCommand((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.requestlayer,owner,layerkey),source)
 

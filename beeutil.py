@@ -252,4 +252,5 @@ def norme(a,b):
 	return (a*a)+(b*b)
 
 def print_debug(s):
-	print s
+	if BEE_DEBUG:
+		print s

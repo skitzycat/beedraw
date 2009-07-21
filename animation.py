@@ -233,6 +233,10 @@ class XmlToQueueEventsConverter:
 			(layerkey,ok)=attrs.value('key').toString().toInt()
 			self.window.addLayerRequestToQueue(layerkey,self.id,type)
 
+		elif name == 'fatalerror':
+			errormessage="%s" % attrs.value('errormessage').toString()
+			self.window.addFatalErrorNotificationToQueue(0,errormessage,type)
+
 		elif name == 'event':
 			pass
 
@@ -381,6 +385,8 @@ class NetworkWriterThread (qtcore.QThread):
 			print_debug("Network Writer Thread got command from queue: %s" % str(command))
 			if command[0]==DrawingCommandTypes.quit:
 				return
+
 			self.gen.logCommand(command)
 			self.socket.flush()
 			self.socket.waitForBytesWritten(-1)
+			print_debug("finished flushing socket")

@@ -41,17 +41,6 @@ class SketchLogWriter:
 
 		self.endEvent()
 
-		# flush right away so network sessions won't have a delay here
-		bytestowrite=self.output.bytesToWrite()
-		while self.output.bytesToWrite()>0:
-			self.output.flush()
-			bytestowrite=self.output.bytesToWrite()
-
-		self.output.flush()
-		self.output.waitForBytesWritten(-1)
-
-		print_debug("finished writing output")
-
 	def logHistoryCommand(self,command):
 		subtype=command[1]
 		if subtype==HistoryCommandTypes.undo:
@@ -117,12 +106,22 @@ class SketchLogWriter:
 		elif subtype==NetworkControlCommandTypes.requestlayer:
 			self.logLayerRequest(command[3])
 
+		elif subtype==NetworkControlCommandTypes.fatalerror:
+			self.logFatalError(command[3])
+
+
 	def startEvent(self,owner):
 		self.log.writeStartElement('event')
 
 	def endEvent(self):
 		self.log.writeEndElement()
 
+	def logFatalError(self,errormessage):
+		lock=qtcore.QMutexLocker(self.mutex)
+		self.log.writeStartElement('fatalerror')
+		self.log.writeAttribute('errormessage',str(errormessage))
+		self.log.writeEndElement()
+		
 	def logLayerAdd(self, position, key, owner=0):
 		lock=qtcore.QMutexLocker(self.mutex)
 
@@ -317,4 +316,5 @@ class SketchLogWriter:
 	def endLog(self):
 		lock=qtcore.QMutexLocker(self.mutex)
 		self.log.writeEndElement()
+		self.output.flush()
 		self.output.close()

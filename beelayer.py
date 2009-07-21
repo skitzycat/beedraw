@@ -271,7 +271,7 @@ class LayerConfigWidget(qtgui.QWidget):
 		win=BeeApp().master.getWindowById(self.windowid)
 
 		if not layer:
-			print "WARNING: updateValueFromLayer could not find layer with key", self.layerkey
+			print_debug("WARNING: updateValueFromLayer could not find layer with key %s" % self.layerkey)
 			return
 
 		proplock=qtcore.QReadLocker(layer.propertieslock)

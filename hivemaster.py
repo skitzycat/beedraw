@@ -5,6 +5,11 @@ import PyQt4.QtCore as qtcore
 import PyQt4.QtGui as qtgui
 import PyQt4.QtNetwork as qtnet
 
+try:
+	from PyQt4.QtXml import QXmlStreamReader
+except:
+	from PyQt4.QtCore import QXmlStreamReader
+
 from HiveMasterUi import Ui_HiveMasterSpec
 from HiveOptionsUi import Ui_HiveOptionsDialog
 from beedrawingwindow import BeeDrawingWindow
@@ -76,6 +81,11 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 
 	def registerClient(self,username,id,socket):
 		lock=qtcore.QWriteLocker(self.clientslistmutex)
+
+		for name in self.clientnames.values():
+			if name==username:
+				return False
+
 		self.clientwriterqueues[id]=Queue(100)
 		self.clientnames[id]=username
 		self.ui.clientsList.addItem(username)
@@ -83,6 +93,8 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 
 		command=(DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.resyncrequest)
 		self.curwindow.addResyncRequestToQueue(id)
+
+		return True
 
 	def unregisterClient(self,id):
 		lock=qtcore.QReadLocker(self.clientslistmutex)
@@ -173,6 +185,8 @@ class HiveClientListener(qtcore.QThread):
 		self.master=master
 		self.id=id
 
+		self.authenticationerror="Unknown Error"
+
 	def authenticate(self):
 		# attempt to read stream of data, which should include version, username and password
 		# make sure someone dosen't overload the buffer while wating for authentication info
@@ -184,19 +198,27 @@ class HiveClientListener(qtcore.QThread):
 
 			# if error exit
 			else:
-				print "Recieved error:", self.socket.error(), "when reading from socket"
-				self.socket.write(qtcore.QByteArray("Authentication Failed"))
+				self.authenticationerror="Error: Lost connection during authentication request"
 				return False
 
 		authlist=authstring.split('\n')
 
 		# if loop ended without getting enough separators just return false
 		if len(authlist)<3:
+			self.authenticationerror="Error parsing authentication information"
 			return False
 
 		self.username=authlist[0]
 		password=authlist[1]
-		version=authlist[2]
+		try:
+			version=int(authlist[2])
+		except ValueError:
+			self.authenticationerror="Error parsing authentication information"
+			return False
+
+		if version != PROTOCOL_VERSION:
+			self.authenticationerror="Protocol version mismatch, please change to server version: %d" % PROTOCOL_VERSION
+			return False
 
 		# if password is blank, let authentication pass
 		if self.master.password=="":
@@ -206,11 +228,12 @@ class HiveClientListener(qtcore.QThread):
 		if password.trimmed().toAscii()==self.master.password:
 			return True
 
+		self.authenticationerror="Incorrect Password"
 		return False
 
 	def register(self):
 		# register this new connection
-		self.master.registerClient(self.username,self.id,self.socket)
+		return self.master.registerClient(self.username,self.id,self.socket)
 
 	def disconnected(self):
 		print_debug("disconnecting client with ID: %d" % self.id)
@@ -223,23 +246,36 @@ class HiveClientListener(qtcore.QThread):
 			data=self.socket.read(readybytes)
 			print_debug("got animation data from socket: %s" % qtcore.QString(data))
 			self.parser.xml.addData(data)
-			self.parser.read()
+			error=self.parser.read()
 
 			self.socket.waitForBytesWritten()
+
+			if error!=QXmlStreamReader.PrematureEndOfDocumentError and error!=QXmlStreamReader.NoError:
+				return error
+
+			return None
 
 	def run(self):
 		# try to authticate user
 		if not self.authenticate():
 			# if authentication fails send close socket and exit
 			print_debug("authentication failed")
-			self.socket.write(qtcore.QByteArray("Authtication failed\nIncorrect Password\n"))
+			self.socket.write(qtcore.QByteArray("Authtication failed\n%s\n" % self.authenticationerror))
+			self.socket.waitForBytesWritten()
 			self.socket.disconnectFromHost()
 			self.socket.waitForDisconnected(1000)
 			return
 
 		print_debug("authentication succeded")
 
-		self.register()
+		if not self.register():
+			print_debug("register failed, probably due to duplicate username")
+			self.socket.write(qtcore.QByteArray("Regististration failed\nRegistration with server failed, the username you chose is probably in use already, try a different one\n"))
+			self.socket.waitForBytesWritten()
+			self.socket.disconnectFromHost()
+			self.socket.waitForDisconnected(1000)
+			return
+
 		print_debug("registered")
 		self.parser=XmlToQueueEventsConverter(None,self.master.curwindow,0,type=ThreadTypes.server,id=self.id)
 		print_debug("created parser")
@@ -262,12 +298,15 @@ class HiveClientListener(qtcore.QThread):
 		while 1:
 			# make sure we've waited long enough
 			self.socket.waitForReadyRead(-1)
-			self.readyRead()
+			error=self.readyRead()
+
+			if error:
+				# queue up command for client to be disconnected
+				self.master.curwindow.addFatalErrorNotificationToQueue(self.id,"XML Stream Parse Error")
+				return
+
 			if self.socket.state() != qtnet.QAbstractSocket.ConnectedState:
 				break
-
-		# after the socket has closed make sure there isn't more to read
-		self.readyRead()
 
 		# this should be run when the socket is disconnected
 		self.disconnected()
@@ -292,7 +331,7 @@ class HiveClientWriter(qtcore.QThread):
 		while 1:
 			data=self.queue.get()
 			if self.socket.state()==qtnet.QAbstractSocket.UnconnectedState:
-				print "ERROR: Client Writer found that socket is unconnected"
+				print_debug("Client Writer found that socket is unconnected")
 				self.master.unregisterClient(self.id)
 				return
 
@@ -352,7 +391,7 @@ class HiveRoutingThread(qtcore.QThread):
 	def run(self):
 		while 1:
 			data=self.queue.get()
-			print "routing info recieved:", data
+			print_debug("routing info recieved: %s" % str(data))
 			(command,owner)=data
 			# a negative number is a flag that we only send it to one client
 			if owner<0:
@@ -366,15 +405,15 @@ class HiveRoutingThread(qtcore.QThread):
 	def sendToAllClients(self,command):
 		lock=qtcore.QReadLocker(self.master.clientslistmutex)
 		for id in self.master.clientwriterqueues.keys():
-			print "sending to client:", id
+			print_debug("sending to client: %d, command: %s" % (id, str(command)))
 			self.master.clientwriterqueues[id].put(command)
 
 	def sendToAllButOwner(self,source,command):
 		lock=qtcore.QReadLocker(self.master.clientslistmutex)
-		print "sending command to all, but the owner:", source, command
+		print_debug("sending command to all, but the owner: %s" % str(command))
 		for id in self.master.clientwriterqueues.keys():
 			if source!=id:
-				print "sending to client:", id
+				print_debug("sending to client: %d" % id)
 				self.master.clientwriterqueues[id].put(command)
 
 	def sendToSingleClient(self,id,command):
@@ -382,4 +421,4 @@ class HiveRoutingThread(qtcore.QThread):
 		if id in self.master.clientwriterqueues:
 			self.master.clientwriterqueues[id].put(command)
 		else:
-			print "WARNING: Can't find client", id, "for sending data to"
+			print_debug("WARNING: Can't find client %d for sending data to" % id)

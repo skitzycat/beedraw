@@ -33,8 +33,10 @@ class ServerDrawingThread(DrawingThread):
 			if layer.owner==0:
 				self.layerOwnerChangeCommand(layer,requester)
 
+		elif subtype==NetworkControlCommandTypes.fatalerror:
+			self.master.routinginput.put((command,requester*-1))
+
 	def sendResyncToClient(self,requester,window):
-		print "sending resync with requester:", requester
 		# first tell client to get rid of list of layers
 		resynccommand=(DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.resyncstart,window.docwidth,window.docheight,requester)
 		dest=-1*requester

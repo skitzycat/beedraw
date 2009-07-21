@@ -348,7 +348,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			return None
 
 		authrequest=qtcore.QByteArray()
-		authrequest=authrequest.append("%s\n%s\n%s\n" % (username,password,PROTOCOL_VERSION))
+		authrequest=authrequest.append("%s\n%s\n%d\n" % (username,password,PROTOCOL_VERSION))
 		# send authtication info
 		socket.write(authrequest)
 
@@ -358,7 +358,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		while responsestring.count('\n')<2 and len(responsestring)<500:
 			if socket.waitForReadyRead(-1):
 				data=socket.read(500)
-				print "got authentication answer: %s" % qtcore.QString(data)
+				print("got authentication answer: %s" % qtcore.QString(data))
 				responsestring.append(data)
 
 			# if error exit
