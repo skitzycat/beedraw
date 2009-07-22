@@ -1,5 +1,5 @@
 # used to make app into windows executable by running command:
-# /cygdrive/c/Python25/python.exe setup.py py2exe
+# /cygdrive/c/Python25/python.exe setup-win.py py2exe
 
 import sys
 
