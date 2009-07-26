@@ -203,7 +203,7 @@
     <property name="title" >
      <string>Help</string>
     </property>
-    <addaction name="actionAbout" />
+    <addaction name="action_Help_About" />
    </widget>
    <widget class="QMenu" name="menuWindow" >
     <property name="title" >
@@ -269,7 +269,7 @@
     <bool>true</bool>
    </property>
   </action>
-  <action name="actionAbout" >
+  <action name="action_Help_About" >
    <property name="text" >
     <string>About</string>
    </property>

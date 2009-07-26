@@ -96,8 +96,8 @@ class XmlToQueueEventsConverter:
 			(height,ok)=attrs.value('height').toString().toInt()
 			self.window.addSetCanvasSizeRequestToQueue(width,height,type)
 
-
 		elif name == 'addlayer':
+
 			if self.type==ThreadTypes.server:
 				# create our own key data in this case
 				key=self.window.nextLayerKey()
@@ -121,7 +121,7 @@ class XmlToQueueEventsConverter:
 
 			self.addKeyTranslation(key,dockey)
 
-			self.window.addInsertLayerEventToQueue(pos,dockey,self.type,owner=owner)
+			self.window.addInsertLayerEventToQueue(pos,dockey,self.image,self.type,owner=owner)
 
 		elif name == 'sublayer':
 			(key,ok)=attrs.value("index").toString().toInt()
@@ -169,6 +169,7 @@ class XmlToQueueEventsConverter:
 				return
 
 			self.curtool=tool.setupTool(self.window,self.curlayer)
+			self.curtool.clippath=self.clippath
 			self.curtool.layerkey=self.curlayer
 			self.curtool.owner=owner
 
@@ -191,13 +192,7 @@ class XmlToQueueEventsConverter:
 		elif name == 'toolparam':
 			(value,ok)=attrs.value('value').toString().toInt()
 			self.curtool.setOption("%s" % attrs.value('name').toString(),value)
-		elif name == 'rawevent':
-			self.inrawevent=True
-			self.raweventargs=[]
-			(self.x,ok)=attrs.value('x').toString().toInt()
-			(self.y,ok)=attrs.value('y').toString().toInt()
-			(layerkey,ok)=attrs.value('layerkey').toString().toInt()
-			self.layerkey=self.translateKey(layerkey)
+		elif name == 'image':
 			self.rawstring=self.xml.readElementText()
 
 			data=qtcore.QByteArray()
@@ -208,7 +203,19 @@ class XmlToQueueEventsConverter:
 			image=qtgui.QImage()
 			image.loadFromData(data,"PNG")
 
-			self.window.addRawEventToQueue(self.layerkey,image,self.x,self.y,None,type)
+			self.image=image
+
+		elif name == 'rawevent':
+			self.inrawevent=True
+			self.raweventargs=[]
+			(self.x,ok)=attrs.value('x').toString().toInt()
+			(self.y,ok)=attrs.value('y').toString().toInt()
+			(layerkey,ok)=attrs.value('layerkey').toString().toInt()
+			self.layerkey=self.translateKey(layerkey)
+			self.rawstring=self.xml.readElementText()
+
+			if self.image:
+				self.window.addRawEventToQueue(self.layerkey,self.image,self.x,self.y,self.clippath,type)
 
 		elif name == 'point':
 			time.sleep(self.stepdelay)
@@ -255,7 +262,8 @@ class XmlToQueueEventsConverter:
 			self.window.addFatalErrorNotificationToQueue(0,errormessage,type)
 
 		elif name == 'event':
-			pass
+			self.clippath=None
+			self.image=None
 
 		elif name == 'sketchlog':
 			print_debug("DEBUG: got document start tag")
@@ -269,6 +277,7 @@ class XmlToQueueEventsConverter:
 			print_debug("Adding end tool event to queue on layer %d" % self.curlayer)
 			self.window.addPenUpToQueue(self.lastx,self.lasty,self.curlayer,type)
 			self.curtool=None
+
 		elif name == 'rawevent':
 			return
 			self.inrawevent=False
@@ -285,8 +294,8 @@ class XmlToQueueEventsConverter:
 			self.window.addRawEventToQueue(self.layerkey,image,self.x,self.y,None,type)
 		elif name == 'clippath':
 			poly=qtgui.QPolygonF(self.clippoints)
-			self.curtool.clippath=qtgui.QPainterPath()
-			self.curtool.clippath.addPolygon(poly)
+			self.clippath=qtgui.QPainterPath()
+			self.clippath.addPolygon(poly)
 
 	def processCharacterData(self):
 		pass

@@ -96,6 +96,8 @@ class AbstractToolDesc:
  
 # base class for all drawing tools
 class AbstractTool:
+	# flag for if we need to log events of this type of tool
+	logable=False
 	def __init__(self,options,window):
 		self.fgcolor=None
 		self.bgcolor=None
@@ -148,12 +150,16 @@ class EyeDropperToolDesc(AbstractToolDesc):
 		self.layerkey=layerkey
 		return self.getTool(window)
 
+# raw tool, not an actual tool that the user has access to, several other operations will use it for logging, such as cut, paste and logging a paint bucket
+class RawTool(AbstractTool):
+	def __init__(self,options,window):
+		AbstractTool.__init__(self,options,window)
+
 # eye dropper tool (select color from canvas)
 class EyeDropperTool(AbstractTool):
 	def __init__(self,options,window):
 		AbstractTool.__init__(self,options,window)
 		self.name="Eye Dropper"
-		self.window=window
 
 	def penDown(self,x,y,pressure=None):
 		if self.options["singlelayer"]==0:
@@ -164,6 +170,8 @@ class EyeDropperTool(AbstractTool):
 
 # basic tool for everything that draws points on the canvas
 class DrawingTool(AbstractTool):
+	# flag for if we need to log events of this type of tool
+	logable=True
 	def __init__(self,options,window):
 		AbstractTool.__init__(self,options,window)
 		self.name="Pencil"
@@ -370,7 +378,7 @@ class DrawingTool(AbstractTool):
 		# calculate bounding area of whole event
 		dirtyrect=qtcore.QRect(left-radius,top-radius,right+(radius*2),bottom+(radius*2))
 		# bound it by the area of the layer
-		dirtyrect=rectIntersectBoundingRect(dirtyrect,self.layer.image.rect())
+		dirtyrect=rectIntersectBoundingRect(dirtyrect,self.layer.getImageRect())
  
 		# get image of what area looked like before
 		oldimage=self.oldlayerimage.copy(dirtyrect)
@@ -539,7 +547,9 @@ class PencilToolDesc(AbstractToolDesc):
 		return tool
  
 	def setupTool(self,window,layerkey=None):
-		self.layerkey=layerkey
+		if not layerkey:
+			layerkey=window.curlayerkey
+
 		tool=self.getTool(window)
 		# copy the foreground color
 		tool.fgcolor=qtgui.QColor(window.master.fgcolor)
@@ -808,45 +818,62 @@ class PaintBucketToolDesc(AbstractToolDesc):
 		return tool
  
 	def setupTool(self,window,layerkey=None):
-		self.layerkey=layerkey
-		return self.getTool(window)
+		if not layerkey:
+			layerkey=window.curlayerkey
+
+		tool=self.getTool(window)
+
+		tool.fgcolor=qtgui.QColor(window.master.fgcolor)
+		tool.layerkey=layerkey
+
+		# if there is a selection get a copy of it
+		if window.selection:
+			tool.clippath=qtgui.QPainterPath(window.clippath)
+
+		return tool
 
 	def runOptionsDialog(self,parent):
 		dialog=qtgui.QDialog()
 		dialog.ui=Ui_PaintBucketOptionsDialog()
 		dialog.ui.setupUi(dialog)
- 
-		self.options["similarity"]=10
+
 		if self.options["wholeselection"]==1:
-			dialog.ui.whole_selection_check.setCheckState(qtcore.CheckState.Checked)
+			dialog.ui.whole_selection_check.setCheckState(qtcore.Qt.Checked)
 		else:
-			dialog.ui.whole_selection_check.setCheckState(qtcore.CheckState.Unchecked)
+			dialog.ui.whole_selection_check.setCheckState(qtcore.Qt.Unchecked)
 		dialog.ui.color_threshold_box.setValue(self.options["similarity"])
  
 		dialog.exec_()
 
 		if dialog.result():
 			self.options["similarity"]=dialog.ui.color_threshold_box.value()
-			if dialog.ui.whole_selection_check.checkState()==qtcore.CheckState.Unchecked:
-				self.options["wholeselection"]==0
+			if dialog.ui.whole_selection_check.checkState()==qtcore.Qt.Unchecked:
+				self.options["wholeselection"]=0
 			else:
-				self.options["wholeselection"]==1
+				self.options["wholeselection"]=1
 
 # paint bucket tool
 class PaintBucketTool(AbstractTool):
+	logable=True
 	def __init__(self,options,window):
 		AbstractTool.__init__(self,options,window)
+		self.pointshistory=[]
 
 	def penDown(self,x,y,pressure=None):
-		image=qtgui.QImage(self.window.image.size(),self.window.image.format())
+		self.pointshistory=[(x,y,pressure)]
+		layer=self.window.getLayerForKey(self.layerkey)
+		if not layer:
+			return
+
+		image=qtgui.QImage(layer.image.size(),layer.image.format())
 		image.fill(self.window.master.fgcolor.rgb())
 		if self.options['wholeselection']==0:
 			fillpath=getSimilarColorRegion(self.window.image,x,y,self.options['similarity'])
 			if self.window.clippath:
 				fillpath=fillpath.intersected(self.window.clippath)
-			self.window.addRawEventToQueue(self.window.curlayerkey,image,0,0,fillpath)
+			self.window.addRawEventToQueue(self.layerkey,image,0,0,fillpath)
 		else:
-			self.window.addRawEventToQueue(self.window.curlayerkey,image,0,0,self.window.clippath)
+			self.window.addRawEventToQueue(self.layerkey,image,0,0,self.window.clippath)
 
 # elipse selection tool
 class ElipseSelectionToolDesc(AbstractToolDesc):

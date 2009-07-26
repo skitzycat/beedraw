@@ -6,7 +6,7 @@
     <x>0</x>
     <y>0</y>
     <width>281</width>
-    <height>176</height>
+    <height>185</height>
    </rect>
   </property>
   <property name="windowTitle" >
@@ -31,6 +31,9 @@
      </item>
      <item row="2" column="2" >
       <widget class="QSlider" name="pressurebalance" >
+       <property name="enabled" >
+        <bool>false</bool>
+       </property>
        <property name="minimum" >
         <number>1</number>
        </property>
@@ -110,6 +113,9 @@
      </item>
      <item row="1" column="2" >
       <widget class="QSlider" name="horizontalSlider" >
+       <property name="enabled" >
+        <bool>false</bool>
+       </property>
        <property name="orientation" >
         <enum>Qt::Horizontal</enum>
        </property>

@@ -24,6 +24,8 @@ from Queue import Queue
 
 from beeutil import *
 
+from beeeventstack import DrawingCommand
+
 from beeapp import BeeApp
 
 from hivecache import *
@@ -92,67 +94,81 @@ class DrawingThread(qtcore.QThread):
 	def processLayerCommand(self,command):
 		window=self.master.getWindowById(self.windowid)
 		subtype=command[1]
+		layerkey=command[2]
+		layer=window.getLayerForKey(layerkey)
+		if not layer:	
+			print "ERROR: Can't process Layer command:", command, "Layer not found"
+			return
+
 		if subtype==LayerCommandTypes.alpha:
-			layer=window.getLayerForKey(command[2])
-			if layer:
-				layer.setOptions(opacity=command[3])
-				window.logCommand(command,self.type)
+			layer.setOptions(opacity=command[3])
+			window.logCommand(command,self.type)
 
 		elif subtype==LayerCommandTypes.mode:
-			layer=window.getLayerForKey(command[2])
-			if layer:
-				layer.setOptions(compmode=command[3])
-				window.logCommand(command,self.type)
+			layer.setOptions(compmode=command[3])
+			window.logCommand(command,self.type)
 
 		elif subtype==LayerCommandTypes.pendown:
-			layer=window.getLayerForKey(command[2])
 			x=command[3]
 			y=command[4]
 			pressure=command[5]
 			tool=command[6]
 			# make sure we can find the layer and either it's a locally owned layer or a source that can draw on non-local layers
-			if layer and (window.ownedByMe(layer.owner) or self.type!=ThreadTypes.user):
-				self.inprocesstools[int(command[2])]=tool
+			if window.ownedByMe(layer.owner) or self.type!=ThreadTypes.user:
+				self.inprocesstools[int(layerkey)]=tool
 				tool.penDown(x,y,pressure)
 			else:
-				print "WARNING: no valid layer selected, remote id:", window.remoteid
+				print_debug("WARNING: no valid layer selected, remote id: %d" % window.remoteid)
 
 		elif subtype==LayerCommandTypes.penmotion:
-			if command[2]==None:
-				return
 			#print "Pen motion event:", command
 			x=command[3]
 			y=command[4]
 			pressure=command[5]
-			if int(command[2]) in self.inprocesstools:
-				tool=self.inprocesstools[int(command[2])]
+			if int(layerkey) in self.inprocesstools:
+				tool=self.inprocesstools[int(layerkey)]
 				tool.penMotion(x,y,pressure)
 
 		elif subtype==LayerCommandTypes.penup:
-			if command[2]==None:
-				return
 			#print "Pen up event:", command
 			x=command[3]
 			y=command[4]
-			if int(command[2]) in self.inprocesstools:
-				tool=self.inprocesstools[int(command[2])]
+			if int(layerkey) in self.inprocesstools:
+				tool=self.inprocesstools[int(layerkey)]
 				tool.penUp(x,y)
 
 				# send to server and log file if needed
-				window.logStroke(tool,int(command[2]),self.type)
+				window.logStroke(tool,int(layerkey),self.type)
 
 				tool.cleanUp()
-				del self.inprocesstools[int(command[2])]
+				del self.inprocesstools[int(layerkey)]
 
 		elif subtype==LayerCommandTypes.rawevent:
-			layer=window.getLayerForKey(command[2])
 			x=command[3]
 			y=command[4]
 			image=command[5]
-			path=command[6]
+			clippath=command[6]
+
+			layerimagelock=qtcore.QWriteLocker(layer.imagelock)
+
+			# determine bounding area for event
+			dirtyrect=qtcore.QRect(x,y,image.width(),image.height())
+			dirtyrect=rectIntersectBoundingRect(dirtyrect,layer.image.rect())
+			dirtyrect=rectIntersectBoundingRect(dirtyrect,clippath.boundingRect().toAlignedRect())
+
+			# set up history event
+			oldimage=layer.image.copy(dirtyrect)
+			historycommand=DrawingCommand(layerkey,oldimage,dirtyrect)
+
 			compmode=qtgui.QPainter.CompositionMode_Source
-			layer.compositeFromCorner(image,x,y,compmode,path)
+			layer.compositeFromCorner(image,x,y,compmode,clippath,lock=layerimagelock)
 			window.logCommand(command,self.type)
+
+			layerpropertieslock=qtcore.QReadLocker(layer.propertieslock)
+
+			# add to undo/redo history
+			window.addCommandToHistory(historycommand,layer.owner)
+
 		else:
 			print "unknown processLayerCommand subtype:", subtype
 
@@ -179,16 +195,16 @@ class DrawingThread(qtcore.QThread):
 			# in this case we want to fill out the details ourselves
 			key = command[2]
 			index = command[3]
-			owner = command[4]
+			image = command[4]
+			owner = command[5]
 			if self.type==ThreadTypes.server and owner != 0:
-				pass
-				window.insertLayer(key,index,owner=owner)
+				window.insertLayer(key,index,image=image,owner=owner)
 
 			else:
 				if window.ownedByMe(owner):
-					window.insertLayer(key,index,owner=owner)
+					window.insertLayer(key,index,image=image,owner=owner)
 				else:
-					window.insertLayer(key,index,LayerTypes.network,owner=owner)
+					window.insertLayer(key,index,type=LayerTypes.network,image=image,owner=owner)
 
 		window.logCommand(command,self.type)
 
@@ -208,22 +224,28 @@ class DrawingThread(qtcore.QThread):
 
 		elif subtype==NetworkControlCommandTypes.giveuplayer:
 			layer=window.getLayerForKey(command[3])
+			if not layer:
+				return
 			layer.changeOwner(0)
 			window.logCommand(command,self.type)
 
 		elif subtype==NetworkControlCommandTypes.layerowner:
 			layer=window.getLayerForKey(command[3])
+			if not layer:
+				return
 			layer.changeOwner(command[2])
 			window.logCommand(command,self.type)
 
 		elif subtype==NetworkControlCommandTypes.requestlayer:
 			layer=window.getLayerForKey(command[3])
+			if not layer:
+				return
 			window.logCommand(command,self.type)
 
 	def sendToServer(self,command):
 		window=self.master.getWindowById(self.windowid)
 		if command[0]==DrawingCommandTypes.alllayer and command[1]==AllLayerCommandTypes.insertlayer:
-			command=(command[0],command[1],command[2],command[3],window.remoteid)
+			command=(command[0],command[1],command[2],command[3],command[4],window.remoteid)
 		window.remoteoutputqueue.put(command)
 
 class RemoteDrawingThread(DrawingThread):

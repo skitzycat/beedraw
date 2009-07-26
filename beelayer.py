@@ -73,6 +73,10 @@ class BeeLayer:
 		# set default name for layer
 		self.changeName("Layer %d" % key)
 
+	def getImageRect(self):
+		lock=qtcore.QReadLocker(self.imagelock)
+		return self.image.rect()
+
 	def getWindow(self):
 		return BeeApp().master.getWindowById(self.windowid)
 
@@ -122,11 +126,14 @@ class BeeLayer:
 		return
 
 	# composite image onto layer from corner coord
-	def compositeFromCorner(self,image,x,y,compmode,clippath=None):
+	def compositeFromCorner(self,image,x,y,compmode,clippath=None,lock=None):
 		x=int(x)
 		y=int(y)
 		#print "calling compositeFromCorner with args:",x,y
-		lock=ReadWriteLocker(self.imagelock,True)
+
+		if not lock:
+			lock=qtcore.QWriteLocker(self.imagelock)
+
 		width=image.size().width()
 		height=image.size().height()
 		rect=qtcore.QRect(x,y,width,height)
@@ -379,8 +386,9 @@ class LayerConfigWidget(qtgui.QWidget):
 
 	def mousePressEvent(self,event):
 		layer=BeeApp().master.getLayerById(self.windowid,self.layerkey)
-		window=layer.getWindow()
-		window.setActiveLayer(layer.key)
+		if layer:
+			window=layer.getWindow()
+			window.setActiveLayer(layer.key)
 
 class BeeLayersWindow(qtgui.QMainWindow):
 	def __init__(self,master):
@@ -430,6 +438,8 @@ class BeeLayersWindow(qtgui.QMainWindow):
 
 	# rebuild layers window by removing all the layers widgets and then adding them back in order
 	def refreshLayersList(self,layers,curlayerkey):
+		""" Update the list of layers displayed in the layers display window, if passed none for the layers arguement, the list of layers is cleared
+		"""
 		lock=qtcore.QMutexLocker(self.mutex)
 
 		frame=self.layersListArea.widget()
@@ -445,6 +455,9 @@ class BeeLayersWindow(qtgui.QMainWindow):
 			vbox.removeWidget(widget)
 
 		newwidget=None
+
+		if not layers:
+			return
 
 		# ask each layer for it's widget and add it
 		for layer in reversed(layers):
@@ -532,6 +545,10 @@ class LayerPreviewWidget(qtgui.QWidget):
 	# repaint preview for layer, I want to keep this in the same aspect ratio as the layer
 	def paintEvent(self,event):
 		layer=BeeApp().master.getLayerById(self.windowid,self.layerkey)
+		# just to make sure nothing goes wrong
+		if not layer:
+			return
+
 		window=BeeApp().master.getWindowById(self.windowid)
 		lock=qtcore.QMutexLocker(self.mutex)
 		# get how much we need to scale down both dimensions

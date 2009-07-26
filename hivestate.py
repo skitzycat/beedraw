@@ -54,7 +54,7 @@ class HiveSessionState(BeeSessionState):
 		owner=layer.owner
 
 		# send command to create layer
-		insertcommand=(DrawingCommandTypes.alllayer,AllLayerCommandTypes.insertlayer,key,index,owner)
+		insertcommand=(DrawingCommandTypes.alllayer,AllLayerCommandTypes.insertlayer,key,index,image,owner)
 		self.master.routinginput.put((insertcommand,id*-1))
 
 		# set alpha and composition mode for layer
@@ -62,10 +62,6 @@ class HiveSessionState(BeeSessionState):
 		self.master.routinginput.put((alphacommand,id*-1))
 		modecommand=(DrawingCommandTypes.layer,LayerCommandTypes.mode,key,compmode)
 		self.master.routinginput.put((modecommand,id*-1))
-
-		# send raw image
-		rawcommand=(DrawingCommandTypes.layer,LayerCommandTypes.rawevent,key,0,0,image,None)
-		self.master.routinginput.put((rawcommand,id*-1))
 
 	def addFatalErrorNotificationToQueue(self,owner,errormessage,source=ThreadTypes.network):
 		self.queueCommand((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.fatalerror,owner,errormessage),source)

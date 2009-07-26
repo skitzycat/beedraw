@@ -28,6 +28,7 @@ import cPickle as pickle
 from beeglobals import *
 from beetypes import *
 from BeeMasterUI import Ui_BeeMasterSpec
+from AboutDisplayDialogUi import Ui_About_Dialog
 from ConnectionDialogUi import Ui_ConnectionInfoDialog
 from colorswatch import *
 from beelayer import BeeLayersWindow
@@ -61,6 +62,10 @@ class BeeSwatchScrollArea(qtgui.QScrollArea):
 		self.setWidget(qtgui.QFrame(self))
 
 		self.show()
+
+		# only the gui thread should mess with these so there shouldn't be a need for any locks
+		self.fgcolor=qtgui.QColor(0,0,0)
+		self.bgcolor=qtgui.QColor(0,0,0)
 
 	def replaceWidget(self,oldwidget):
 		parent=oldwidget.parentWidget()
@@ -165,8 +170,16 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		self.drawingwindows.append(window)
 
 	def unregisterWindow(self,window):
-		#print "unregistering window with references:", sys.getrefcount(window)
 		self.drawingwindows.remove(window)
+		# if the window we're deleting was the active window
+		if self.curwindow==window:
+			# if there is at least one other window make that the current window
+			if self.drawingwindows:
+				self.curwindow=self.drawingwindows[0]
+			else:
+				self.curwindow=None
+
+			self.refreshLayersList()
 
 	def getNextWindowId(self):
 		self.nextwindowid+=1
@@ -325,6 +338,15 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 		self.refreshLayersList()
 
+	def on_action_Help_About_triggered(self,accept=True):
+		if not accept:
+			return
+
+		dialog=qtgui.QDialog(self)
+		dialogui=Ui_About_Dialog()
+		dialogui.setupUi(dialog)
+		dialog.exec_()
+
 	def on_action_File_Connect_triggered(self,accept=True):
 		if not accept:
 			return
@@ -375,7 +397,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		while responsestring.count('\n')<2 and len(responsestring)<500:
 			if socket.waitForReadyRead(-1):
 				data=socket.read(500)
-				print("got authentication answer: %s" % qtcore.QString(data))
+				print_debug("got authentication answer: %s" % qtcore.QString(data))
 				responsestring.append(data)
 
 			# if error exit
@@ -432,8 +454,11 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		qtgui.QMainWindow.closeEvent(self,event)
 
 	def refreshLayersList(self):
-		if self.curwindow and self.layerswindow:
-			self.layerswindow.refreshLayersList(self.curwindow.layers,self.curwindow.curlayerkey)
+		if self.layerswindow:
+			if self.curwindow:
+				self.layerswindow.refreshLayersList(self.curwindow.layers,self.curwindow.curlayerkey)
+			else:
+				self.layerswindow.refreshLayersList(None,None)
 
 	# function for a window to take the focus from other windows
 	def takeFocus(self,window):

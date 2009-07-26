@@ -45,6 +45,9 @@ class BeeSessionState:
 
 		self.historysize=20
 
+		# never have a local clip path
+		self.clippath=None
+
 		# set unique ID
 		self.id=master.getNextWindowId()
 
@@ -225,8 +228,8 @@ class BeeSessionState:
 		pos=0
 		for layer in self.layers:
 			locks.append(ReadWriteLocker(layer.imagelock,True))
-			log.logLayerAdd(pos,layer.key)
-			log.logRawEvent(0,0,layer.key,layer.image)
+			log.logLayerAdd(pos,layer.key, layer.image)
+			#log.logRawEvent(0,0,layer.key,layer.image)
 			pos+=1
 
 		self.log=log
@@ -254,8 +257,8 @@ class BeeSessionState:
 		self.reCompositeImage()
 		curlaylock=qtcore.QMutexLocker(self.curlayerkeymutex)
 		# only select it immediately if we can draw on it
-		if layer.type==LayerTypes.user:
-			self.curlayerkey=layer.key
+		#if layer.type==LayerTypes.user:
+		#	self.curlayerkey=layer.key
 
 		# only add command to history if we should
 		if self.type==WindowTypes.singleuser and history!=-1:
@@ -266,11 +269,6 @@ class BeeSessionState:
 		layer=BeeLayer(self.id,type,key,image,opacity=opacity,visible=visible,compmode=compmode,owner=owner)
 
 		self.layers.insert(index,layer)
-
-		# only select it immediately if we can draw on it
-		if type==LayerTypes.user:
-			lock=qtcore.QMutexLocker(self.curlayerkeymutex)
-			self.curlayerkey=key
 
 		# only add command to history if we are in a local session
 		if self.type==WindowTypes.singleuser and history!=-1:
@@ -337,9 +335,9 @@ class BeeSessionState:
 		# update all layer preview thumbnails
 		self.master.refreshLayerThumb(self.id)
 
-	def addInsertLayerEventToQueue(self,index,key,source=ThreadTypes.user,owner=0):
+	def addInsertLayerEventToQueue(self,index,key,image=None,source=ThreadTypes.user,owner=0):
 		# when the source is local like this the owner will always be me (id 0)
-		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.insertlayer,key,index,owner),source,owner)
+		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.insertlayer,key,index,image,owner),source,owner)
 		return key
 
 	def addLayer(self):
@@ -347,7 +345,7 @@ class BeeSessionState:
 		key=self.nextLayerKey()
 		index=len(self.layers)
 		# when the source is local like this the owner will always be me (id 0)
-		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.insertlayer,key,index,0))
+		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.insertlayer,key,index,None,0))
 
 	def addRawEventToQueue(self,key,image,x,y,path,source=ThreadTypes.user):
 		self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.rawevent,key,x,y,image,path),source)
@@ -378,6 +376,8 @@ class BeeSessionState:
 			self.remoteoutputqueue.put(command)
 
 	def logStroke(self,tool,layer,source=ThreadTypes.network):
+		if not tool.logable:
+			return
 		if self.log:
 			self.log.logToolEvent(layer,tool)
 

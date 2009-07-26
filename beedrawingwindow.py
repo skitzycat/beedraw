@@ -100,14 +100,14 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		# don't go through the queue for this layer add because we need it to
 		# be done before the next step
 		if startlayer:
-			self.addInsertLayerEventToQueue(self.nextLayerKey(),0,source=ThreadTypes.user)
+			self.addInsertLayerEventToQueue(0,self.nextLayerKey(),source=ThreadTypes.user)
 
 		# have window get destroyed when it gets a close event
 		self.setAttribute(qtcore.Qt.WA_DeleteOnClose)
 
 	# this is for debugging memory cleanup
 	#def __del__(self):
-		#print "DESTRUCTOR: bee drawing window"
+	#	print "DESTRUCTOR: bee drawing window"
 
 	def saveFile(self,filename):
 		""" save current state of session to file
@@ -339,16 +339,6 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 			return self.curlayerkey
 		return None
 
-	def penDown(self,x,y,pressure):
-		self.curtool=self.master.getCurToolInst(self)
-		self.curtool.penDown(x,y,pressure)
-
-	def penMotion(self,x,y,pressure):
-		self.curtool.penMotion(x,y,pressure)
-
-	def penUp(self,x,y):
-		self.curtool.penUp(x,y)
-
 	# not sure how useful these will be, but just in case a tool wants to do something special when it leaves the drawable area they are here
 	def penEnter(self):
 		self.curtool.penEnter()
@@ -474,7 +464,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		# end the log if there is one
 		self.endLog()
 
-		# for some reason this seems to get rid of a reference
+		# for some reason this seems to get rid of a reference needed to allow garbage collection
 		self.setParent(None)
 
 		self.localdrawingthread.addExitEventToQueue()

@@ -332,7 +332,6 @@ class HiveClientListener(qtcore.QThread):
 # this thread will write to a specific client
 class HiveClientWriter(qtcore.QThread):
 	def __init__(self,parent,socket,master,id):
-		#qtcore.QThread.__init__(self,parent)
 		qtcore.QThread.__init__(self)
 		self.setParent(self)
 
@@ -340,19 +339,25 @@ class HiveClientWriter(qtcore.QThread):
 		self.master=master
 		self.id=id
 
+		# add to list of writing threads
 		lock=qtcore.QReadLocker(self.master.clientslistmutex)
 		self.queue=self.master.clientwriterqueues[id]
+
+		# create custom QXmlStreamWriter
 		self.xmlgenerator=SketchLogWriter(self.socket)
 
 	def run(self):
 		while 1:
+			# block until item is available from thread safe queue
 			data=self.queue.get()
 			if self.socket.state()==qtnet.QAbstractSocket.UnconnectedState:
-				print_debug("Client Writer found that socket is unconnected")
 				self.master.unregisterClient(self.id)
 				return
 
 			self.xmlgenerator.logCommand(data)
+
+		# flush so command goes out on network right away
+		socket.flush()
 
 # class to handle running the TCP server and handling new connections
 class HiveServerThread(qtcore.QThread):

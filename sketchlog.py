@@ -104,7 +104,7 @@ class SketchLogWriter:
 			self.logLayerSub(command[2])
 
 		elif subtype==AllLayerCommandTypes.insertlayer:
-			self.logLayerAdd(command[3], command[2], command[4])
+			self.logLayerAdd(command[3], command[2], command[4], command[5])
 
 	def logNetworkControl(self,command):
 		subtype=command[1]
@@ -139,8 +139,28 @@ class SketchLogWriter:
 		self.log.writeAttribute('errormessage',str(errormessage))
 		self.log.writeEndElement()
 		
-	def logLayerAdd(self, position, key, owner=0):
+	def logLayerAdd(self, position, key, image=None, owner=0):
 		lock=qtcore.QMutexLocker(self.mutex)
+
+		# if there is an image then log it as
+		if image:
+			self.log.writeStartElement('image')
+
+			bytearray=qtcore.QByteArray()
+			buf=qtcore.QBuffer(bytearray)
+			buf.open(qtcore.QIODevice.WriteOnly)
+			image.save(buf,"PNG")
+
+			# compress then convert to base 64 so it can be printed in ascii
+			bytearray=qtcore.qCompress(bytearray)
+			bytearray=bytearray.toBase64()
+
+			rawstring='%s' % bytearray
+
+			self.log.writeCharacters(rawstring)
+
+			# end image
+			self.log.writeEndElement()
 
 		# start addlayer event
 		self.log.writeStartElement('addlayer')
@@ -198,6 +218,20 @@ class SketchLogWriter:
 
 		points=tool.pointshistory
 
+		# write clip path if needed
+		if tool.clippath:
+			poly=tool.clippath.toFillPolygon().toPolygon()
+			self.log.writeStartElement('clippath')
+
+			for p in range(poly.size()):
+				self.log.writeStartElement('polypoint')
+				self.log.writeAttribute('x',str(poly.at(p).x()))
+				self.log.writeAttribute('y',str(poly.at(p).y()))
+				self.log.writeEndElement()
+
+			# end clip path
+			self.log.writeEndElement()
+
 		# start tool event
 		self.log.writeStartElement('toolevent')
 		self.log.writeAttribute('name',tool.name)
@@ -215,19 +249,6 @@ class SketchLogWriter:
 			self.log.writeAttribute('r',str(tool.bgcolor.red()))
 			self.log.writeAttribute('g',str(tool.bgcolor.green()))
 			self.log.writeAttribute('b',str(tool.bgcolor.blue()))
-			self.log.writeEndElement()
-
-		if tool.clippath:
-			poly=tool.clippath.toFillPolygon().toPolygon()
-			self.log.writeStartElement('clippath')
-
-			for p in range(poly.size()):
-				self.log.writeStartElement('polypoint')
-				self.log.writeAttribute('x',str(poly.at(p).x()))
-				self.log.writeAttribute('y',str(poly.at(p).y()))
-				self.log.writeEndElement()
-
-			# end clip path
 			self.log.writeEndElement()
 
 		# add tool params to log
@@ -261,14 +282,23 @@ class SketchLogWriter:
 	def logRawEvent(self,x,y,layerkey,image,path=None):
 		lock=qtcore.QMutexLocker(self.mutex)
 
-		x=str(x)
-		y=str(y)
-		layerkey=str(layerkey)
+		# write out the image data
+		self.log.writeStartElement('image')
+		bytearray=qtcore.QByteArray()
+		buf=qtcore.QBuffer(bytearray)
+		buf.open(qtcore.QIODevice.WriteOnly)
+		image.save(buf,"PNG")
 
-		self.log.writeStartElement('rawevent')
-		self.log.writeAttribute('x',x)
-		self.log.writeAttribute('y',y)
-		self.log.writeAttribute('layerkey',layerkey)
+		# compress then convert to base 64 so it can be printed in ascii
+		bytearray=qtcore.qCompress(bytearray)
+		bytearray=bytearray.toBase64()
+
+		rawstring='%s' % bytearray
+
+		self.log.writeCharacters(rawstring)
+
+		# end writing the image data
+		self.log.writeEndElement()
 
 		# if there is a clip path for this raw event
 		if path:
@@ -284,18 +314,15 @@ class SketchLogWriter:
 			# end clip path
 			self.log.writeEndElement()
 
-		bytearray=qtcore.QByteArray()
-		buf=qtcore.QBuffer(bytearray)
-		buf.open(qtcore.QIODevice.WriteOnly)
-		image.save(buf,"PNG")
+		x=str(x)
+		y=str(y)
+		layerkey=str(layerkey)
 
-		# compress then convert to base 64 so it can be printed in ascii
-		bytearray=qtcore.qCompress(bytearray)
-		bytearray=bytearray.toBase64()
+		self.log.writeStartElement('rawevent')
+		self.log.writeAttribute('x',x)
+		self.log.writeAttribute('y',y)
+		self.log.writeAttribute('layerkey',layerkey)
 
-		rawstring='%s' % bytearray
-
-		self.log.writeCharacters(rawstring)
 		self.log.writeEndElement()
 
 	def logResyncRequest(self):

@@ -6,7 +6,7 @@
     <x>0</x>
     <y>0</y>
     <width>370</width>
-    <height>178</height>
+    <height>185</height>
    </rect>
   </property>
   <property name="windowTitle" >
@@ -31,6 +31,9 @@
      </item>
      <item row="1" column="2" >
       <widget class="QSlider" name="pressurebalance" >
+       <property name="enabled" >
+        <bool>false</bool>
+       </property>
        <property name="minimum" >
         <number>1</number>
        </property>
@@ -67,6 +70,9 @@
      </item>
      <item row="3" column="2" >
       <widget class="QSlider" name="blurslider" >
+       <property name="enabled" >
+        <bool>false</bool>
+       </property>
        <property name="minimum" >
         <number>1</number>
        </property>
