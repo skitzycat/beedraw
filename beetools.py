@@ -931,7 +931,7 @@ class SketchTool(DrawingTool):
 		self.lastpressure=-1
 		self.compmode=qtgui.QPainter.CompositionMode_SourceOver
 		self.scaledbrushes=[]
-
+		self.brushshape=BrushShapes.ellipse
 
 	def movedFarEnough(self,x,y):
 		if distance2d(self.lastpoint[0],self.lastpoint[1],x,y) < self.options["step"]:
@@ -962,6 +962,10 @@ class SketchTool(DrawingTool):
 		# try to find exact or closest brushes to scale
 		abovebrush, belowbrush = self.findScaledBrushes(scale)
 
+		# TEMPORARY code for testing
+		#self.brushimage=abovebrush[0]
+		#return
+
 		# didn't get an exact match so interpolate between two others
 		if belowbrush:
 			# shift both of the nearby brushes
@@ -973,7 +977,7 @@ class SketchTool(DrawingTool):
 			# interpolate between the results, but trust the one that was closer more
 			outputimage = self.fast_interpolate(scaledbelowimage,scaledaboveimage, t)
 
-		# we were below the lowest sized brush or exactly at 1
+		# if the scale is so small it should be at one
 		elif abovebrush[1]!=scale or (abovebrush[0].width()==1 and abovebrush[0].height()==1):
 			s = scale/abovebrush[1]
 			outputimage = self.scaleSinglePixelImage(s, self.singlepixelbrush.pixel(0,0), subpixelx, subpixely)
@@ -998,14 +1002,14 @@ class SketchTool(DrawingTool):
 		a = subpixelx
 		b = subpixely
 
-		#a = subpixelx-.5
-		#b = subpixely-.5
+		a = subpixelx-.5
+		b = subpixely-.5
 
-		#if a<0:
-		#	a=1.+a
+		if a<0:
+			a=1.+a
 
-		#if b<0:
-		#	b=1.+b
+		if b<0:
+			b=1.+b
  
  		for y in range(dstheight):
 			for x in range(dstwidth):
@@ -1166,11 +1170,9 @@ class SketchTool(DrawingTool):
 
 	# make full sized brush and list of pre-scaled brushes
 	def makeFullSizedBrush(self):
-		shape=BrushShapes.ellipse
-
 		# only support one brush shape right now
-		if shape==BrushShapes.ellipse:
-			self.makeEllipseBrush()
+		if self.brushshape==BrushShapes.ellipse:
+			self.fullsizedbrush=self.makeEllipseBrush(self.options["maxdiameter"],self.options["maxdiameter"])
 
 		self.makeScaledBrushes()
 
@@ -1185,11 +1187,13 @@ class SketchTool(DrawingTool):
 		height=self.fullsizedbrush.height() * MAXIMUM_SCALE
 
 		while True:
-			if width >= self.fullsizedbrush.width() and height >= self.fullsizedbrush.height():
-				scaledImage=self.scaleImage(self.fullsizedbrush,width,height)
+			#if width >= self.fullsizedbrush.width() and height >= self.fullsizedbrush.height():
+			#	scaledImage=self.scaleImage(self.fullsizedbrush,width,height)
 			# scale down using previous one once below 1:1
-			else:
-				scaledImage=self.scaleImage(scaledImage,width,height)
+			#else:
+			#	scaledImage=self.scaleImage(scaledImage,width,height)
+
+			scaledImage=self.makeEllipseBrush(width,height)
 
 			xscale = float(width) / self.fullsizedbrush.width()
 			yscale = float(height) / self.fullsizedbrush.height()
@@ -1205,25 +1209,25 @@ class SketchTool(DrawingTool):
 			width = int ((width + 1) / 2)
 			height = int((height + 1) / 2)
 
-	def makeEllipseBrush(self):
-		self.width=self.options["maxdiameter"]
-		self.height=self.options["maxdiameter"]
+	def makeEllipseBrush(self,width,height):
 		fgr=self.fgcolor.red()
 		fgg=self.fgcolor.green()
 		fgb=self.fgcolor.blue()
 
-		self.fullsizedbrush=qtgui.QImage(self.width,self.height,qtgui.QImage.Format_ARGB32_Premultiplied)
+		brushimage=qtgui.QImage(width,height,qtgui.QImage.Format_ARGB32_Premultiplied)
 
-		for i in range(self.width):
-			for j in range(self.height):
-				v=self.ellipseBrushFadeAt(i,j)
-				self.fullsizedbrush.setPixel(i,j,qtgui.qRgba(int(fgr*v),int(fgg*v),int(fgb*v),int(v*255)))
+		for i in range(width):
+			for j in range(height):
+				v=self.ellipseBrushFadeAt(i,j,width,height)
+				brushimage.setPixel(i,j,qtgui.qRgba(int(fgr*v),int(fgg*v),int(fgb*v),int(v*255)))
 
-	def ellipseBrushFadeAt(self,x,y):
-		m_xcentre = self.width/2.0
-		m_ycentre = self.height/2.0
-		m_xcoef = 2.0/self.width
-		m_ycoef = 2.0/self.height
+		return brushimage
+
+	def ellipseBrushFadeAt(self,x,y,width,height):
+		m_xcentre = width/2.0
+		m_ycentre = height/2.0
+		m_xcoef = 2.0/width
+		m_ycoef = 2.0/height
 
 		if self.options["fade horizontal"] == 0:
 			m_xfadecoef = 1.0
@@ -1311,9 +1315,9 @@ class SketchTool(DrawingTool):
 
 		painter=qtgui.QPainter()
 		painter.begin(dstimage)
-		painter.setRenderHint(qtgui.QPainter.Antialiasing)
-		painter.setRenderHint(qtgui.QPainter.HighQualityAntialiasing)
-		painter.setRenderHint(qtgui.QPainter.SmoothPixmapTransform)
+		#painter.setRenderHint(qtgui.QPainter.Antialiasing)
+		#painter.setRenderHint(qtgui.QPainter.HighQualityAntialiasing)
+		#painter.setRenderHint(qtgui.QPainter.SmoothPixmapTransform)
 		painter.drawImage(dstrect,srcimage,srcrect)
 		painter.end()
 
@@ -1441,6 +1445,6 @@ class SketchTool(DrawingTool):
 
 		#if(xScale > 2 or yScale > 2 or xScale < 1 or yScale < 1)
 		# do this every time for now, I'll make special cases later if needed
-		scaledimage=brushimage.scaled(width,height,qtcore.Qt.IgnoreAspectRatio,qtcore.Qt.SmoothTransformation)
+		scaledimage=brushimage.scaled(width,height,qtcore.Qt.KeepAspectRatio)
 
 		return scaledimage

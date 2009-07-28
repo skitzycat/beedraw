@@ -131,8 +131,8 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 			# after going off the canvas, this is a quick hack to deal with it
 			if event.pressure()>0:
 				self.cursorMoveEvent(event.x(),event.y(),event.pressure(),event.hiResGlobalX()%1,event.hiResGlobalY()%1)
-			else:
-				self.cursorReleaseEvent(event.x(),event.y())
+			#else:
+			#	self.cursorReleaseEvent(event.x(),event.y())
 		elif event.type()==qtcore.QEvent.TabletPress:
 			self.cursorPressEvent(event.x(),event.y(),event.pressure(),event.hiResGlobalX()%1,event.hiResGlobalY()%1)
 		elif event.type()==qtcore.QEvent.TabletRelease:
@@ -149,14 +149,16 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 
 	# these are called regardless of if a mouse or tablet event was used
 	def cursorPressEvent(self,x,y,pressure=1,subx=0,suby=0):
+		#print "cursorPressEvent:",x,y,pressure
+
+		if self.pendown:
+			return
+		
 		window=BeeApp().master.getWindowById(self.windowid)
 		# if the window has no layers in it's layers list then just return
 		if not window.layers:
 			return
 
-		if self.pendown:
-			window.addPenUpToQueue(x,y)
-		
 		self.setCursor(BeeApp().master.getCurToolDesc().getDownCursor())
 
 		self.pendown=True
@@ -168,7 +170,7 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 	def cursorMoveEvent(self,x,y,pressure=1,subx=0,suby=0):
 		window=BeeApp().master.getWindowById(self.windowid)
 		if self.pendown:
-			#print "cursorMoveEvent at:",x,y,subx,suby
+			#print "cursorMoveEvent:",x,y,pressure
 			x=x+subx
 			y=y+suby
 			x,y=self.viewCoordsToImage(x,y)
@@ -176,6 +178,7 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 			window.addPenMotionToQueue(x,y,pressure,layerkey=window.getCurLayerKey())
 
 	def cursorReleaseEvent(self,x,y,pressure=1,subx=0,suby=0):
+		#print "cursorReleaseEvent:",x,y
 		window=BeeApp().master.getWindowById(self.windowid)
 		if self.pendown:
 			self.setCursor(window.master.getCurToolDesc().getCursor())
