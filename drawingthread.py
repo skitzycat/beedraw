@@ -154,7 +154,8 @@ class DrawingThread(qtcore.QThread):
 			# determine bounding area for event
 			dirtyrect=qtcore.QRect(x,y,image.width(),image.height())
 			dirtyrect=rectIntersectBoundingRect(dirtyrect,layer.image.rect())
-			dirtyrect=rectIntersectBoundingRect(dirtyrect,clippath.boundingRect().toAlignedRect())
+			if clippath:
+				dirtyrect=rectIntersectBoundingRect(dirtyrect,clippath.boundingRect().toAlignedRect())
 
 			# set up history event
 			oldimage=layer.image.copy(dirtyrect)

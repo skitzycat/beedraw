@@ -150,11 +150,6 @@ class EyeDropperToolDesc(AbstractToolDesc):
 		self.layerkey=layerkey
 		return self.getTool(window)
 
-# raw tool, not an actual tool that the user has access to, several other operations will use it for logging, such as cut, paste and logging a paint bucket
-class RawTool(AbstractTool):
-	def __init__(self,options,window):
-		AbstractTool.__init__(self,options,window)
-
 # eye dropper tool (select color from canvas)
 class EyeDropperTool(AbstractTool):
 	def __init__(self,options,window):
@@ -250,11 +245,18 @@ class DrawingTool(AbstractTool):
 		self.makeFullSizedBrush()
 		self.updateBrushForPressure(pressure,x%1,y%1)
 
-		x=math.floor(x)
-		y=math.floor(y)
+		targetx=int(x)-int(self.brushimage.width()/2)+1
+		targety=int(y)-int(self.brushimage.height()/2)+1
+		# if this is an even number then do adjustments for the center if needed
+		if self.brushimage.width()%2==0:
+			print "this is an even sized brush:"
+			if x%1<.5:
+				targetx-=1
+			if y%1<.5:
+				targety-=1
 
-		self.layer.compositeFromCenter(self.brushimage,int(x),int(y),self.compmode,self.clippath)
- 
+		self.layer.compositeFromCorner(self.brushimage,targetx,targety,self.compmode,self.clippath)
+
 	# determine if it's moved far enough that we care
 	def movedFarEnough(self,x,y):
 		if int(x)==int(self.lastpoint[0]) and int(y)==int(self.lastpoint[1]):
@@ -339,8 +341,14 @@ class DrawingTool(AbstractTool):
 			stampx=pointx-left-xradius
 			stampy=pointy-top-yradius
 
-			stampx=int(math.floor(stampx))
-			stampy=int(math.floor(stampy))
+			stampx=int(stampx)
+			stampy=int(stampy)
+
+			if self.brushimage.width()%2==0:
+				if pointx%1<.5:
+					stampx-=1
+				if pointy%1<.5:
+					stampy-=1
 
 			#print "stamping at point:", stampx, stampy
 			#printImage(self.brushimage)
@@ -980,13 +988,51 @@ class SketchTool(DrawingTool):
 		# if the scale is so small it should be at one
 		elif abovebrush[1]!=scale or (abovebrush[0].width()==1 and abovebrush[0].height()==1):
 			s = scale/abovebrush[1]
-			outputimage = self.scaleSinglePixelImage(s, self.singlepixelbrush.pixel(0,0), subpixelx, subpixely)
+			outputimage = self.new_scaleSinglePixelImage(s, self.singlepixelbrush.pixel(0,0), subpixelx, subpixely)
 
 		# got an exact match, so just shift it according to sub-pixels
 		else:
 			outputimage=self.fast_scaleShiftImage(abovebrush, scale, subpixelx, subpixely)
 
 		self.brushimage=outputimage
+
+	def new_scaleSinglePixelImage(self,scale,pixel,subpixelx,subpixely):
+		print "calling new_scaleSinglePixelImage with scale",scale
+		srcwidth=1
+		srcheight=1
+		dstwidth=2
+		dstheight=2
+
+		outputimage=qtgui.QImage(dstwidth,dstheight,qtgui.QImage.Format_ARGB32_Premultiplied)
+
+		if subpixelx > .5:
+			centerx=subpixelx
+		else:
+			centerx=1+subpixelx
+
+		if subpixely > .5:
+			centery=subpixely
+		else:
+			centery=1+subpixely
+
+ 		for y in range(dstheight):
+			for x in range(dstwidth):
+				distance=distance2d(x+.5,y+.5,centerx,centery)
+				opacity=(1-distance)*scale
+
+				if opacity<0:
+					opacity=0
+				if opacity>1:
+					opacity=1
+
+				pixred=int((qtgui.qRed(pixel)*opacity)+.5)
+				pixgreen=int((qtgui.qGreen(pixel)*opacity)+.5)
+				pixblue=int((qtgui.qBlue(pixel)*opacity)+.5)
+				alpha=int((opacity*255)+.5)
+
+				outputimage.setPixel(x,y,qtgui.qRgba(pixred,pixgreen,pixblue,alpha))
+
+		return outputimage
 
 	# do special case calculations for brush of single pixel size
 	def scaleSinglePixelImage(self,scale,pixel,subpixelx,subpixely):
@@ -997,69 +1043,79 @@ class SketchTool(DrawingTool):
 		dstwidth=2
 		dstheight=2
 
+		print "scale for single pixel image scale:", scale
+
 		outputimage=qtgui.QImage(dstwidth,dstheight,qtgui.QImage.Format_ARGB32_Premultiplied)
 
 		a = subpixelx
 		b = subpixely
 
-		a = subpixelx-.5
-		b = subpixely-.5
-
-		if a<0:
-			a=1.+a
-
-		if b<0:
-			b=1.+b
- 
  		for y in range(dstheight):
 			for x in range(dstwidth):
-				if x > 0 and y > 0:
+				if x == 1 and y == 1:
 					topleft=pixel
 				else:
 					topleft=qtgui.qRgba(0,0,0,0)
-				if x > 0 and y < srcheight:
+				if x == 1 and y == 0:
 					bottomleft=pixel
 				else:
 					bottomleft=qtgui.qRgba(0,0,0,0)
-				if x < srcwidth and y > 0:
+				if x == 0 and y == 1:
 					topright=pixel
 				else:
 					topright=qtgui.qRgba(0,0,0,0)
-				if x < srcwidth and y < srcheight:
+				if x == 0 and y == 0:
 					bottomright=pixel
 				else:
 					bottomright=qtgui.qRgba(0,0,0,0)
 
-				red=(a*b*qtgui.qRed(topleft)
+				red=int(a*b*qtgui.qRed(topleft)
 						+ a * (1-b) * qtgui.qRed(bottomleft)
 						+ (1-a) * b * qtgui.qRed(topright)
 						+ (1-a) * (1-b) * qtgui.qRed(bottomright) + .5 )
-				green=(a*b*qtgui.qGreen(topleft)
+				green=int(a*b*qtgui.qGreen(topleft)
 						+ a * (1-b) * qtgui.qGreen(bottomleft)
 						+ (1-a) * b * qtgui.qGreen(topright)
 						+ (1-a) * (1-b) * qtgui.qGreen(bottomright) + .5 )
-				blue=(a*b*qtgui.qBlue(topleft)
+				blue=int(a*b*qtgui.qBlue(topleft)
 						+ a * (1-b) * qtgui.qBlue(bottomleft)
 						+ (1-a) * b * qtgui.qBlue(topright)
 						+ (1-a) * (1-b) * qtgui.qBlue(bottomright) + .5 )
-				alpha=(a*b*qtgui.qAlpha(topleft)
+				alpha=int(a*b*qtgui.qAlpha(topleft)
 						+ a * (1-b) * qtgui.qAlpha(bottomleft)
 						+ (1-a) * b * qtgui.qAlpha(topright)
 						+ (1-a) * (1-b) * qtgui.qAlpha(bottomright) + .5 )
 
 				alpha=int(alpha * scale * scale + .5)
+
 				red=int(red * scale * scale + .5)
 				green=int(green * scale * scale + .5)
 				blue=int(blue * scale * scale + .5)
 
+				if alpha:
+					red/=alpha
+					green/=alpha
+					blue/=alpha
+
 				if red > 255:
 					red=255
+				if red < 0:
+					red=0
+
 				if green > 255:
 					green=255
+				if green < 0:
+					green=0
+
 				if blue > 255:
 					blue=255
+				if blue < 0:
+					blue=0
+
 				if alpha > 255:
 					alpha=255
+				if alpha < 0:
+					alpha=0
 
 				outputimage.setPixel(x,y,qtgui.qRgba(red,green,blue,alpha))
 
@@ -1135,21 +1191,33 @@ class SketchTool(DrawingTool):
 
 				if red > 255:
 					red=255
+				if red < 0:
+					red=0
+
 				if green > 255:
 					green=255
+				if green < 0:
+					green=0
+
 				if blue > 255:
 					blue=255
+				if blue < 0:
+					blue=0
+
 				if alpha > 255:
 					alpha=255
+				if alpha < 0:
+					alpha=0
+
 
 				outputimage.setPixel(x,y,qtgui.qRgba(red,green,blue,alpha))
 
-		fast_image=self.fast_interpolate(image1,image2,t)
-		if outputimage!=fast_image:
-			print "Fast transform not equal"
-			printImage(fast_image)
-			print ""
-			printImage(outputimage)
+		#fast_image=self.fast_interpolate(image1,image2,t)
+		#if outputimage!=fast_image:
+		#	print "Fast transform not equal"
+		#	printImage(fast_image)
+		#	print ""
+		#	printImage(outputimage)
 
 		return outputimage
 
@@ -1187,13 +1255,11 @@ class SketchTool(DrawingTool):
 		height=self.fullsizedbrush.height() * MAXIMUM_SCALE
 
 		while True:
-			#if width >= self.fullsizedbrush.width() and height >= self.fullsizedbrush.height():
-			#	scaledImage=self.scaleImage(self.fullsizedbrush,width,height)
+			if width >= self.fullsizedbrush.width() and height >= self.fullsizedbrush.height():
+				scaledImage=self.scaleImage(self.fullsizedbrush,width,height)
 			# scale down using previous one once below 1:1
-			#else:
-			#	scaledImage=self.scaleImage(scaledImage,width,height)
-
-			scaledImage=self.makeEllipseBrush(width,height)
+			else:
+				scaledImage=self.scaleImage(scaledImage,width,height)
 
 			xscale = float(width) / self.fullsizedbrush.width()
 			yscale = float(height) / self.fullsizedbrush.height()
@@ -1357,11 +1423,6 @@ class SketchTool(DrawingTool):
 		for dsty in range(int(dstheight)):
 			for dstx in range(int(dstwidth)):
 				# distance from x to center of dst image x
-				#distx = dstx - dstcenterx + .5
-				#srcx = (distx * scale) + srccenterx - subpixelx
-
-				#disty = dsty - dstcentery + .5
-				#srcy = (disty * scale) + srccentery - subpixely
 				srcx = (dstx - subpixelx + .5) * xscale
 				srcy = (dsty - subpixely + .5) * yscale
 
@@ -1369,10 +1430,10 @@ class SketchTool(DrawingTool):
 				srcy -= .5
 
 				# simple integer truncation will not be suitable here because it does the wrong thing for negative numbers
-				leftx = int(math.floor(srcx))
+				leftx = int(srcx)
 				xinterp = srcx - leftx
 
-				topy = int(math.floor(srcy))
+				topy = int(srcy)
 				yinterp = srcy - topy
 
 				if leftx >= 0 and leftx < srcwidth and topy >= 0 and topy < srcheight:
@@ -1417,34 +1478,134 @@ class SketchTool(DrawingTool):
 
 				if red > 255:
 					red=255
+				if red < 0:
+					red=0
+
 				if green > 255:
 					green=255
+				if green < 0:
+					green=0
+
 				if blue > 255:
 					blue=255
+				if blue < 0:
+					blue=0
+
 				if alpha > 255:
 					alpha=255
+				if alpha < 0:
+					alpha=0
 
 				dstimage.setPixel(dstx,dsty,qtgui.qRgba(red,green,blue,alpha))
 
-		print "Regular shift:"
-		printImage(dstimage)
-		print "Fast shift:"
-		fastimage=self.fast_scaleShiftImage(srcbrush,scale,subpixelx,subpixely)
-		printImage(fastimage)
+		#print "Regular shift:"
+		#printImage(dstimage)
+		#print "Fast shift:"
+		#fastimage=self.fast_scaleShiftImage(srcbrush,scale,subpixelx,subpixely)
+		#printImage(fastimage)
 		return dstimage
 
-	def scaleImage(self,brushimage,width,height):
-		srcwidth=brushimage.width()
-		srcheight=brushimage.height()
+	def scaleImage(self,srcimage,width,height):
+		srcwidth=srcimage.width()
+		srcheight=srcimage.height()
 
 		if srcwidth==width and srcheight==height:
-			return brushimage
+			return srcimage
 
 		xscale=float(srcwidth)/width
 		yscale=float(srcheight)/height
 
-		#if(xScale > 2 or yScale > 2 or xScale < 1 or yScale < 1)
-		# do this every time for now, I'll make special cases later if needed
-		scaledimage=brushimage.scaled(width,height,qtcore.Qt.KeepAspectRatio)
+		#if xscale > 2 or yscale > 2 or xscale < 1 or yscale < 1 :
+		if True:
+			scaledimage=srcimage.scaled(width,height,qtcore.Qt.IgnoreAspectRatio,qtcore.Qt.SmoothTransformation)
+		else:
+			scaledimage=qtgui.QImage(width,height,qtgui.QImage.Format_ARGB32_Premultiplied)
+			for dsty in range(height):
+				for dstx in range(width):
+					srcx=(dstx+.5) * xscale
+					srcy=(dsty+.5) * yscale
+
+					srcx-=.5
+					srcy-=.5
+
+					leftx=int(srcx)
+					if srcx < 0:
+						leftx-=1
+
+					xinterp = srcx - leftx
+
+					topy=int(srcy)
+
+					if srcy < 0:
+						topy-=1
+
+					yinterp = srcy - topy
+
+					if leftx >= 0 and leftx < srcwidth and topy >= 0 and topy < srcheight:
+						topleft=srcimage.pixel(leftx,topy)
+					else:
+						topleft=qtgui.qRgba(0,0,0,0)
+
+					if leftx >= 0 and leftx < srcwidth and topy+1  >= 0 and topy+1 < srcheight:
+						bottomleft=srcimage.pixel(leftx,topy)
+					else:
+						bottomleft=qtgui.qRgba(0,0,0,0)
+
+					if leftx+1 >= 0 and leftx+1 < srcwidth and topy >= 0 and topy < srcheight:
+						topright=srcimage.pixel(leftx,topy)
+					else:
+						topright=qtgui.qRgba(0,0,0,0)
+
+					if leftx+1 >= 0 and leftx+1 < srcwidth and topy+1 >= 0 and topy+1 < srcheight:
+						bottomright=srcimage.pixel(leftx,topy)
+					else:
+						bottomright=qtgui.qRgba(0,0,0,0)
+
+					a=1-xinterp
+					b=1-yinterp
+
+				red=(a*b*qtgui.qRed(topleft)
+						+ a * (1-b) * qtgui.qRed(bottomleft)
+						+ (1-a) * b * qtgui.qRed(topright)
+						+ (1-a) * (1-b) * qtgui.qRed(bottomright) + .5 )
+				green=(a*b*qtgui.qGreen(topleft)
+						+ a * (1-b) * qtgui.qGreen(bottomleft)
+						+ (1-a) * b * qtgui.qGreen(topright)
+						+ (1-a) * (1-b) *qtgui.qGreen(bottomright) + .5 )
+				blue=(a*b*qtgui.qBlue(topleft)
+						+ a * (1-b) * qtgui.qBlue(bottomleft)
+						+ (1-a) * b * qtgui.qBlue(topright)
+						+ (1-a) * (1-b) * qtgui.qBlue(bottomright) + .5 )
+				alpha=(a*b*qtgui.qAlpha(topleft)
+						+ a * (1-b) * qtgui.qAlpha(bottomleft)
+						+ (1-a) * b * qtgui.qAlpha(topright)
+						+ (1-a) * (1-b) * qtgui.qAlpha(bottomright) + .5 )
+
+				if alpha!=0:
+					red /= alpha
+					green /= alpha
+					blue /= alpha
+
+				if red > 255:
+					red=255
+				if red < 0:
+					red=0
+
+				if green > 255:
+					green=255
+				if green < 0:
+					green=0
+
+				if blue > 255:
+					blue=255
+				if blue < 0:
+					blue=0
+
+				if alpha > 255:
+					alpha=255
+				if alpha < 0:
+					alpha=0
+
+				scaledimage.setPixel(dstx,dsty, qtgui.qRgba(red,green,blue,alpha))
 
 		return scaledimage
