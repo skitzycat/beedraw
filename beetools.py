@@ -247,6 +247,10 @@ class DrawingTool(AbstractTool):
 
 		targetx=int(x)-int(self.brushimage.width()/2)+1
 		targety=int(y)-int(self.brushimage.height()/2)+1
+
+		print "button pressed on pixel:", x,y
+		print "pasting corner on pixel:", targetx,targety
+
 		# if this is an even number then do adjustments for the center if needed
 		if self.brushimage.width()%2==0:
 			print "this is an even sized brush:"
@@ -977,13 +981,13 @@ class SketchTool(DrawingTool):
 		# didn't get an exact match so interpolate between two others
 		if belowbrush:
 			# shift both of the nearby brushes
-			scaledaboveimage=self.fast_scaleShiftImage(abovebrush,scale,subpixelx,subpixely)
-			scaledbelowimage=self.fast_scaleShiftImage(belowbrush,scale,subpixelx,subpixely)
+			scaledaboveimage=self.new_scaleShiftImage(abovebrush,scale,subpixelx,subpixely)
+			scaledbelowimage=self.new_scaleShiftImage(belowbrush,scale,subpixelx,subpixely)
 
 			t = (scale-belowbrush[1])/(abovebrush[1]-belowbrush[1])
 
 			# interpolate between the results, but trust the one that was closer more
-			outputimage = self.fast_interpolate(scaledbelowimage,scaledaboveimage, t)
+			outputimage = self.interpolate(scaledbelowimage,scaledaboveimage, t)
 
 		# if the scale is so small it should be at one
 		elif abovebrush[1]!=scale or (abovebrush[0].width()==1 and abovebrush[0].height()==1):
@@ -992,7 +996,7 @@ class SketchTool(DrawingTool):
 
 		# got an exact match, so just shift it according to sub-pixels
 		else:
-			outputimage=self.fast_scaleShiftImage(abovebrush, scale, subpixelx, subpixely)
+			outputimage=self.new_scaleShiftImage(abovebrush, scale, subpixelx, subpixely)
 
 		self.brushimage=outputimage
 
@@ -1122,7 +1126,7 @@ class SketchTool(DrawingTool):
 		return outputimage
 
 	# optimizied algorithm to interpoloate two images, this pushes the work into Qt functions and saves memory by altering the original images
-	def fast_interpolate(self,image1,image2,t):
+	def interpolate(self,image1,image2,t):
 		if not ( image1.width() == image2.width() and image1.width() == image2.width() ):
 			print "Error: interploate function passed non compatable images"
 			return image1
@@ -1162,64 +1166,6 @@ class SketchTool(DrawingTool):
 		#printImage(image2)
 
 		return image2
-
-	# interpolate between two images that are the exact same size
-	def interpolate(self,image1,image2,t):
-		if not ( image1.width() == image2.width() and image1.width() == image2.width() ):
-			print "Error: interploate function passed non compatable images"
-			return image1
-
-		if t < 0 or t > 1:
-			print "Error: interploate function passed bad t value:", t
-			raise Exception, "interploate passed bad t value"
-			return image1
-
-		width=image1.width()
-		height=image1.height()
-
-		outputimage=qtgui.QImage(width,height,qtgui.QImage.Format_ARGB32_Premultiplied)
-
-		for x in range(width):
-			for y in range(height):
-				image1pixel = image1.pixel(x,y)
-				image2pixel = image2.pixel(x,y)
-
-				red = int((1-t) * qtgui.qRed(image1pixel) + t * qtgui.qRed(image2pixel) + .5 )
-				green = int((1-t) * qtgui.qGreen(image1pixel) + t * qtgui.qGreen(image2pixel) + .5 )
-				blue = int((1-t) * qtgui.qBlue(image1pixel) + t * qtgui.qBlue(image2pixel) + .5 )
-				alpha = int((1-t) * qtgui.qAlpha(image1pixel) + t * qtgui.qAlpha(image2pixel) + .5 )
-
-				if red > 255:
-					red=255
-				if red < 0:
-					red=0
-
-				if green > 255:
-					green=255
-				if green < 0:
-					green=0
-
-				if blue > 255:
-					blue=255
-				if blue < 0:
-					blue=0
-
-				if alpha > 255:
-					alpha=255
-				if alpha < 0:
-					alpha=0
-
-
-				outputimage.setPixel(x,y,qtgui.qRgba(red,green,blue,alpha))
-
-		#fast_image=self.fast_interpolate(image1,image2,t)
-		#if outputimage!=fast_image:
-		#	print "Fast transform not equal"
-		#	printImage(fast_image)
-		#	print ""
-		#	printImage(outputimage)
-
-		return outputimage
 
 	# return single brush that matches scale passed or two brushes that are nearest to that scale
 	def findScaledBrushes(self,scale):
@@ -1267,13 +1213,14 @@ class SketchTool(DrawingTool):
 
 			self.scaledbrushes.append((scaledImage,xscale,yscale))
 
+			# never scale by less than 1/2
+			width = int ((width + 1) / 2)
+			height = int((height + 1) / 2)
+
 			# break after we get to a single pixel brush
 			if width==1 and height==1:
 				break
 
-			# never scale by less than 1/2
-			width = int ((width + 1) / 2)
-			height = int((height + 1) / 2)
 
 	def makeEllipseBrush(self,width,height):
 		fgr=self.fgcolor.red()
@@ -1288,6 +1235,10 @@ class SketchTool(DrawingTool):
 				brushimage.setPixel(i,j,qtgui.qRgba(int(fgr*v),int(fgg*v),int(fgb*v),int(v*255)))
 
 		return brushimage
+
+	def new_ellipseBrushFadeAt(self,x,y,width,height):
+		m_xcentre = width/2.0
+		m_ycentre = height/2.0
 
 	def ellipseBrushFadeAt(self,x,y,width,height):
 		m_xcentre = width/2.0
@@ -1338,8 +1289,30 @@ class SketchTool(DrawingTool):
 		return 1
 
 	# use subpixel adjustments to shift image and scale it too if needed, optimized version that pushes as much calculation into Qt as possible
-	def fast_scaleShiftImage(self,srcbrush,scale,subpixelx,subpixely):
+	def new_scaleShiftImage(self,srcbrush,scale,subpixelx,subpixely):
+		transmatrix=qtgui.QMatrix()
+		transmatrix=transmatrix.scale(scale,scale)
+		transmatrix=transmatrix.translate(subpixelx,subpixely)
 
+		srcimage=srcbrush[0]
+		dstimage=srcimage.transformed(transmatrix,qtcore.Qt.SmoothTransformation)
+
+		truematrix=qtgui.QImage.trueMatrix(transmatrix,srcimage.width(),srcimage.height())
+
+		print "DEBUG: ran new_scaleShiftImage with args:", scale,subpixelx,subpixely
+		print "  on image:"
+		printImage(srcimage)
+		print "  translateion matrix:"
+		print truematrix.m11(), truematrix.m12(), 0
+		print truematrix.m21(), truematrix.m22(), 0
+		print truematrix.dx(), truematrix.dy(), 1
+		print "  result:"
+		printImage(dstimage)
+		print
+		return dstimage
+
+	# use subpixel adjustments to shift image and scale it too if needed, optimized version that pushes as much calculation into Qt as possible
+	def scaleShiftImage(self,srcbrush,scale,subpixelx,subpixely):
 		dstwidthf=scale*self.fullsizedbrush.width()
 		dstheightf=scale*self.fullsizedbrush.height()
 		#print "unrounded dstwidth:", dstwidthf
@@ -1363,12 +1336,8 @@ class SketchTool(DrawingTool):
 		dstleft=xcenter-(xsize/2.0)+subpixelx
 		dsttop=ycenter-(ysize/2.0)+subpixely
 
-		if dstimage.width()%2==0:
-			dstleft+=.5
-			dsttop+=.5
-
-		#print "xcenter:", xcenter
-		#print "ycenter:", ycenter
+		print "xcenter:", xcenter
+		print "ycenter:", ycenter
 
 		#print "xsize:", xsize
 		#print "ysize:", xsize
@@ -1382,130 +1351,27 @@ class SketchTool(DrawingTool):
 		painter=qtgui.QPainter()
 		painter.begin(dstimage)
 		#painter.setRenderHint(qtgui.QPainter.Antialiasing)
+		#painter.setRenderHint(qtgui.QPainter.TextAntialiasing)
 		#painter.setRenderHint(qtgui.QPainter.HighQualityAntialiasing)
-		#painter.setRenderHint(qtgui.QPainter.SmoothPixmapTransform)
-		painter.drawImage(dstrect,srcimage,srcrect)
+		painter.setRenderHint(qtgui.QPainter.SmoothPixmapTransform)
+		painter.drawPixmap(dstrect,srcimage,srcrect)
 		painter.end()
 
 		#print "scaled image:"
 		#printImage(dstimage)
 
-		return dstimage
+		print "DEBUG: ran scaleShiftImage with args:", scale,subpixelx,subpixely
+		print "  on image:"
+		printImage(srcimage)
+		print "  to target",rectToTuple(dstrect)
+		print "  result:"
+		printImage(dstimage)
+		print
 
-	# use subpixel adjustments to shift image and scale it too if needed
-	def scaleShiftImage(self,srcbrush,scale,subpixelx,subpixely):
-		#print "scaleShiftImage called with subpixels:", subpixelx, subpixely
-		#print "scaleShiftImage called with scale:", scale
-		# add one pixel for subpixel adjustments
-		dstwidth=math.ceil(scale*self.fullsizedbrush.width())+1
-		dstheight=math.ceil(scale*self.fullsizedbrush.height())+1
-
-		dstimage=qtgui.QImage(dstwidth,dstheight,qtgui.QImage.Format_ARGB32_Premultiplied)
-
-		srcimage=srcbrush[0]
-		#print "performing scale and shift on image:"
-		#printImage(srcimage)
-
-		xscale=srcbrush[1]/scale
-		yscale=srcbrush[2]/scale
-
-		#print "xscale, yscale:",xscale,yscale
-
-		srcwidth=srcimage.width()
-		srcheight=srcimage.height()
-
-		srccenterx=srcwidth/2.
-		srccentery=srcheight/2.
-
-		dstcenterx=dstwidth/2.
-		dstcentery=dstheight/2.
-
-		for dsty in range(int(dstheight)):
-			for dstx in range(int(dstwidth)):
-				# distance from x to center of dst image x
-				srcx = (dstx - subpixelx + .5) * xscale
-				srcy = (dsty - subpixely + .5) * yscale
-
-				srcx -= .5
-				srcy -= .5
-
-				# simple integer truncation will not be suitable here because it does the wrong thing for negative numbers
-				leftx = int(srcx)
-				xinterp = srcx - leftx
-
-				topy = int(srcy)
-				yinterp = srcy - topy
-
-				if leftx >= 0 and leftx < srcwidth and topy >= 0 and topy < srcheight:
-					topleft = srcimage.pixel(leftx,topy)
-				else:
-					topleft = qtgui.qRgba(0,0,0,0)
-
-				if leftx >= 0 and leftx < srcwidth and topy + 1 >= 0 and topy + 1 < srcheight:
-					bottomleft = srcimage.pixel(leftx,topy+1)
-				else:
-					bottomleft = qtgui.qRgba(0,0,0,0)
-
-				if leftx + 1 >= 0 and leftx + 1 < srcwidth and topy >= 0 and topy < srcheight:
-					topright = srcimage.pixel(leftx+1,topy)
-				else:
-					topright = qtgui.qRgba(0,0,0,0)
-
-				if leftx + 1 >= 0 and leftx + 1 < srcwidth and topy + 1 >= 0 and topy + 1 < srcheight:
-					bottomright = srcimage.pixel(leftx+1,topy+1)
-				else:
-					bottomright = qtgui.qRgba(0,0,0,0)
-
-				a = 1.-xinterp
-				b = 1.-yinterp
-
-				red=(a*b*qtgui.qRed(topleft)
-						+ a * (1-b) * qtgui.qRed(bottomleft)
-						+ (1-a) * b * qtgui.qRed(topright)
-						+ (1-a) * (1-b) * qtgui.qRed(bottomright) + .5 )
-				green=(a*b*qtgui.qGreen(topleft)
-						+ a * (1-b) * qtgui.qGreen(bottomleft)
-						+ (1-a) * b * qtgui.qGreen(topright)
-						+ (1-a) * (1-b) *qtgui.qGreen(bottomright) + .5 )
-				blue=(a*b*qtgui.qBlue(topleft)
-						+ a * (1-b) * qtgui.qBlue(bottomleft)
-						+ (1-a) * b * qtgui.qBlue(topright)
-						+ (1-a) * (1-b) * qtgui.qBlue(bottomright) + .5 )
-				alpha=(a*b*qtgui.qAlpha(topleft)
-						+ a * (1-b) * qtgui.qAlpha(bottomleft)
-						+ (1-a) * b * qtgui.qAlpha(topright)
-						+ (1-a) * (1-b) * qtgui.qAlpha(bottomright) + .5 )
-
-				if red > 255:
-					red=255
-				if red < 0:
-					red=0
-
-				if green > 255:
-					green=255
-				if green < 0:
-					green=0
-
-				if blue > 255:
-					blue=255
-				if blue < 0:
-					blue=0
-
-				if alpha > 255:
-					alpha=255
-				if alpha < 0:
-					alpha=0
-
-				dstimage.setPixel(dstx,dsty,qtgui.qRgba(red,green,blue,alpha))
-
-		#print "Regular shift:"
-		#printImage(dstimage)
-		#print "Fast shift:"
-		#fastimage=self.fast_scaleShiftImage(srcbrush,scale,subpixelx,subpixely)
-		#printImage(fastimage)
 		return dstimage
 
 	def scaleImage(self,srcimage,width,height):
+
 		srcwidth=srcimage.width()
 		srcheight=srcimage.height()
 
@@ -1516,8 +1382,8 @@ class SketchTool(DrawingTool):
 		yscale=float(srcheight)/height
 
 		#if xscale > 2 or yscale > 2 or xscale < 1 or yscale < 1 :
-		if True:
-			scaledimage=srcimage.scaled(width,height,qtcore.Qt.IgnoreAspectRatio,qtcore.Qt.SmoothTransformation)
+		if False:
+			scaledimage=srcimage.scaled(width,height,qtcore.Qt.IgnoreAspectRatio,qtcore.Qt.FastTransformation)
 		else:
 			scaledimage=qtgui.QImage(width,height,qtgui.QImage.Format_ARGB32_Premultiplied)
 			for dsty in range(height):
@@ -1547,65 +1413,66 @@ class SketchTool(DrawingTool):
 						topleft=qtgui.qRgba(0,0,0,0)
 
 					if leftx >= 0 and leftx < srcwidth and topy+1  >= 0 and topy+1 < srcheight:
-						bottomleft=srcimage.pixel(leftx,topy)
+						bottomleft=srcimage.pixel(leftx,topy+1)
 					else:
 						bottomleft=qtgui.qRgba(0,0,0,0)
 
 					if leftx+1 >= 0 and leftx+1 < srcwidth and topy >= 0 and topy < srcheight:
-						topright=srcimage.pixel(leftx,topy)
+						topright=srcimage.pixel(leftx+1,topy)
 					else:
 						topright=qtgui.qRgba(0,0,0,0)
 
 					if leftx+1 >= 0 and leftx+1 < srcwidth and topy+1 >= 0 and topy+1 < srcheight:
-						bottomright=srcimage.pixel(leftx,topy)
+						bottomright=srcimage.pixel(leftx+1,topy+1)
 					else:
 						bottomright=qtgui.qRgba(0,0,0,0)
 
 					a=1-xinterp
 					b=1-yinterp
 
-				red=(a*b*qtgui.qRed(topleft)
+					red=int(a*b*qtgui.qRed(topleft)
 						+ a * (1-b) * qtgui.qRed(bottomleft)
 						+ (1-a) * b * qtgui.qRed(topright)
 						+ (1-a) * (1-b) * qtgui.qRed(bottomright) + .5 )
-				green=(a*b*qtgui.qGreen(topleft)
+					green=int(a*b*qtgui.qGreen(topleft)
 						+ a * (1-b) * qtgui.qGreen(bottomleft)
 						+ (1-a) * b * qtgui.qGreen(topright)
 						+ (1-a) * (1-b) *qtgui.qGreen(bottomright) + .5 )
-				blue=(a*b*qtgui.qBlue(topleft)
+					blue=int(a*b*qtgui.qBlue(topleft)
 						+ a * (1-b) * qtgui.qBlue(bottomleft)
 						+ (1-a) * b * qtgui.qBlue(topright)
 						+ (1-a) * (1-b) * qtgui.qBlue(bottomright) + .5 )
-				alpha=(a*b*qtgui.qAlpha(topleft)
+					alpha=int(a*b*qtgui.qAlpha(topleft)
 						+ a * (1-b) * qtgui.qAlpha(bottomleft)
 						+ (1-a) * b * qtgui.qAlpha(topright)
 						+ (1-a) * (1-b) * qtgui.qAlpha(bottomright) + .5 )
 
-				if alpha!=0:
-					red /= alpha
-					green /= alpha
-					blue /= alpha
+					if alpha!=0:
+						red /= alpha
+						green /= alpha
+						blue /= alpha
 
-				if red > 255:
-					red=255
-				if red < 0:
-					red=0
 
-				if green > 255:
-					green=255
-				if green < 0:
-					green=0
+					if red > 255:
+						red=255
+					if red < 0:
+						red=0
 
-				if blue > 255:
-					blue=255
-				if blue < 0:
-					blue=0
+					if green > 255:
+						green=255
+					if green < 0:
+						green=0
 
-				if alpha > 255:
-					alpha=255
-				if alpha < 0:
-					alpha=0
+					if blue > 255:
+						blue=255
+					if blue < 0:
+						blue=0
 
-				scaledimage.setPixel(dstx,dsty, qtgui.qRgba(red,green,blue,alpha))
+					if alpha > 255:
+						alpha=255
+					if alpha < 0:
+						alpha=0
+
+					scaledimage.setPixel(dstx,dsty,qtgui.qRgba(red,green,blue,alpha))
 
 		return scaledimage
