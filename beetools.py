@@ -1290,26 +1290,26 @@ class SketchTool(DrawingTool):
 
 	# use subpixel adjustments to shift image and scale it too if needed, optimized version that pushes as much calculation into Qt as possible
 	def new_scaleShiftImage(self,srcbrush,scale,subpixelx,subpixely):
-		transmatrix=qtgui.QMatrix()
-		transmatrix=transmatrix.scale(scale,scale)
-		transmatrix=transmatrix.translate(subpixelx,subpixely)
+		dstwidthf=scale*self.fullsizedbrush.width()
+		dstheightf=scale*self.fullsizedbrush.height()
+		#print "unrounded dstwidth:", dstwidthf
+
+		dstwidth=math.ceil(dstwidthf)+1
+		dstheight=math.ceil(dstheightf)+1
 
 		srcimage=srcbrush[0]
-		dstimage=srcimage.transformed(transmatrix,qtcore.Qt.SmoothTransformation)
+		# convert old image to numpy array
+		oldarray=qimage2numpy(srcimage)
 
-		truematrix=qtgui.QImage.trueMatrix(transmatrix,srcimage.width(),srcimage.height())
+		newarray=numpy.zeros((dstwidth,dstheight,4),dtype=numpy.int8)
 
-		print "DEBUG: ran new_scaleShiftImage with args:", scale,subpixelx,subpixely
-		print "  on image:"
-		printImage(srcimage)
-		print "  translateion matrix:"
-		print truematrix.m11(), truematrix.m12(), 0
-		print truematrix.m21(), truematrix.m22(), 0
-		print truematrix.dx(), truematrix.dy(), 1
-		print "  result:"
-		printImage(dstimage)
-		print
-		return dstimage
+		print "Old array"
+		print oldarray
+		print "New array"
+		print newarray
+
+		# make new array with size one bigger
+		return srcimage
 
 	# use subpixel adjustments to shift image and scale it too if needed, optimized version that pushes as much calculation into Qt as possible
 	def scaleShiftImage(self,srcbrush,scale,subpixelx,subpixely):
