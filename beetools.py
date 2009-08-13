@@ -29,6 +29,14 @@ from PaintBucketOptionsDialogUi import *
 
 from beeapp import BeeApp
  
+try:
+	import NumPy as numpy
+except:
+	try:
+		import numpy
+	except:
+		import Numeric as numpy
+
 # Class to manage tools and make instances as needed
 class BeeToolBox:
 	def __init__(self):
@@ -1235,10 +1243,6 @@ class SketchTool(DrawingTool):
 				brushimage.setPixel(i,j,qtgui.qRgba(int(fgr*v),int(fgg*v),int(fgb*v),int(v*255)))
 
 		return brushimage
-
-	def new_ellipseBrushFadeAt(self,x,y,width,height):
-		m_xcentre = width/2.0
-		m_ycentre = height/2.0
 
 	def ellipseBrushFadeAt(self,x,y,width,height):
 		m_xcentre = width/2.0
