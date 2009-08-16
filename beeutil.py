@@ -20,6 +20,7 @@ import PyQt4.QtCore as qtcore
 import PyQt4.QtNetwork as qtnet
 
 from PIL import ImageQt
+import Image
 
 from beeglobals import *
 import math
@@ -270,3 +271,21 @@ def print_debug(s):
 # convert from PIL to QImage
 def PILtoQImage(im):
 	return ImageQt.ImageQt(im)
+
+def printPILImage(im):
+	printImage(PILtoQImage(im))
+
+# scale a PIL image, the dx and dy values should only be between 0 and 1
+# xscale and yscale should be between 2 and .5, because that is the only range in which billenar interpolation looks good
+def scaleShiftPIL(im,dx,dy,newsizex,newsizey,xscale,yscale):
+	print "calling scaleShiftPIL with args:", dx,dy,newsizex,newsizey,xscale,yscale
+	print "on image:"
+	printPILImage(im)
+	newim=im.transform((newsizex,newsizey),Image.AFFINE,(1/xscale,0,(.5-dx)/xscale,0,1/yscale,(.5-dy)/yscale),Image.BILINEAR)
+	print "producing image:"
+	printPILImage(newim)
+	return newim
+
+def translatePoint(x,y,trans):
+	a,b,c,d,e,f=trans
+	return ( (a*x) + (b*y) + c, (d*x) + (e*y) + f )

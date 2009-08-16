@@ -21,6 +21,7 @@ import math
 from beeutil import *
 from beetypes import *
 from beeeventstack import *
+from ImageQt import ImageQt
  
 from PencilOptionsDialogUi import *
 from BrushOptionsDialogUi import *
@@ -253,8 +254,8 @@ class DrawingTool(AbstractTool):
 		self.makeFullSizedBrush()
 		self.updateBrushForPressure(pressure,x%1,y%1)
 
-		targetx=int(x)-int(self.brushimage.width()/2)+1
-		targety=int(y)-int(self.brushimage.height()/2)+1
+		targetx=int(x)-int(self.brushimage.width()/2)
+		targety=int(y)-int(self.brushimage.height()/2)
 
 		print "button pressed on pixel:", x,y
 		print "pasting corner on pixel:", targetx,targety
@@ -262,10 +263,10 @@ class DrawingTool(AbstractTool):
 		# if this is an even number then do adjustments for the center if needed
 		if self.brushimage.width()%2==0:
 			print "this is an even sized brush:"
-			if x%1<.5:
-				targetx-=1
-			if y%1<.5:
-				targety-=1
+			if x%1>.5:
+				targetx+=1
+			if y%1>.5:
+				targety+=1
 
 		self.layer.compositeFromCorner(self.brushimage,targetx,targety,self.compmode,self.clippath)
 
@@ -277,6 +278,9 @@ class DrawingTool(AbstractTool):
 
 	def scaleForPressure(self,pressure):
 		return pressure
+
+	def getFullSizedBrushWidth(self):
+		return self.fullsizedbrush.width()
 
 	def penMotion(self,x,y,pressure):
 		#print "pen motion point:", x, y
@@ -304,7 +308,7 @@ class DrawingTool(AbstractTool):
 
 		# figure out the maximum radius the brush will have
 		maxscale=self.scaleForPressure(maxpressure)
-		maxradius=int(math.ceil(self.fullsizedbrush.width()*maxscale/2.0))
+		maxradius=int(math.ceil(self.getFullSizedBrushWidth()/2.0))
 
 		#print "maxradius:", maxradius
 		#print "path:", path
@@ -976,21 +980,27 @@ class SketchTool(DrawingTool):
 
 	def updateBrushForPressure(self,pressure,subpixelx=0,subpixely=0):
 		self.lastpressure=pressure
-		#print "updating brush for pressure/subpixels:", pressure, subpixelx, subpixely
+		print "updating brush for pressure/subpixels:", pressure, subpixelx, subpixely
 		scale=self.scaleForPressure(pressure)
+
+		fullwidth,fullheight=self.fullsizedbrush.size
+		targetwidth=int(math.ceil(fullwidth*scale))+1
+		targetheight=int(math.ceil(fullheight*scale))+1
+
+		# if the target size is an even number
+		if targetwidth%2==0:
+			subpixelx=(subpixelx+.5)%1
+		if targetheight%2==0:
+			subpixely=(subpixely+.5)%1
 
 		# try to find exact or closest brushes to scale
 		abovebrush, belowbrush = self.findScaledBrushes(scale)
 
-		# TEMPORARY code for testing
-		#self.brushimage=abovebrush[0]
-		#return
-
 		# didn't get an exact match so interpolate between two others
 		if belowbrush:
 			# shift both of the nearby brushes
-			scaledaboveimage=self.new_scaleShiftImage(abovebrush,scale,subpixelx,subpixely)
-			scaledbelowimage=self.new_scaleShiftImage(belowbrush,scale,subpixelx,subpixely)
+			scaledaboveimage=self.scaleShiftImage(abovebrush,scale,subpixelx,subpixely,targetwidth,targetheight)
+			scaledbelowimage=self.scaleShiftImage(belowbrush,scale,subpixelx,subpixely,targetwidth,targetheight)
 
 			t = (scale-belowbrush[1])/(abovebrush[1]-belowbrush[1])
 
@@ -998,151 +1008,45 @@ class SketchTool(DrawingTool):
 			outputimage = self.interpolate(scaledbelowimage,scaledaboveimage, t)
 
 		# if the scale is so small it should be at one
-		elif abovebrush[1]!=scale or (abovebrush[0].width()==1 and abovebrush[0].height()==1):
+		elif abovebrush[1]!=scale or (abovebrush[0].size[0]==1 and abovebrush[0].size[1]==1):
 			s = scale/abovebrush[1]
-			outputimage = self.new_scaleSinglePixelImage(s, self.singlepixelbrush.pixel(0,0), subpixelx, subpixely)
+			outputimage = self.scaleSinglePixelImage(s, self.singlepixelbrush, subpixelx, subpixely)
 
 		# got an exact match, so just shift it according to sub-pixels
 		else:
-			outputimage=self.new_scaleShiftImage(abovebrush, scale, subpixelx, subpixely)
+			outputimage=self.scaleShiftImage(abovebrush, scale, subpixelx, subpixely,targetwidth,targetheight)
 
-		self.brushimage=outputimage
-
-	def new_scaleSinglePixelImage(self,scale,pixel,subpixelx,subpixely):
-		print "calling new_scaleSinglePixelImage with scale",scale
-		srcwidth=1
-		srcheight=1
-		dstwidth=2
-		dstheight=2
-
-		outputimage=qtgui.QImage(dstwidth,dstheight,qtgui.QImage.Format_ARGB32_Premultiplied)
-
-		if subpixelx > .5:
-			centerx=subpixelx
-		else:
-			centerx=1+subpixelx
-
-		if subpixely > .5:
-			centery=subpixely
-		else:
-			centery=1+subpixely
-
- 		for y in range(dstheight):
-			for x in range(dstwidth):
-				distance=distance2d(x+.5,y+.5,centerx,centery)
-				opacity=(1-distance)*scale
-
-				if opacity<0:
-					opacity=0
-				if opacity>1:
-					opacity=1
-
-				pixred=int((qtgui.qRed(pixel)*opacity)+.5)
-				pixgreen=int((qtgui.qGreen(pixel)*opacity)+.5)
-				pixblue=int((qtgui.qBlue(pixel)*opacity)+.5)
-				alpha=int((opacity*255)+.5)
-
-				outputimage.setPixel(x,y,qtgui.qRgba(pixred,pixgreen,pixblue,alpha))
-
-		return outputimage
+		qimage=ImageQt(outputimage)
+		print "output image format:", qimage.format()
+		qimage.convertToFormat(qtgui.QImage.Format_ARGB32_Premultiplied)
+		self.brushimage=qimage
 
 	# do special case calculations for brush of single pixel size
 	def scaleSinglePixelImage(self,scale,pixel,subpixelx,subpixely):
-		#print "calling scaleSinglePixelImage with subpixels:",subpixelx,subpixely
-		#print "calling scaleSinglePixelImage with scale",scale
-		srcwidth=1
-		srcheight=1
-		dstwidth=2
-		dstheight=2
+		print "calling scaleSinglePixelImage with subpixels:",subpixelx,subpixely
+		print "calling scaleSinglePixelImage with scale",scale
+		print "single pixel image:"
+		printPILImage(pixel)
 
-		print "scale for single pixel image scale:", scale
+		outputimage=scaleShiftPIL(pixel,subpixelx,subpixely,2,2,scale,scale)
 
-		outputimage=qtgui.QImage(dstwidth,dstheight,qtgui.QImage.Format_ARGB32_Premultiplied)
-
-		a = subpixelx
-		b = subpixely
-
- 		for y in range(dstheight):
-			for x in range(dstwidth):
-				if x == 1 and y == 1:
-					topleft=pixel
-				else:
-					topleft=qtgui.qRgba(0,0,0,0)
-				if x == 1 and y == 0:
-					bottomleft=pixel
-				else:
-					bottomleft=qtgui.qRgba(0,0,0,0)
-				if x == 0 and y == 1:
-					topright=pixel
-				else:
-					topright=qtgui.qRgba(0,0,0,0)
-				if x == 0 and y == 0:
-					bottomright=pixel
-				else:
-					bottomright=qtgui.qRgba(0,0,0,0)
-
-				red=int(a*b*qtgui.qRed(topleft)
-						+ a * (1-b) * qtgui.qRed(bottomleft)
-						+ (1-a) * b * qtgui.qRed(topright)
-						+ (1-a) * (1-b) * qtgui.qRed(bottomright) + .5 )
-				green=int(a*b*qtgui.qGreen(topleft)
-						+ a * (1-b) * qtgui.qGreen(bottomleft)
-						+ (1-a) * b * qtgui.qGreen(topright)
-						+ (1-a) * (1-b) * qtgui.qGreen(bottomright) + .5 )
-				blue=int(a*b*qtgui.qBlue(topleft)
-						+ a * (1-b) * qtgui.qBlue(bottomleft)
-						+ (1-a) * b * qtgui.qBlue(topright)
-						+ (1-a) * (1-b) * qtgui.qBlue(bottomright) + .5 )
-				alpha=int(a*b*qtgui.qAlpha(topleft)
-						+ a * (1-b) * qtgui.qAlpha(bottomleft)
-						+ (1-a) * b * qtgui.qAlpha(topright)
-						+ (1-a) * (1-b) * qtgui.qAlpha(bottomright) + .5 )
-
-				alpha=int(alpha * scale * scale + .5)
-
-				red=int(red * scale * scale + .5)
-				green=int(green * scale * scale + .5)
-				blue=int(blue * scale * scale + .5)
-
-				if alpha:
-					red/=alpha
-					green/=alpha
-					blue/=alpha
-
-				if red > 255:
-					red=255
-				if red < 0:
-					red=0
-
-				if green > 255:
-					green=255
-				if green < 0:
-					green=0
-
-				if blue > 255:
-					blue=255
-				if blue < 0:
-					blue=0
-
-				if alpha > 255:
-					alpha=255
-				if alpha < 0:
-					alpha=0
-
-				outputimage.setPixel(x,y,qtgui.qRgba(red,green,blue,alpha))
+		print "Scaled single pixel brush:"
+		printPILImage(outputimage)
 
 		return outputimage
 
 	# optimizied algorithm to interpoloate two images, this pushes the work into Qt functions and saves memory by altering the original images
 	def interpolate(self,image1,image2,t):
-		if not ( image1.width() == image2.width() and image1.width() == image2.width() ):
+		if not ( image1.size[0] == image2.size[0] and image1.size[1] == image2.size[1] ):
 			print "Error: interploate function passed non compatable images"
 			return image1
 
 		if t < 0 or t > 1:
 			print  "Error: interploate function passed bad t value:", t
-			raise Exception, "interploate passed bad t value"
 			return image1
+
+		mask=Image.new("L",image1.size,int(round(t*255)))
+		return Image.composite(image2,image1,mask)
 
 		width=image1.width()
 		height=image1.height()
@@ -1189,7 +1093,6 @@ class SketchTool(DrawingTool):
 		# if we get to the end just return the last one
 		return (current,None)
 
-
 	# make full sized brush and list of pre-scaled brushes
 	def makeFullSizedBrush(self):
 		# only support one brush shape right now
@@ -1198,285 +1101,95 @@ class SketchTool(DrawingTool):
 
 		self.makeScaledBrushes()
 
-		self.singlepixelbrush=qtgui.QImage(1,1,qtgui.QImage.Format_ARGB32_Premultiplied)
-		self.singlepixelbrush.setPixel(0,0,self.fgcolor.rgba())
+		self.singlepixelbrush=self.scaledbrushes[-1][0]
 
 	# make list of pre-scaled brushes
 	def makeScaledBrushes(self):
 		self.scaledbrushes=[]
 
-		width=self.fullsizedbrush.width() * MAXIMUM_SCALE
-		height=self.fullsizedbrush.height() * MAXIMUM_SCALE
+		width,height=self.fullsizedbrush.size
+		fullwidth,fullheight=self.fullsizedbrush.size
 
 		while True:
-			if width >= self.fullsizedbrush.width() and height >= self.fullsizedbrush.height():
+			if width >= fullwidth and height >= fullheight:
 				scaledImage=self.scaleImage(self.fullsizedbrush,width,height)
 			# scale down using previous one once below 1:1
 			else:
 				scaledImage=self.scaleImage(scaledImage,width,height)
 
-			xscale = float(width) / self.fullsizedbrush.width()
-			yscale = float(height) / self.fullsizedbrush.height()
+			xscale = float(width) / fullwidth
+			yscale = float(height) / fullheight
 			scale=xscale
 
 			self.scaledbrushes.append((scaledImage,xscale,yscale))
-
-			# never scale by less than 1/2
-			width = int ((width + 1) / 2)
-			height = int((height + 1) / 2)
 
 			# break after we get to a single pixel brush
 			if width==1 and height==1:
 				break
 
+			# never scale by less than 1/2
+			width = int ((width + 1) / 2)
+			height = int((height + 1) / 2)
+
+		print "List of scaled brushes"
+		for brush in self.scaledbrushes:
+			print "brush scale: ", brush[1]
+			printPILImage(brush[0])
+			
 
 	def makeEllipseBrush(self,width,height):
 		fgr=self.fgcolor.red()
 		fgg=self.fgcolor.green()
 		fgb=self.fgcolor.blue()
 
-		brushimage=qtgui.QImage(width,height,qtgui.QImage.Format_ARGB32_Premultiplied)
+		imgwidth=int(math.ceil(width))
+		imgheight=int(math.ceil(height))
+
+		brushimage=Image.new("RGBA",(imgwidth,imgheight),(0,0,0,0))
+
+		# create raw access object for faster pixel setting
+		pix=brushimage.load()
 
 		for i in range(width):
 			for j in range(height):
 				v=self.ellipseBrushFadeAt(i,j,width,height)
-				brushimage.setPixel(i,j,qtgui.qRgba(int(fgr*v),int(fgg*v),int(fgb*v),int(v*255)))
+				if v>0:
+					pix[i,j]=(fgr,fgg,fgb,v)
 
 		return brushimage
 
 	def ellipseBrushFadeAt(self,x,y,width,height):
-		m_xcentre = width/2.0
-		m_ycentre = height/2.0
-		m_xcoef = 2.0/width
-		m_ycoef = 2.0/height
+		radius=width/2.
 
-		if self.options["fade horizontal"] == 0:
-			m_xfadecoef = 1.0
-		else:
-			m_xfadecoef = 1.0 / self.options["fade horizontal"] 
+		centerx=math.ceil(width)/2.
+		centery=math.ceil(height)/2.
 
-		if self.options["fade vertical"] == 0:
-			m_yfadecoef = 1.0
-		else:
-			m_yfadecoef = 1.0 / self.options["fade vertical"] 
+		distance=math.sqrt(((x+.5-centerx)**2)+((y+.5-centery)**2))
 
-		xr = (x - m_xcentre) + .5
-		yr = (y - m_ycentre) + .5
-
-		n = norme(xr*m_xcoef,yr*m_ycoef)
-
-		# case 1:
-		if n > 1:
+		if distance>radius:
 			return 0
 
-		# case 2:
-		normefade = norme(xr * m_xfadecoef, yr * m_yfadecoef)
-		if normefade > 1:
-			if xr == 0:
-				xle = 0
-				if yr > 0:
-					yle=1.0/m_ycoef
-				else:
-					yle=-1.0/m_ycoef
+		if distance<radius-1:
+			return 255
 
-			else:
-				c = yr / float(xr)
-				xle = math.sqrt(1. / norme(m_xcoef, c * m_ycoef ))
-				if xr <= 0:
-					xle = -xle
-				yle = xle*c
+		return int(255*(radius-distance))
 
-				normefadelimite = norme(xle * m_xfadecoef, yle * m_yfadecoef)
-				return 1.-(normefade - 1) / (normefadelimite - 1 )
-
-		# case 3
-		return 1
-
-	# use subpixel adjustments to shift image and scale it too if needed, optimized version that pushes as much calculation into Qt as possible
-	def new_scaleShiftImage(self,srcbrush,scale,subpixelx,subpixely):
-		dstwidthf=scale*self.fullsizedbrush.width()
-		dstheightf=scale*self.fullsizedbrush.height()
-		#print "unrounded dstwidth:", dstwidthf
-
-		dstwidth=math.ceil(dstwidthf)+1
-		dstheight=math.ceil(dstheightf)+1
-
-		srcimage=srcbrush[0]
-		# convert old image to numpy array
-		oldarray=qimage2numpy(srcimage)
-
-		newarray=numpy.zeros((dstwidth,dstheight,4),dtype=numpy.int8)
-
-		print "Old array"
-		print oldarray
-		print "New array"
-		print newarray
-
-		# make new array with size one bigger
-		return srcimage
-
-	# use subpixel adjustments to shift image and scale it too if needed, optimized version that pushes as much calculation into Qt as possible
-	def scaleShiftImage(self,srcbrush,scale,subpixelx,subpixely):
-		dstwidthf=scale*self.fullsizedbrush.width()
-		dstheightf=scale*self.fullsizedbrush.height()
-		#print "unrounded dstwidth:", dstwidthf
-
-		dstwidth=math.ceil(dstwidthf)+1
-		dstheight=math.ceil(dstheightf)+1
-
-		dstimage=qtgui.QImage(dstwidth,dstheight,qtgui.QImage.Format_ARGB32_Premultiplied)
-		dstimage.fill(0)
-
-		srcimage=srcbrush[0]
-		#print "performing scale and shift on image:"
-		#printImage(srcimage)
-
-		xcenter=(dstimage.width()/2.0)-.5
-		ycenter=(dstimage.height()/2.0)-.5
-
-		xsize=self.fullsizedbrush.width()*scale
-		ysize=self.fullsizedbrush.height()*scale
-
-		dstleft=xcenter-(xsize/2.0)+subpixelx
-		dsttop=ycenter-(ysize/2.0)+subpixely
-
-		print "xcenter:", xcenter
-		print "ycenter:", ycenter
-
-		#print "xsize:", xsize
-		#print "ysize:", xsize
-
-		dstrect=qtcore.QRectF(dstleft,dsttop,xsize,ysize)
-		srcrect=qtcore.QRectF(srcimage.rect())
-		#print "destination image of size:", dstwidth, dstheight
-		#print "destination rect:", rectToTuple(dstrect)
-		#print "source rect:", rectToTuple(srcrect)
-
-		painter=qtgui.QPainter()
-		painter.begin(dstimage)
-		#painter.setRenderHint(qtgui.QPainter.Antialiasing)
-		#painter.setRenderHint(qtgui.QPainter.TextAntialiasing)
-		#painter.setRenderHint(qtgui.QPainter.HighQualityAntialiasing)
-		painter.setRenderHint(qtgui.QPainter.SmoothPixmapTransform)
-		painter.drawPixmap(dstrect,srcimage,srcrect)
-		painter.end()
-
-		#print "scaled image:"
-		#printImage(dstimage)
-
-		print "DEBUG: ran scaleShiftImage with args:", scale,subpixelx,subpixely
-		print "  on image:"
-		printImage(srcimage)
-		print "  to target",rectToTuple(dstrect)
-		print "  result:"
-		printImage(dstimage)
-		print
-
-		return dstimage
+	# use subpixel adjustments to shift image and scale it too if needed
+	def scaleShiftImage(self,srcbrush,fullscale,subpixelx,subpixely,targetwidth,targetheight):
+		scale=srcbrush[1]/fullscale
+		return scaleShiftPIL(srcbrush[0],subpixelx,subpixely,targetwidth,targetheight,scale,scale)
 
 	def scaleImage(self,srcimage,width,height):
 
-		srcwidth=srcimage.width()
-		srcheight=srcimage.height()
+		srcwidth,srcheight=srcimage.size
 
 		if srcwidth==width and srcheight==height:
 			return srcimage
 
-		xscale=float(srcwidth)/width
-		yscale=float(srcheight)/height
+		xscale=width/float(srcwidth)
+		yscale=height/float(srcheight)
 
-		#if xscale > 2 or yscale > 2 or xscale < 1 or yscale < 1 :
-		if False:
-			scaledimage=srcimage.scaled(width,height,qtcore.Qt.IgnoreAspectRatio,qtcore.Qt.FastTransformation)
-		else:
-			scaledimage=qtgui.QImage(width,height,qtgui.QImage.Format_ARGB32_Premultiplied)
-			for dsty in range(height):
-				for dstx in range(width):
-					srcx=(dstx+.5) * xscale
-					srcy=(dsty+.5) * yscale
+		return scaleShiftPIL(srcimage,0,0,width,height,xscale,yscale)
 
-					srcx-=.5
-					srcy-=.5
-
-					leftx=int(srcx)
-					if srcx < 0:
-						leftx-=1
-
-					xinterp = srcx - leftx
-
-					topy=int(srcy)
-
-					if srcy < 0:
-						topy-=1
-
-					yinterp = srcy - topy
-
-					if leftx >= 0 and leftx < srcwidth and topy >= 0 and topy < srcheight:
-						topleft=srcimage.pixel(leftx,topy)
-					else:
-						topleft=qtgui.qRgba(0,0,0,0)
-
-					if leftx >= 0 and leftx < srcwidth and topy+1  >= 0 and topy+1 < srcheight:
-						bottomleft=srcimage.pixel(leftx,topy+1)
-					else:
-						bottomleft=qtgui.qRgba(0,0,0,0)
-
-					if leftx+1 >= 0 and leftx+1 < srcwidth and topy >= 0 and topy < srcheight:
-						topright=srcimage.pixel(leftx+1,topy)
-					else:
-						topright=qtgui.qRgba(0,0,0,0)
-
-					if leftx+1 >= 0 and leftx+1 < srcwidth and topy+1 >= 0 and topy+1 < srcheight:
-						bottomright=srcimage.pixel(leftx+1,topy+1)
-					else:
-						bottomright=qtgui.qRgba(0,0,0,0)
-
-					a=1-xinterp
-					b=1-yinterp
-
-					red=int(a*b*qtgui.qRed(topleft)
-						+ a * (1-b) * qtgui.qRed(bottomleft)
-						+ (1-a) * b * qtgui.qRed(topright)
-						+ (1-a) * (1-b) * qtgui.qRed(bottomright) + .5 )
-					green=int(a*b*qtgui.qGreen(topleft)
-						+ a * (1-b) * qtgui.qGreen(bottomleft)
-						+ (1-a) * b * qtgui.qGreen(topright)
-						+ (1-a) * (1-b) *qtgui.qGreen(bottomright) + .5 )
-					blue=int(a*b*qtgui.qBlue(topleft)
-						+ a * (1-b) * qtgui.qBlue(bottomleft)
-						+ (1-a) * b * qtgui.qBlue(topright)
-						+ (1-a) * (1-b) * qtgui.qBlue(bottomright) + .5 )
-					alpha=int(a*b*qtgui.qAlpha(topleft)
-						+ a * (1-b) * qtgui.qAlpha(bottomleft)
-						+ (1-a) * b * qtgui.qAlpha(topright)
-						+ (1-a) * (1-b) * qtgui.qAlpha(bottomright) + .5 )
-
-					if alpha!=0:
-						red /= alpha
-						green /= alpha
-						blue /= alpha
-
-
-					if red > 255:
-						red=255
-					if red < 0:
-						red=0
-
-					if green > 255:
-						green=255
-					if green < 0:
-						green=0
-
-					if blue > 255:
-						blue=255
-					if blue < 0:
-						blue=0
-
-					if alpha > 255:
-						alpha=255
-					if alpha < 0:
-						alpha=0
-
-					scaledimage.setPixel(dstx,dsty,qtgui.qRgba(red,green,blue,alpha))
-
-		return scaledimage
+	def getFullSizedBrushWidth(self):
+		return self.fullsizedbrush.size[0]
