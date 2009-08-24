@@ -257,12 +257,12 @@ class DrawingTool(AbstractTool):
 		targetx=int(x)-int(self.brushimage.width()/2)
 		targety=int(y)-int(self.brushimage.height()/2)
 
-		print "button pressed on pixel:", x,y
-		print "pasting corner on pixel:", targetx,targety
+		#print "button pressed on pixel:", x,y
+		#print "pasting corner on pixel:", targetx,targety
 
 		# if this is an even number then do adjustments for the center if needed
 		if self.brushimage.width()%2==0:
-			print "this is an even sized brush:"
+			#print "this is an even sized brush:"
 			if x%1>.5:
 				targetx+=1
 			if y%1>.5:
@@ -922,8 +922,7 @@ class SketchToolDesc(PencilToolDesc):
 		self.options["step"]=1
 		self.options["blur"]=30
 		self.options["pressurebalance"]=100
-		self.options["fade vertical"]=2
-		self.options["fade horizontal"]=2
+		self.options["fade percent"]=30
 		self.options["opacity"]=100
  
 	def getTool(self,window):
@@ -980,18 +979,18 @@ class SketchTool(DrawingTool):
 
 	def updateBrushForPressure(self,pressure,subpixelx=0,subpixely=0):
 		self.lastpressure=pressure
-		print "updating brush for pressure/subpixels:", pressure, subpixelx, subpixely
+		#print "updating brush for pressure/subpixels:", pressure, subpixelx, subpixely
 		scale=self.scaleForPressure(pressure)
 
 		fullwidth,fullheight=self.fullsizedbrush.size
 		targetwidth=int(math.ceil(fullwidth*scale))+1
 		targetheight=int(math.ceil(fullheight*scale))+1
 
-		# if the target size is an even number
+		# if the target size is an even number then make it odd
 		if targetwidth%2==0:
-			subpixelx=(subpixelx+.5)%1
+			targetwidth+=1
 		if targetheight%2==0:
-			subpixely=(subpixely+.5)%1
+			targetheight+=1
 
 		# try to find exact or closest brushes to scale
 		abovebrush, belowbrush = self.findScaledBrushes(scale)
@@ -999,8 +998,8 @@ class SketchTool(DrawingTool):
 		# didn't get an exact match so interpolate between two others
 		if belowbrush:
 			# shift both of the nearby brushes
-			scaledaboveimage=self.scaleShiftImage(abovebrush,scale,subpixelx,subpixely,targetwidth,targetheight)
-			scaledbelowimage=self.scaleShiftImage(belowbrush,scale,subpixelx,subpixely,targetwidth,targetheight)
+			scaledaboveimage=self.scaleShiftImage(abovebrush,scale,subpixelx-.5,subpixely-.5,targetwidth,targetheight)
+			scaledbelowimage=self.scaleShiftImage(belowbrush,scale,subpixelx-.5,subpixely-.5,targetwidth,targetheight)
 
 			t = (scale-belowbrush[1])/(abovebrush[1]-belowbrush[1])
 
@@ -1010,28 +1009,51 @@ class SketchTool(DrawingTool):
 		# if the scale is so small it should be at one
 		elif abovebrush[1]!=scale or (abovebrush[0].size[0]==1 and abovebrush[0].size[1]==1):
 			s = scale/abovebrush[1]
-			outputimage = self.scaleSinglePixelImage(s, self.singlepixelbrush, subpixelx, subpixely)
+			outputimage = self.scaleSmallBrush(s, subpixelx-.5, subpixely-.5)
+			#outputimage = self.scaleSinglePixelImage(s, self.singlepixelbrush, subpixelx-.5, subpixely-.5)
 
 		# got an exact match, so just shift it according to sub-pixels
 		else:
-			outputimage=self.scaleShiftImage(abovebrush, scale, subpixelx, subpixely,targetwidth,targetheight)
+			outputimage=self.scaleShiftImage(abovebrush, scale, subpixelx-.5, subpixely-.5,targetwidth,targetheight)
 
 		qimage=ImageQt(outputimage)
-		print "output image format:", qimage.format()
 		qimage.convertToFormat(qtgui.QImage.Format_ARGB32_Premultiplied)
 		self.brushimage=qimage
 
+	# do special case calculations for brush of size smaller than full 3x3
+	def scaleSmallBrush(self,scale,subpixelx,subpixely):
+		fullwidth,fullheight=self.fullsizedbrush.size
+		radius=fullwidth*scale/2.
+
+		if radius>1.5:
+			"WARNING: small brush called on brush with radius:", radius
+			radius=1.5
+
+		#print "radius:", radius
+
+		brushwidth=3
+		brushheight=3
+
+		brushimage=Image.new("RGBA",(brushwidth,brushheight),(0,0,0,0))
+		pix=brushimage.load()
+
+		for i in range(brushwidth):
+			for j in range(brushheight):
+				pix[i,j]=(self.colortuple[0],self.colortuple[1],self.colortuple[2],self.ellipseBrushFadeAt(i,j,radius,brushwidth,brushheight,0))
+
+		return scaleShiftPIL(brushimage,subpixelx,subpixely,5,5,1,1)
+
 	# do special case calculations for brush of single pixel size
 	def scaleSinglePixelImage(self,scale,pixel,subpixelx,subpixely):
-		print "calling scaleSinglePixelImage with subpixels:",subpixelx,subpixely
-		print "calling scaleSinglePixelImage with scale",scale
-		print "single pixel image:"
-		printPILImage(pixel)
+		#print "calling scaleSinglePixelImage with subpixels:",subpixelx,subpixely
+		#print "calling scaleSinglePixelImage with scale",scale
+		#print "single pixel image:"
+		#printPILImage(pixel)
 
 		outputimage=scaleShiftPIL(pixel,subpixelx,subpixely,2,2,scale,scale)
 
-		print "Scaled single pixel brush:"
-		printPILImage(outputimage)
+		#print "Scaled single pixel brush:"
+		#printPILImage(outputimage)
 
 		return outputimage
 
@@ -1045,8 +1067,15 @@ class SketchTool(DrawingTool):
 			print  "Error: interploate function passed bad t value:", t
 			return image1
 
-		mask=Image.new("L",image1.size,int(round(t*255)))
-		return Image.composite(image2,image1,mask)
+		#print "blending image:"
+		#printPILImage(image1)
+		#print "and image:"
+		#printPILImage(image2)
+		im=Image.blend(image1,image2,t)
+		#print "to produce"
+		#printPILImage(im)
+		#print
+		return im
 
 		width=image1.width()
 		height=image1.height()
@@ -1103,6 +1132,8 @@ class SketchTool(DrawingTool):
 
 		self.singlepixelbrush=self.scaledbrushes[-1][0]
 
+		self.colortuple=(self.fgcolor.red(),self.fgcolor.green(),self.fgcolor.blue())
+
 	# make list of pre-scaled brushes
 	def makeScaledBrushes(self):
 		self.scaledbrushes=[]
@@ -1123,27 +1154,35 @@ class SketchTool(DrawingTool):
 
 			self.scaledbrushes.append((scaledImage,xscale,yscale))
 
-			# break after we get to a single pixel brush
-			if width==1 and height==1:
+			# break after we get to a single pixel brush, single pixel brushes don't scale up right so don't bother making one
+			if width<=3 and height<=3:
 				break
 
 			# never scale by less than 1/2
 			width = int ((width + 1) / 2)
 			height = int((height + 1) / 2)
 
-		print "List of scaled brushes"
-		for brush in self.scaledbrushes:
-			print "brush scale: ", brush[1]
-			printPILImage(brush[0])
-			
+			# don't scale to even numbered sizes, scale to next highest odd number
+			if width%2==0:
+				width+=1
+			if height%2==0:
+				height+=1
 
+		#print "List of scaled brushes"
+		#for brush in self.scaledbrushes:
+			#print "brush scale: ", brush[1]
+			#printPILImage(brush[0])
+			
 	def makeEllipseBrush(self,width,height):
 		fgr=self.fgcolor.red()
 		fgg=self.fgcolor.green()
 		fgb=self.fgcolor.blue()
 
+		radius=width/2.
 		imgwidth=int(math.ceil(width))
 		imgheight=int(math.ceil(height))
+
+		fadepercent=self.options["fade percent"]
 
 		brushimage=Image.new("RGBA",(imgwidth,imgheight),(0,0,0,0))
 
@@ -1152,31 +1191,39 @@ class SketchTool(DrawingTool):
 
 		for i in range(width):
 			for j in range(height):
-				v=self.ellipseBrushFadeAt(i,j,width,height)
+				v=self.ellipseBrushFadeAt(i,j,radius,width,height,fadepercent)
 				if v>0:
 					pix[i,j]=(fgr,fgg,fgb,v)
 
 		return brushimage
 
-	def ellipseBrushFadeAt(self,x,y,width,height):
-		radius=width/2.
-
-		centerx=math.ceil(width)/2.
-		centery=math.ceil(height)/2.
+	# 
+	def ellipseBrushFadeAt(self,x,y,radius,imgwidth,imgheight,fadepercent):
+		centerx=math.ceil(imgwidth)/2.
+		centery=math.ceil(imgheight)/2.
 
 		distance=math.sqrt(((x+.5-centerx)**2)+((y+.5-centery)**2))
 
-		if distance>radius:
+		# if the distance is over .5 past the radius then it's past the bounds of the brush
+		if distance>radius+.5:
 			return 0
 
-		if distance<radius-1:
+		# special case for the center pixel
+		elif distance==0:
+			if radius<.5:
+				return int(radius*2*255)
 			return 255
 
-		return int(255*(radius-distance))
+		elif distance<radius-.5:
+			return 255
+
+		return int(255*(radius+.5-distance))
 
 	# use subpixel adjustments to shift image and scale it too if needed
 	def scaleShiftImage(self,srcbrush,fullscale,subpixelx,subpixely,targetwidth,targetheight):
 		scale=srcbrush[1]/fullscale
+		#print "going from scale:", srcbrush[1], "to scale", fullscale
+		#print "calculated conversion:", scale
 		return scaleShiftPIL(srcbrush[0],subpixelx,subpixely,targetwidth,targetheight,scale,scale)
 
 	def scaleImage(self,srcimage,width,height):
