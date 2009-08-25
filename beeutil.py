@@ -278,17 +278,17 @@ def printPILImage(im):
 # scale a PIL image, the dx and dy values should only be between 0 and 1
 # xscale and yscale should be between 1 and .5, because that is the only range in which billenar interpolation looks good
 def scaleShiftPIL(im,dx,dy,newsizex,newsizey,xscale,yscale):
-	#print "calling scaleShiftPIL with args:", dx,dy,newsizex,newsizey,xscale,yscale
-	#print "on image:"
-	#printPILImage(im)
+	print "calling scaleShiftPIL with args:", dx,dy,newsizex,newsizey,xscale,yscale
+	print "on image:"
+	printPILImage(im)
 
 	imb_width=im.size[0]+2
 	imb_height=im.size[1]+2
 
 	# add in clear border around image so sampling for interpolation works right
 	bordered_image=im.transform((imb_width,imb_height),Image.AFFINE,(1,0,-1,0,1,-1))
-	#print "bordered image:"
-	#printPILImage(bordered_image)
+	print "bordered image:"
+	printPILImage(bordered_image)
 
 	# this will center the image even if it doesn't snap to exactly a pixel boundary
 	pixcenteradjx=((im.size[0]*xscale)%1)/2
@@ -312,19 +312,16 @@ def scaleShiftPIL(im,dx,dy,newsizex,newsizey,xscale,yscale):
 	pixcenteradjx-=stampcenteradjx
 	pixcenteradjy-=stampcenteradjy
 
-	#print "pix adjustments:", pixcenteradjx, pixcenteradjy
+	print "pix adjustments:", pixcenteradjx, pixcenteradjy
 
 	trans=(1/xscale,0,1+((.5-dx+pixcenteradjx)*(1/xscale)),0,1/yscale,1+((.5-dy+pixcenteradjy)*(1/yscale)))
 
-	#print "transform:", trans
-
-	# working when scale is exact to pixel margin
-	#trans=(1/xscale,0,1+((.5-dx)*(1/xscale)),0,1/yscale,1+((.5-dy)*(1/yscale)))
+	print "transform:", trans
 
 	newim=bordered_image.transform((newsizex,newsizey),Image.AFFINE,trans,Image.BILINEAR)
 
-	#print "producing image:"
-	#printPILImage(newim)
+	print "producing image:"
+	printPILImage(newim)
 	return newim
 
 # debugging function to see how the affine translation is working

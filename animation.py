@@ -155,6 +155,8 @@ class XmlToQueueEventsConverter:
 			self.window.addRedoToQueue(owner,type)
 
 		elif name == 'toolevent':
+			self.clippath=None
+			self.image=None
 			self.strokestart=False
 			toolname="%s" % attrs.value('name').toString()
 			(layerkey,ok)=attrs.value('layerkey').toString().toInt()
@@ -260,10 +262,6 @@ class XmlToQueueEventsConverter:
 		elif name == 'fatalerror':
 			errormessage="%s" % attrs.value('errormessage').toString()
 			self.window.addFatalErrorNotificationToQueue(0,errormessage,type)
-
-		elif name == 'event':
-			self.clippath=None
-			self.image=None
 
 		elif name == 'sketchlog':
 			print_debug("DEBUG: got document start tag")

@@ -1067,46 +1067,21 @@ class SketchTool(DrawingTool):
 			print  "Error: interploate function passed bad t value:", t
 			return image1
 
-		#print "blending image:"
-		#printPILImage(image1)
-		#print "and image:"
-		#printPILImage(image2)
+		print "t value:", t
+		if t>.5:
+			print "result should look more like image 1"
+		else:
+			print "result should look more like image 2"
+
+		print "blending image:"
+		printPILImage(image1)
+		print "and image:"
+		printPILImage(image2)
 		im=Image.blend(image1,image2,t)
-		#print "to produce"
-		#printPILImage(im)
-		#print
+		print "to produce"
+		printPILImage(im)
+		print
 		return im
-
-		width=image1.width()
-		height=image1.height()
-
-		fade=int(t*255)
-		fadecolor=qtgui.QColor(0,0,0,fade)
-		fadeimg=qtgui.QImage(width,height,qtgui.QImage.Format_ARGB32_Premultiplied)
-		fadeimg.fill(fadecolor.rgba())
-		painter=qtgui.QPainter()
-
-		painter.begin(image1)
-		painter.setCompositionMode(qtgui.QPainter.CompositionMode_DestinationOut)
-		painter.drawImage(0,0,fadeimg)
-		painter.end()
-		#print "image 1 after fade"
-		#printImage(image1)
-
-		painter=qtgui.QPainter()
-		painter.begin(image2)
-		painter.setCompositionMode(qtgui.QPainter.CompositionMode_DestinationIn)
-		painter.drawImage(0,0,fadeimg)
-		#painter.end()
-		#painter.begin(image2)
-		painter.setCompositionMode(qtgui.QPainter.CompositionMode_Plus)
-		painter.drawImage(0,0,image1)
-		painter.end()
-
-		#print "interpolated image"
-		#printImage(image2)
-
-		return image2
 
 	# return single brush that matches scale passed or two brushes that are nearest to that scale
 	def findScaledBrushes(self,scale):
@@ -1220,9 +1195,9 @@ class SketchTool(DrawingTool):
 		return int(255*(radius+.5-distance))
 
 	# use subpixel adjustments to shift image and scale it too if needed
-	def scaleShiftImage(self,srcbrush,fullscale,subpixelx,subpixely,targetwidth,targetheight):
-		scale=srcbrush[1]/fullscale
-		#print "going from scale:", srcbrush[1], "to scale", fullscale
+	def scaleShiftImage(self,srcbrush,targetscale,subpixelx,subpixely,targetwidth,targetheight):
+		scale=targetscale/srcbrush[1]
+		print "going from scale:", srcbrush[1], "to scale", targetscale
 		#print "calculated conversion:", scale
 		return scaleShiftPIL(srcbrush[0],subpixelx,subpixely,targetwidth,targetheight,scale,scale)
 
