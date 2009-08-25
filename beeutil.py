@@ -273,7 +273,11 @@ def PILtoQImage(im):
 	return ImageQt.ImageQt(im)
 
 def printPILImage(im):
-	printImage(PILtoQImage(im))
+	pix=im.load()
+	for i in range(im.size[0]):
+		for j in range(im.size[1]):
+			print pix[i,j],
+		print
 
 # scale a PIL image, the dx and dy values should only be between 0 and 1
 # xscale and yscale should be between 1 and .5, because that is the only range in which billenar interpolation looks good

@@ -297,14 +297,20 @@ class BeeSessionState:
 		for layer in self.layers:
 			if layer.key==key:
 				return layer
-		print "WARNING: could not find layer for key", key
+		if key==None:
+			print_debug("WARNING: current layer key is None" )
+		else:
+			print_debug("WARNING: could not find layer for key %d" % int(key) )
 		return None
 
 	def getLayerIndexForKey(self,key):
 		for index in range(len(self.layers)):
 			if self.layers[index].key==key:
 				return index
-		print "WARNING: could not find layer for key", key
+		if key==None:
+			print_debug("WARNING: current layer key is None" )
+		else:
+			print_debug("WARNING: could not find layer for key %d" % int(key) )
 		return None
 
 	def addSetCanvasSizeRequestToQueue(self,width,height,source=ThreadTypes.user,owner=0):

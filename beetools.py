@@ -922,7 +922,7 @@ class SketchToolDesc(PencilToolDesc):
 		self.options["step"]=1
 		self.options["blur"]=30
 		self.options["pressurebalance"]=100
-		self.options["fade percent"]=30
+		self.options["fade percent"]=0
 		self.options["opacity"]=100
  
 	def getTool(self,window):
@@ -1016,8 +1016,13 @@ class SketchTool(DrawingTool):
 		else:
 			outputimage=self.scaleShiftImage(abovebrush, scale, subpixelx-.5, subpixely-.5,targetwidth,targetheight)
 
-		qimage=ImageQt(outputimage)
-		qimage.convertToFormat(qtgui.QImage.Format_ARGB32_Premultiplied)
+		outputimage=outputimage.convert("RGBA")
+		qalpha=ImageQt(outputimage)
+
+		qimage=qtgui.QImage(qalpha.width(),qalpha.height(),qtgui.QImage.Format_RGB32)
+		qimage.fill(self.getColorRGBA())
+		qimage.setAlphaChannel(qalpha)
+
 		self.brushimage=qimage
 
 	# do special case calculations for brush of size smaller than full 3x3
@@ -1034,12 +1039,13 @@ class SketchTool(DrawingTool):
 		brushwidth=3
 		brushheight=3
 
-		brushimage=Image.new("RGBA",(brushwidth,brushheight),(0,0,0,0))
+		brushimage=Image.new("L",(brushwidth,brushheight),0)
 		pix=brushimage.load()
 
 		for i in range(brushwidth):
 			for j in range(brushheight):
-				pix[i,j]=(self.colortuple[0],self.colortuple[1],self.colortuple[2],self.ellipseBrushFadeAt(i,j,radius,brushwidth,brushheight,0))
+				curfade=self.ellipseBrushFadeAt(i,j,radius,brushwidth,brushheight,0)
+				pix[i,j]=(int(round(curfade*255)))
 
 		return scaleShiftPIL(brushimage,subpixelx,subpixely,5,5,1,1)
 
@@ -1063,7 +1069,10 @@ class SketchTool(DrawingTool):
 			print "Error: interploate function passed non compatable images"
 			return image1
 
-		if t < 0 or t > 1:
+		if t < 0:
+			print  "Error: interploate function passed bad t value:", t
+			return image2
+		elif t > 1:
 			print  "Error: interploate function passed bad t value:", t
 			return image1
 
@@ -1159,7 +1168,7 @@ class SketchTool(DrawingTool):
 
 		fadepercent=self.options["fade percent"]
 
-		brushimage=Image.new("RGBA",(imgwidth,imgheight),(0,0,0,0))
+		brushimage=Image.new("L",(imgwidth,imgheight),0)
 
 		# create raw access object for faster pixel setting
 		pix=brushimage.load()
@@ -1168,7 +1177,7 @@ class SketchTool(DrawingTool):
 			for j in range(height):
 				v=self.ellipseBrushFadeAt(i,j,radius,width,height,fadepercent)
 				if v>0:
-					pix[i,j]=(fgr,fgg,fgb,v)
+					pix[i,j]=(int(round(255*v)))
 
 		return brushimage
 
@@ -1186,13 +1195,13 @@ class SketchTool(DrawingTool):
 		# special case for the center pixel
 		elif distance==0:
 			if radius<.5:
-				return int(radius*2*255)
-			return 255
+				return radius*2
+			return 1
 
 		elif distance<radius-.5:
-			return 255
+			return 1
 
-		return int(255*(radius+.5-distance))
+		return radius+.5-distance
 
 	# use subpixel adjustments to shift image and scale it too if needed
 	def scaleShiftImage(self,srcbrush,targetscale,subpixelx,subpixely,targetwidth,targetheight):
