@@ -1067,20 +1067,20 @@ class SketchTool(DrawingTool):
 			print  "Error: interploate function passed bad t value:", t
 			return image1
 
-		print "t value:", t
-		if t>.5:
-			print "result should look more like image 1"
-		else:
-			print "result should look more like image 2"
+		#print "t value:", t
+		#if t>.5:
+		#	print "result should look more like image 1"
+		#else:
+		#	print "result should look more like image 2"
 
-		print "blending image:"
-		printPILImage(image1)
-		print "and image:"
-		printPILImage(image2)
+		#print "blending image:"
+		#printPILImage(image1)
+		#print "and image:"
+		#printPILImage(image2)
 		im=Image.blend(image1,image2,t)
-		print "to produce"
-		printPILImage(im)
-		print
+		#print "to produce"
+		#printPILImage(im)
+		#print
 		return im
 
 	# return single brush that matches scale passed or two brushes that are nearest to that scale
@@ -1197,7 +1197,7 @@ class SketchTool(DrawingTool):
 	# use subpixel adjustments to shift image and scale it too if needed
 	def scaleShiftImage(self,srcbrush,targetscale,subpixelx,subpixely,targetwidth,targetheight):
 		scale=targetscale/srcbrush[1]
-		print "going from scale:", srcbrush[1], "to scale", targetscale
+		#print "going from scale:", srcbrush[1], "to scale", targetscale
 		#print "calculated conversion:", scale
 		return scaleShiftPIL(srcbrush[0],subpixelx,subpixely,targetwidth,targetheight,scale,scale)
 
