@@ -354,10 +354,16 @@ class HiveClientWriter(qtcore.QThread):
 				self.master.unregisterClient(self.id)
 				return
 
+			# write xml data to socket
 			self.xmlgenerator.logCommand(data)
 
-		# flush so command goes out on network right away
-		socket.flush()
+			# flush so command goes out on network right away
+			self.socket.flush()
+
+			# test to make sure the delay isn't in the XML buffer
+			self.socket.write(" ")
+			self.socket.waitForBytesWritten(-1)
+			self.socket.flush()
 
 # class to handle running the TCP server and handling new connections
 class HiveServerThread(qtcore.QThread):

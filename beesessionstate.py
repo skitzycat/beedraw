@@ -176,6 +176,8 @@ class BeeSessionState:
 	def layerUp(self,key):
 		self.layersmutex=qtcore.QMutex()
 		index=self.getLayerIndexForKey(key)
+		if index==None:
+			return
 		if index<len(self.layers)-1:
 			self.layers[index],self.layers[index+1]=self.layers[index+1],self.layers[index]
 			self.reCompositeImage()

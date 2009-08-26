@@ -154,6 +154,10 @@ class XmlToQueueEventsConverter:
 			(owner,ok)=attrs.value('owner').toString().toInt()
 			self.window.addRedoToQueue(owner,type)
 
+		elif name == 'event':
+			self.clippath=None
+			self.image=None
+
 		elif name == 'toolevent':
 			self.clippath=None
 			self.image=None
@@ -244,11 +248,14 @@ class XmlToQueueEventsConverter:
 
 			# make sure command is legit from this source
 			layer=self.window.getLayerForKey(layerkey)
-			proplock=qtcore.QReadLocker(layer.propertieslock)
-			if layer.owner!=self.id:
-				print_debug("ERROR: got bad give up layer command from client: %d for layer key: %d" % (self.id,layerkey))
-			else:
-				self.window.addGiveUpLayerToQueue(layerkey,self.id,type)
+
+			# make sure layer is there
+			if layer:
+				proplock=qtcore.QReadLocker(layer.propertieslock)
+				if layer.owner!=self.id:
+					print_debug("ERROR: got bad give up layer command from client: %d for layer key: %d" % (self.id,layerkey))
+				else:
+					self.window.addGiveUpLayerToQueue(layerkey,self.id,type)
 
 		elif name == 'changelayerowner':
 			(layerkey,ok)=attrs.value('key').toString().toInt()
@@ -391,6 +398,8 @@ class NetworkListenerThread (qtcore.QThread):
 			return None
 				
 class NetworkWriterThread (qtcore.QThread):
+	""" class representing a client thread that is sending information to server
+  """
 	def __init__(self,window,socket):
 		qtcore.QThread.__init__(self)
 		self.socket=socket
