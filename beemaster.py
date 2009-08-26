@@ -29,6 +29,7 @@ from beeglobals import *
 from beetypes import *
 from BeeMasterUI import Ui_BeeMasterSpec
 from AboutDisplayDialogUi import Ui_About_Dialog
+from PickNewCanvasSizeDialogUi import Ui_canvas_size_dialog
 from ConnectionDialogUi import Ui_ConnectionInfoDialog
 from colorswatch import *
 from beelayer import BeeLayersWindow
@@ -334,9 +335,16 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 	def on_actionFileMenuNew_triggered(self,accept=True):
 		if not accept:
 			return
-		self.curwindow=BeeDrawingWindow(self)
+		dialog=qtgui.QDialog(self)
+		dialogui=Ui_canvas_size_dialog()
+		dialogui.setupUi(dialog)
+		dialog.exec_()
 
-		self.refreshLayersList()
+		if dialog.result():
+			width=dialogui.width_box.value()
+			height=dialogui.height_box.value()
+			self.curwindow=BeeDrawingWindow(self,width=width,height=height)
+			self.refreshLayersList()
 
 	def on_action_Help_About_triggered(self,accept=True):
 		if not accept:
