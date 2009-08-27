@@ -367,8 +367,9 @@ class LayerConfigWidget(qtgui.QWidget):
 		newmode=BlendTranslations.nameToMode(value)
 		if newmode!=None:
 			layer=BeeApp().master.getLayerById(self.windowid,self.layerkey)
-			win=layer.getWindow()
-			win.addBlendModeChangeToQueue(layer.key,newmode)
+			if layer:
+				win=layer.getWindow()
+				win.addBlendModeChangeToQueue(layer.key,newmode)
 
 	def on_network_control_button_pressed(self):
 		layer=BeeApp().master.getLayerById(self.windowid,self.layerkey)
