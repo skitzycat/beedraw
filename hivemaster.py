@@ -50,6 +50,9 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 		# set defaults
 		self.port=8333
 
+		self.width=600
+		self.height=400
+
 		# Initialize values
 		self.nextclientid=1
 		self.nextclientidmutex=qtcore.QMutex()
@@ -81,9 +84,7 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 		self.bgcolor=qtgui.QColor(255,255,255)
 
 		# drawing window which holds the current state of the network session
-		self.curwindow=HiveSessionState(self,600,400,WindowTypes.standaloneserver,20)
-
-		self.curwindow.startRemoteDrawingThreads()
+		self.curwindow=None
 		self.serverthread=None
 
 	# since there should only be one window just return 1
@@ -138,7 +139,17 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 		qtgui.QMainWindow.closeEvent(self,event)
 #		self.stopServer()
 
+	def resetState(self):
+		# only do this if the server isn't running yet
+		if not self.serverthread:
+			self.curwindow=HiveSessionState(self,self.width,self.height,WindowTypes.standaloneserver,20)
+			self.curwindow.startRemoteDrawingThreads()
+
 	def startServer(self):
+		# make sure the state exists
+		if not self.curwindow:
+			self.resetState()
+
 		# make sure no other instance is running
 		self.stopServer()
 
@@ -191,6 +202,8 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 			if dialog.result():
 				self.port=dialog.ui.port_box.value()
 				self.password=dialog.ui.password_entry.text()
+				self.width=dialog.ui.width_box.value()
+				self.height=dialog.ui.height_box.value()
 
 # thread to setup connection, authenticate and then
 # listen to a socket and add incomming client commands to queue
