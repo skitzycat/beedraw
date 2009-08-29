@@ -54,8 +54,6 @@ class BeeSessionState:
 		# register state so the master can get back to here
 		master.registerWindow(self)
 
-		self.selection=[]
-
 		# initialize values
 		self.backdropcolor=0xFFFFFFFF
 		self.log=None

@@ -104,10 +104,17 @@
     <addaction name="actionFlatten_Image" />
     <addaction name="menuTransform" />
    </widget>
+   <widget class="QMenu" name="menuSelect" >
+    <property name="title" >
+     <string>Select</string>
+    </property>
+    <addaction name="action_Select_None" />
+   </widget>
    <addaction name="menuFile" />
    <addaction name="menuEdit" />
    <addaction name="menuView" />
    <addaction name="menuImage" />
+   <addaction name="menuSelect" />
   </widget>
   <action name="action_File_Save_As" >
    <property name="text" >
@@ -216,6 +223,11 @@
   <action name="actionFlip_Vertically" >
    <property name="text" >
     <string>Flip Vertically</string>
+   </property>
+  </action>
+  <action name="action_Select_None" >
+   <property name="text" >
+    <string>Select None</string>
    </property>
   </action>
  </widget>

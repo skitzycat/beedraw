@@ -65,6 +65,8 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		self.remotedrawingthread=None
 
 		self.selectionoutline=[]
+		self.selection=[]
+		self.selectionlock=qtcore.QReadWriteLock()
 		self.clippath=None
 
 		self.localcommandqueue=Queue(0)
@@ -163,7 +165,10 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		self.master.refreshLayerThumb(self.id)
 
 	# update the clipping path to match the current selection
-	def updateClipPath(self):
+	def updateClipPath(self,slock=None):
+		if not slock:
+			slock=qtcore.QReadLocker(self.selectionlock)
+
 		if not self.selection:
 			self.clippath=None
 			return
@@ -173,7 +178,17 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 			self.clippath.addPath(select)
 
 	# change the current selection path
-	def changeSelection(self,type,newarea=None):
+	def changeSelection(self,type,newarea=None,slock=None):
+		if not slock:
+			slock=qtcore.QWriteLocker(self.selectionlock)
+
+		# if we get a clear operation clear the seleciton and outline then return
+		if type==SelectionModTypes.clear:
+			self.selection=[]
+			self.selectionoutline=[]
+			self.updateClipPath(slock=slock)
+			return
+
 		# new area argument can be implied to be the cursor overlay, but we need one or the other
 		if not self.cursoroverlay and not newarea:
 			return
@@ -181,13 +196,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		if not newarea:
 			newarea=qtgui.QPainterPath(self.cursoroverlay.path)
 
-		# if we get a clear operation clear the seleciton and outline then return
-		if type==SelectionModTypes.clear:
-			self.selection=[]
-			self.selectionoutline=[]
-			return
-
-		elif type==SelectionModTypes.new or len(self.selection)==0:
+		if type==SelectionModTypes.new or len(self.selection)==0:
 			self.selection=[newarea]
 
 		elif type==SelectionModTypes.add:
@@ -237,7 +246,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		else:
 			print "unrecognized selection modification type:", type
 
-		self.updateClipPath()
+		self.updateClipPath(slock=slock)
 		# TODO: make sure the selection is not the whole image
 
 		# now change the selecition outline
@@ -362,6 +371,10 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 	def on_action_Edit_Undo_triggered(self,accept=True):
 		if accept:
 			self.addUndoToQueue()
+
+	def on_action_Select_None_triggered(self,accept=True):
+		if accept:
+			self.changeSelection(SelectionModTypes.clear)
 
 	def on_action_Edit_Redo_triggered(self,accept=True):
 		if accept:

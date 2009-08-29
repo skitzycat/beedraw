@@ -819,12 +819,12 @@ class FeatherSelectToolDesc(AbstractToolDesc):
 		return self.getTool(window)
 
 # fuzzy selection tool
-class FeatherSelectTool(SelectionTool):
+class FeatherSelectTool(AbstractTool):
 	def __init__(self,options,window):
-		SelectionTool.__init__(self,options,window)
+		AbstractTool.__init__(self,options,window)
 
 	def penDown(self,x,y,pressure=None):
-		newpath=getSimilarColorRegion(self.window.image,x,y,self.options['similarity'])
+		newpath=getSimilarColorMap(self.window.image,x,y,self.options['similarity'])
 		self.window.changeSelection(SelectionModTypes.new,newpath)
 
 # paint bucket tool description
