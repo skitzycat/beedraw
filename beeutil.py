@@ -266,10 +266,15 @@ def getSimilarColorMap(image,x,y,similarity):
 
 	painter.end()
 
-	region=qtgui.QRegion(retmap)
-
 	retpath=qtgui.QPainterPath()
-	retpath.addRegion(region)
+
+	for rect in qtgui.QRegion(retmap).rects():
+		tmprect=qtcore.QRectF(rect)
+		# fudge so they overlap a bit and we can merge them properly
+		tmprect.adjust(-.00001,-.00001,.00002,.00002)
+		tmppath=qtgui.QPainterPath()
+		tmppath.addRect(tmprect)
+		retpath=retpath.united(tmppath)
 
 	#attempt to smooth out the path
 	#retpath=retpath.united(retpath)
@@ -279,6 +284,7 @@ def getSimilarColorMap(image,x,y,similarity):
 
 # Gets passed an image, a point and a similarity value.  Returns a path containing the pixel passed and similar colored surrounding pixels
 def getSimilarColorRegion(image,x,y,similarity):
+	return
 	width=image.width()
 	height=image.height()
 	# dictionary to keep track of points already in path
