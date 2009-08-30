@@ -19,6 +19,9 @@ import PyQt4.QtGui as qtgui
 import PyQt4.QtCore as qtcore
 import PyQt4.QtNetwork as qtnet
 
+from beeapp import BeeApp
+from beetypes import *
+
 from PIL import ImageQt
 import Image
 
@@ -215,6 +218,8 @@ def compareColors(color1,color2,similarity):
 	return False
 
 def getSimilarColorMap(image,x,y,similarity):
+	x=int(x)
+	y=int(y)
 	width=image.width()
 	height=image.height()
 
@@ -267,7 +272,7 @@ def getSimilarColorMap(image,x,y,similarity):
 	retpath.addRegion(region)
 
 	#attempt to smooth out the path
-	retpath=retpath.united(retpath)
+	#retpath=retpath.united(retpath)
 
 	#print "done finding selection area"
 	return retpath
@@ -390,3 +395,15 @@ def scaleShiftPIL(im,dx,dy,newsizex,newsizey,xscale,yscale):
 def translatePoint(x,y,trans):
 	a,b,c,d,e,f=trans
 	return ( (a*x) + (b*y) + c, (d*x) + (e*y) + f )
+
+def getCurSelectionModType():
+	modkeys=BeeApp().app.keyboardModifiers()
+
+	if modkeys==qtcore.Qt.ShiftModifier:
+		return SelectionModTypes.add
+	elif modkeys==qtcore.Qt.ControlModifier:
+		return SelectionModTypes.subtract
+	elif modkeys==qtcore.Qt.ControlModifier|qtcore.Qt.ShiftModifier:
+		return SelectionModTypes.intersect
+
+	return SelectionModTypes.new

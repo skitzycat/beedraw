@@ -196,6 +196,8 @@ class BeeSessionState:
 			tool=self.master.getCurToolInst(self)
 			self.curtool=tool
 
+		tool.guiLevelCommand(x,y)
+
 		self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.pendown,layerkey,x,y,pressure,tool),source)
 
 	def addPenMotionToQueue(self,x,y,pressure,layerkey=None,source=ThreadTypes.user):

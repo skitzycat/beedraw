@@ -116,6 +116,10 @@ class AbstractTool:
 		self.layer=None
 		self.valid=True
 
+	# some things are better handled in the GUI thread so if needed put it in this function
+	def guiLevelCommand(self,x,y):
+		pass
+
 	def setOption(self,key,value):
 		self.options[key]=value
  
@@ -757,16 +761,9 @@ class SelectionTool(AbstractTool):
 		# get modifier keys currently being held down
 		modkeys=BeeApp().app.keyboardModifiers()
  
-		# change selection according to current modifier keys
-		if modkeys==qtcore.Qt.ShiftModifier:
-			self.window.changeSelection(SelectionModTypes.add)
-		elif modkeys==qtcore.Qt.ControlModifier:
-			self.window.changeSelection(SelectionModTypes.subtract)
-		elif modkeys==qtcore.Qt.ControlModifier|qtcore.Qt.ShiftModifier:
-			self.window.changeSelection(SelectionModTypes.intersect)
-		# if we don't recognize the modifier types just replace the selection
-		else:
-			self.window.changeSelection(SelectionModTypes.new)
+		selectionmod=getCurSelectionModType()
+
+		self.window.changeSelection(selectionmod)
  
 		if self.window.cursoroverlay:
 			srect=self.window.cursoroverlay.path.boundingRect().toAlignedRect()
@@ -823,9 +820,28 @@ class FeatherSelectTool(AbstractTool):
 	def __init__(self,options,window):
 		AbstractTool.__init__(self,options,window)
 
+	def guiLevelCommand(self,x,y):
+		self.selectionmod=getCurSelectionModType()
+		self.newpath=getSimilarColorMap(self.window.image,x,y,self.options['similarity'])
+
 	def penDown(self,x,y,pressure=None):
-		newpath=getSimilarColorMap(self.window.image,x,y,self.options['similarity'])
-		self.window.changeSelection(SelectionModTypes.new,newpath)
+		# just for simplicty the dirty region will be the old selection unioned
+		# with the new area
+		if len(self.window.selection)>0:
+			srect=qtcore.QRect()
+			for select in self.window.selection:
+				srect=srect.united(select.boundingRect().toAlignedRect())
+ 
+			srect.adjust(-1,-1,2,2)
+			dirtyregion=qtgui.QRegion(srect)
+		else:
+			dirtyregion=qtgui.QRegion()
+
+		dirtyregion=dirtyregion.united(qtgui.QRegion(self.newpath.boundingRect().toAlignedRect()))
+
+		self.window.changeSelection(self.selectionmod,self.newpath)
+
+		self.window.view.updateView(dirtyregion.boundingRect())
 
 # paint bucket tool description
 class PaintBucketToolDesc(AbstractToolDesc):
