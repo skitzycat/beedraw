@@ -177,82 +177,95 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		for select in self.selection:
 			self.clippath.addPath(select)
 
-	# change the current selection path
+	# change the current selection path, and update to screen to show it
 	def changeSelection(self,type,newarea=None,slock=None):
 		if not slock:
 			slock=qtcore.QWriteLocker(self.selectionlock)
 
+		dirtyregion=qtgui.QRegion()
+
 		# if we get a clear operation clear the seleciton and outline then return
 		if type==SelectionModTypes.clear:
+			for s in self.selection:
+				dirtyregion=dirtyregion.united(qtgui.QRegion(s.boundingRect().toAlignedRect()))
 			self.selection=[]
 			self.selectionoutline=[]
 			self.updateClipPath(slock=slock)
-			return
-
-		# new area argument can be implied to be the cursor overlay, but we need one or the other
-		if not self.cursoroverlay and not newarea:
-			return
-
-		if not newarea:
-			newarea=qtgui.QPainterPath(self.cursoroverlay.path)
-
-		if type==SelectionModTypes.new or len(self.selection)==0:
-			self.selection=[newarea]
-
-		elif type==SelectionModTypes.add:
-			newselect=[]
-			for select in self.selection:
-				# the new area completely contains this path so just ignore it
-				if newarea.contains(select):
-					pass
-				elif select.contains(newarea):
-					newarea=newarea.united(select)
-				# if they intersect union the areas
-				elif newarea.intersects(select):
-					newarea=newarea.united(select)
-				# otherwise they are completely disjoint so just add it separately
-				else:
-					newselect.append(select)
-
-			# finally add in new select and update selection
-			newselect.append(newarea)
-			self.selection=newselect
-
-		elif type==SelectionModTypes.subtract:
-			newselect=[]
-			for select in self.selection:
-				# the new area completely contains this path so just ignore it
-				if newarea.contains(select):
-					pass
-				# if they intersect subtract the areas and add to path
-				elif newarea.intersects(select) or select.contains(newarea):
-					select=select.subtracted(newarea)
-					newselect.append(select)
-				# otherwise they are completely disjoint so just add it separately
-				else:
-					newselect.append(select)
-
-			self.selection=newselect
-
-		elif type==SelectionModTypes.intersect:
-			newselect=[]
-			for select in self.selection:
-				tmpselect=select.intersected(newarea)
-				if not tmpselect.isEmpty():
-					newselect.append(tmpselect)
-
-			self.selection=newselect
 
 		else:
-			print "unrecognized selection modification type:", type
+			# new area argument can be implied to be the cursor overlay, but we need one or the other
+			if not self.cursoroverlay and not newarea:
+				return
 
-		self.updateClipPath(slock=slock)
-		# TODO: make sure the selection is not the whole image
+			else:
+				if not newarea:
+					newarea=qtgui.QPainterPath(self.cursoroverlay.path)
 
-		# now change the selecition outline
-		#self.selectionoutline=self.selection.toFillPolygons()
+			if type==SelectionModTypes.new or len(self.selection)==0:
+				dirtyregion=dirtyregion.united(qtgui.QRegion(newarea.boundingRect().toAlignedRect()))
+				for s in self.selection:
+					dirtyregion=dirtyregion.united(qtgui.QRegion(s.boundingRect().toAlignedRect()))
+				self.selection=[newarea]
 
-	# thread safe function to return a layer key number that hasn't been returned before
+			elif type==SelectionModTypes.add:
+				newselect=[]
+				dirtyregion=dirtyregion.united(qtgui.QRegion(newarea.boundingRect().toAlignedRect()))
+				for select in self.selection:
+					# the new area completely contains this path so just ignore it
+					if newarea.contains(select):
+						pass
+					elif select.contains(newarea):
+						newarea=newarea.united(select)
+					# if they intersect union the areas
+					elif newarea.intersects(select):
+						newarea=newarea.united(select)
+					# otherwise they are completely disjoint so just add it separately
+					else:
+						newselect.append(select)
+
+				# finally add in new select and update selection
+				newselect.append(newarea)
+				self.selection=newselect
+
+			elif type==SelectionModTypes.subtract:
+				newselect=[]
+				dirtyregion=dirtyregion.united(qtgui.QRegion(newarea.boundingRect().toAlignedRect()))
+				for select in self.selection:
+					# the new area completely contains this path so just ignore it
+					if newarea.contains(select):
+						pass
+					# if they intersect subtract the areas and add to path
+					elif newarea.intersects(select) or select.contains(newarea):
+						select=select.subtracted(newarea)
+						newselect.append(select)
+					# otherwise they are completely disjoint so just add it separately
+					else:
+						newselect.append(select)
+
+				self.selection=newselect
+
+			elif type==SelectionModTypes.intersect:
+				newselect=[]
+				dirtyregion=dirtyregion.united(qtgui.QRegion(newarea.boundingRect().toAlignedRect()))
+				for select in self.selection:
+					dirtyregion=dirtyregion.united(qtgui.QRegion(select.boundingRect().toAlignedRect()))
+					tmpselect=select.intersected(newarea)
+					if not tmpselect.isEmpty():
+						newselect.append(tmpselect)
+
+				self.selection=newselect
+
+			else:
+				print "unrecognized selection modification type:", type
+
+			self.updateClipPath(slock=slock)
+			# TODO: make sure the selection is not the whole image
+
+		# now update screen as needed
+		if not dirtyregion.isEmpty():
+			dirtyrect=dirtyregion.boundingRect()
+			dirtyrect.adjust(-1,-1,2,2)
+			self.view.updateView(dirtyrect)
 
 	def queueCommand(self,command,source=ThreadTypes.user,owner=0):
 		#print "queueing command:", command

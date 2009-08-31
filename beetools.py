@@ -746,32 +746,15 @@ class SelectionTool(AbstractTool):
 	def penUp(self,x,y,source=0):
 		x=int(x)
 		y=int(y)
-		# just for simplicty the dirty region will be the old selection unioned
-		# with the current overlay
-		if len(self.window.selection)>0:
-			srect=qtcore.QRect()
-			for select in self.window.selection:
-				srect=srect.united(select.boundingRect().toAlignedRect())
  
-			srect.adjust(-1,-1,2,2)
-			dirtyregion=qtgui.QRegion(srect)
-		else:
-			dirtyregion=qtgui.QRegion()
- 
-		# get modifier keys currently being held down
+		# see how the user wants the selection altered
 		modkeys=BeeApp().app.keyboardModifiers()
- 
 		selectionmod=getCurSelectionModType()
 
-		self.window.changeSelection(selectionmod)
- 
 		if self.window.cursoroverlay:
-			srect=self.window.cursoroverlay.path.boundingRect().toAlignedRect()
-			srect.adjust(-1,-1,2,2)
-			dirtyregion=dirtyregion.unite(qtgui.QRegion(srect))
+			newpath=qtgui.QPainterPath(self.window.cursoroverlay.path)
 			self.window.cursoroverlay=None
- 
-		self.window.view.updateView(dirtyregion.boundingRect())
+			self.window.changeSelection(selectionmod,newpath)
  
 	# set overlay to display area that would be selected if user lifted up button
 	def penMotion(self,x,y,pressure):
@@ -825,23 +808,7 @@ class FeatherSelectTool(AbstractTool):
 		self.newpath=getSimilarColorMap(self.window.image,x,y,self.options['similarity'])
 
 	def penDown(self,x,y,pressure=None):
-		# just for simplicty the dirty region will be the old selection unioned
-		# with the new area
-		if len(self.window.selection)>0:
-			srect=qtcore.QRect()
-			for select in self.window.selection:
-				srect=srect.united(select.boundingRect().toAlignedRect())
- 
-			srect.adjust(-1,-1,2,2)
-			dirtyregion=qtgui.QRegion(srect)
-		else:
-			dirtyregion=qtgui.QRegion()
-
-		dirtyregion=dirtyregion.united(qtgui.QRegion(self.newpath.boundingRect().toAlignedRect()))
-
 		self.window.changeSelection(self.selectionmod,self.newpath)
-
-		self.window.view.updateView(dirtyregion.boundingRect())
 
 # paint bucket tool description
 class PaintBucketToolDesc(AbstractToolDesc):
