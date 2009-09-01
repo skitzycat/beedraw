@@ -805,7 +805,7 @@ class FeatherSelectTool(AbstractTool):
 
 	def guiLevelCommand(self,x,y):
 		self.selectionmod=getCurSelectionModType()
-		self.newpath=getSimilarColorMap(self.window.image,x,y,self.options['similarity'])
+		self.newpath=getSimilarColorPath(self.window.image,x,y,self.options['similarity'])
 
 	def penDown(self,x,y,pressure=None):
 		self.window.changeSelection(self.selectionmod,self.newpath)
@@ -817,7 +817,7 @@ class PaintBucketToolDesc(AbstractToolDesc):
 
 	def setDefaultOptions(self):
 		self.options["similarity"]=10
-		self.options["wholeselection"]=1
+		self.options["wholeselection"]=0
 
 	def getTool(self,window):
 		tool=PaintBucketTool(self.options,window)
@@ -875,7 +875,7 @@ class PaintBucketTool(AbstractTool):
 		image=qtgui.QImage(layer.image.size(),layer.image.format())
 		image.fill(self.window.master.fgcolor.rgb())
 		if self.options['wholeselection']==0:
-			fillpath=getSimilarColorRegion(self.window.image,x,y,self.options['similarity'])
+			fillpath=getSimilarColorPath(self.window.image,x,y,self.options['similarity'])
 			if self.window.clippath:
 				fillpath=fillpath.intersected(self.window.clippath)
 			self.window.addRawEventToQueue(self.layerkey,image,0,0,fillpath)
