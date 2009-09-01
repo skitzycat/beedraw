@@ -865,6 +865,11 @@ class PaintBucketTool(AbstractTool):
 	def __init__(self,options,window):
 		AbstractTool.__init__(self,options,window)
 		self.pointshistory=[]
+		self.newpath=None
+
+	def guiLevelCommand(self,x,y):
+		if self.options['wholeselection']==0:
+			self.newpath=getSimilarColorPath(self.window.image,x,y,self.options['similarity'])
 
 	def penDown(self,x,y,pressure=None):
 		self.pointshistory=[(x,y,pressure)]
@@ -874,8 +879,8 @@ class PaintBucketTool(AbstractTool):
 
 		image=qtgui.QImage(layer.image.size(),layer.image.format())
 		image.fill(self.window.master.fgcolor.rgb())
-		if self.options['wholeselection']==0:
-			fillpath=getSimilarColorPath(self.window.image,x,y,self.options['similarity'])
+		if self.newpath:
+			fillpath=self.newpath
 			if self.window.clippath:
 				fillpath=fillpath.intersected(self.window.clippath)
 			self.window.addRawEventToQueue(self.layerkey,image,0,0,fillpath)
