@@ -191,6 +191,9 @@ class BeeSessionState:
 		"""
 		pass
 
+	def getClipPathCopy(self):
+		return None
+
 	def addPenDownToQueue(self,x,y,pressure,layerkey=None,tool=None,source=ThreadTypes.user,owner=0):
 		if not tool:
 			tool=self.master.getCurToolInst(self)

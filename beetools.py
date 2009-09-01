@@ -584,8 +584,7 @@ class PencilToolDesc(AbstractToolDesc):
 		tool.layerkey=window.curlayerkey
  
 		# if there is a selection get a copy of it
-		if window.selection:
-			tool.clippath=qtgui.QPainterPath(window.clippath)
+		tool.clippath=window.getClipPathCopy()
  
 		return tool
  
@@ -687,8 +686,7 @@ class EraserToolDesc(AbstractToolDesc):
 	def setupTool(self,window,layerkey=None):
 		self.layerkey=layerkey
 		tool=self.getTool(window)
-		if window.selection:
-			tool.clippath=qtgui.QPainterPath(window.clippath)
+		tool.clippath=window.getClipPathCopy()
 		tool.layerkey=window.curlayerkey
 		return tool
  
@@ -834,8 +832,7 @@ class PaintBucketToolDesc(AbstractToolDesc):
 		tool.layerkey=layerkey
 
 		# if there is a selection get a copy of it
-		if window.selection:
-			tool.clippath=qtgui.QPainterPath(window.clippath)
+		tool.clippath=window.getClipPathCopy()
 
 		return tool
 
@@ -881,11 +878,11 @@ class PaintBucketTool(AbstractTool):
 		image.fill(self.window.master.fgcolor.rgb())
 		if self.newpath:
 			fillpath=self.newpath
-			if self.window.clippath:
-				fillpath=fillpath.intersected(self.window.clippath)
+			if self.clippath:
+				fillpath=fillpath.intersected(self.clippath)
 			self.window.addRawEventToQueue(self.layerkey,image,0,0,fillpath)
 		else:
-			self.window.addRawEventToQueue(self.layerkey,image,0,0,self.window.clippath)
+			self.window.addRawEventToQueue(self.layerkey,image,0,0,clippath)
 
 # elipse selection tool
 class ElipseSelectionToolDesc(AbstractToolDesc):

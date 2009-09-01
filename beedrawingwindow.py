@@ -68,6 +68,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		self.selection=[]
 		self.selectionlock=qtcore.QReadWriteLock()
 		self.clippath=None
+		self.clippathlock=qtcore.QReadWriteLock()
 
 		self.localcommandqueue=Queue(0)
 
@@ -164,10 +165,18 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		# update all layer preview thumbnails
 		self.master.refreshLayerThumb(self.id)
 
+	def getClipPathCopy(self):
+		cliplock=qtcore.QReadLocker(self.clippathlock)
+		if self.clippath:
+			return qtgui.QPainterPath(self.clippath)
+		return None
+
 	# update the clipping path to match the current selection
 	def updateClipPath(self,slock=None):
 		if not slock:
 			slock=qtcore.QReadLocker(self.selectionlock)
+
+		cliplock=qtcore.QWriteLocker(self.clippathlock)
 
 		if not self.selection:
 			self.clippath=None

@@ -218,6 +218,7 @@ def compareColors(color1,color2,similarity):
 	return False
 
 # get path representing the outline of all pixels in a continuous region of color similar to that of the one at x,y
+# note that this must be run only from the GUI thread since it relies on using bitmaps
 def getSimilarColorPath(image,x,y,similarity):
 	x=int(x)
 	y=int(y)
