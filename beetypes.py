@@ -74,6 +74,9 @@ class WindowTypes:
 class ThreadTypes:
 	user, animation, network, server = range(4)
 
+class ToolLogTypes:
+	unlogable, regular, raw = range(3)
+
 # types of ways to modify the current selection
 class SelectionModTypes:
 	clear, new, intersect, add, subtract = range(5)

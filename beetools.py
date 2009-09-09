@@ -105,8 +105,7 @@ class AbstractToolDesc:
  
 # base class for all drawing tools
 class AbstractTool:
-	# flag for if we need to log events of this type of tool
-	logable=False
+	logtype=ToolLogTypes.unlogable
 	def __init__(self,options,window):
 		self.fgcolor=None
 		self.bgcolor=None
@@ -116,7 +115,11 @@ class AbstractTool:
 		self.layer=None
 		self.valid=True
 
-	# some things are better handled in the GUI thread so if needed put it in this function
+		# these are expected to get set if a tool is set to do raw logging
+		self.oldstate=None
+		self.changedarea=None
+
+	# some things are better handled in the GUI thread (ability to use pixmaps) so if needed put it in this function
 	def guiLevelCommand(self,x,y):
 		pass
 
@@ -178,8 +181,7 @@ class EyeDropperTool(AbstractTool):
 
 # basic tool for everything that draws points on the canvas
 class DrawingTool(AbstractTool):
-	# flag for if we need to log events of this type of tool
-	logable=True
+	logtype=ToolLogTypes.regular
 	def __init__(self,options,window):
 		AbstractTool.__init__(self,options,window)
 		self.name="Pencil"
@@ -252,7 +254,7 @@ class DrawingTool(AbstractTool):
 		#print "pen down point:", x, y
 		#print "pen pressure:", pressure
 		self.layer=self.window.getLayerForKey(self.layerkey)
-		self.oldlayerimage=qtgui.QImage(self.layer.image)
+		self.oldlayerimage=self.layer.getImageCopy()
 		self.pointshistory=[(x,y,pressure)]
 		self.lastpoint=(x,y)
 		self.makeFullSizedBrush()
@@ -411,11 +413,11 @@ class DrawingTool(AbstractTool):
 		# get image of what area looked like before
 		oldimage=self.oldlayerimage.copy(dirtyrect)
  
-		command=DrawingCommand(self.layer.key,oldimage,dirtyrect)
+		command=DrawingCommand(self.layerkey,oldimage,dirtyrect)
 
 		self.window.addCommandToHistory(command,self.layer.owner)
  
-		BeeApp().master.refreshLayerThumb(self.window.id,self.layer.key)
+		BeeApp().master.refreshLayerThumb(self.window.id,self.layerkey)
  
 # basic tool for drawing fuzzy edged stuff on the canvas
 class PaintBrushTool(DrawingTool):
@@ -858,7 +860,7 @@ class PaintBucketToolDesc(AbstractToolDesc):
 
 # paint bucket tool
 class PaintBucketTool(AbstractTool):
-	logable=True
+	logtype=ToolLogTypes.raw
 	def __init__(self,options,window):
 		AbstractTool.__init__(self,options,window)
 		self.pointshistory=[]
@@ -874,15 +876,33 @@ class PaintBucketTool(AbstractTool):
 		if not layer:
 			return
 
+		# save image for history
+		self.oldimage=layer.getImageCopy()
+
+		proplock=qtcore.QReadLocker(layer.propertieslock)
+
 		image=qtgui.QImage(layer.image.size(),layer.image.format())
-		image.fill(self.window.master.fgcolor.rgb())
+		proplock.unlock()
+
+		image.fill(self.fgcolor.rgb())
 		if self.newpath:
 			fillpath=self.newpath
 			if self.clippath:
 				fillpath=fillpath.intersected(self.clippath)
-			self.window.addRawEventToQueue(self.layerkey,image,0,0,fillpath)
+			self.changedarea=fillpath
 		else:
-			self.window.addRawEventToQueue(self.layerkey,image,0,0,clippath)
+			fillpath=self.clippath
+
+		self.changedarea=fillpath.boundingRect().toAlignedRect()
+		layer.compositeFromCorner(image,0,0,qtgui.QPainter.CompositionMode_SourceOver,fillpath)
+
+		oldstamp=qtgui.QImage.copy(self.oldimage,self.changedarea)
+		# add to history
+		command=DrawingCommand(self.layerkey,oldstamp,self.changedarea)
+		self.window.addCommandToHistory(command,layer.owner)
+
+		# refresh layer preview
+		BeeApp().master.refreshLayerThumb(self.window.id,self.layerkey)
 
 # elipse selection tool
 class ElipseSelectionToolDesc(AbstractToolDesc):

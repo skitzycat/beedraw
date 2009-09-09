@@ -386,21 +386,38 @@ class BeeSessionState:
 		if self.type==WindowTypes.networkclient and source==ThreadTypes.user:
 			self.remoteoutputqueue.put(command)
 
-	def logStroke(self,tool,layer,source=ThreadTypes.network):
-		if not tool.logable:
+	def logStroke(self,tool,layerkey,source=ThreadTypes.network):
+		# if the tool isn't suppose to be logged then don't do anything
+		if tool.logtype==ToolLogTypes.unlogable:
 			return
-		if self.log:
-			self.log.logToolEvent(layer,tool)
 
+		layer=self.getLayerForKey(tool.layerkey)
+
+		if tool.logtype==ToolLogTypes.regular:
+			command=(DrawingCommandTypes.layer,LayerCommandTypes.tool,tool.layerkey,tool)
+		elif tool.logtype==ToolLogTypes.raw:
+			if tool.changedarea:
+				imlock=qtcore.QReadLocker(layer.imagelock)
+				stamp=layer.image.copy(tool.changedarea)
+				command=(DrawingCommandTypes.layer,LayerCommandTypes.rawevent,tool.layerkey,tool.changedarea.x(),tool.changedarea.y(),stamp,None)
+			else:
+				print_debug("Warning: could not log tool as raw event, proper tool variables not set")
+				return
+
+		# if there is a local text log, then log it there
+		if self.log:
+			self.log.logCommand(command)
+
+		# if this is part of a network session then send it out
 		if self.type==WindowTypes.networkclient and source==ThreadTypes.user:
-			self.remoteoutputqueue.put((DrawingCommandTypes.layer,LayerCommandTypes.tool,tool.layerkey,tool))
+			self.remoteoutputqueue.put(command)
 
 		elif self.type==WindowTypes.standaloneserver:
 			layer=self.getLayerForKey(tool.layerkey)
 			if not layer:
 				print_debug("couldn't find layer when logging stroke")
 				return
-			self.master.routinginput.put(((DrawingCommandTypes.layer,LayerCommandTypes.tool,tool.layerkey,tool),layer.owner))
+			self.master.routinginput.put((command,layer.owner))
 
 	# add an event to the undo/redo history
 	def addCommandToHistory(self,command,source=0):
