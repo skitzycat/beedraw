@@ -68,3 +68,19 @@ class CachedToolEvent(CachedLayerEvent):
 	def send(self,id,queue):
 		self.tool.pointshistory=self.points
 		queue.put(((DrawingCommandTypes.layer,LayerCommandTypes.tool,self.layer.key,self.tool),id*-1))
+
+class CachedRawEvent(CachedLayerEvent):
+	def __init__(self,layer,x,y,image,path,compmode,owner):
+		CachedLayerEvent.__init__(self,layer)
+		self.x=x
+		self.y=y
+		self.image=image
+		self.path=path
+		self.compmode=compmode
+		self.owner=owner
+
+	def process(self):
+		self.layer.compositeFromCorner(self.image,self.x,self.y,self.compmode,self.path)
+	def send(self,id,queue):
+		command=(DrawingCommandTypes.layer,LayerCommandTypes.rawevent,self.layer.key,self.x,self.y,self.image,self.path,self.compmode)
+		queue.put((command,id*-1))

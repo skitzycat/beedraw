@@ -365,7 +365,7 @@ class BeeSessionState:
 		self.queueCommand((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.resyncstart,remoteid,width,height),source)
 
 	def addFatalErrorNotificationToQueue(self,remoteid,errormessage,source=ThreadTypes.network):
-		self.queueCommand((DrawingCommandTypes.quit),source)
+		self.queueCommand((DrawingCommandTypes.quit,),source)
 		qtgui.QMessageBox.warning(None,"Network Session Ended","Server has severed connection due to: %s" % errormessage)
 
 	def addOpacityChangeToQueue(self,key,value,source=ThreadTypes.user):

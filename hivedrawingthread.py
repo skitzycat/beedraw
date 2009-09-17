@@ -139,19 +139,22 @@ class ServerDrawingThread(DrawingThread):
 
 			toolcommand=(DrawingCommandTypes.layer,LayerCommandTypes.tool,cachedcommand.layer.key,tool)
 
-			self.master.routinginput.put((toolcommand,cachedcommand.layer.owner))
+			self.master.routinginput.put((toolcommand,owner))
 
 			del self.inprocesstools[command[2]]
 
 		elif subtype==LayerCommandTypes.rawevent:
-			layer=window.getLayerForKey(command[2])
 			x=command[3]
 			y=command[4]
 			image=command[5]
 			path=command[6]
 			compmode=qtgui.QPainter.CompositionMode_Source
 			layer.compositeFromCorner(image,x,y,compmode,path)
-			window.logCommand(command,self.type)
+
+			cachedcommand=CachedRawEvent(layer,x,y,image,path,compmode,owner)
+
+			self.master.routinginput.put((command,owner))
+
 		else:
 			sendcommand=False
 			print "unknown processLayerCommand subtype:", subtype

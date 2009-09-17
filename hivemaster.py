@@ -115,6 +115,7 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 		return True
 
 	def unregisterClient(self,id):
+		print_debug("unregistering client: %d" % id)
 		lock=qtcore.QReadLocker(self.clientslistmutex)
 		if not id in self.clientnames:
 			return
@@ -133,6 +134,7 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 		layerlistlock=qtcore.QMutexLocker(self.curwindow.layersmutex)
 		for layer in self.curwindow.layers:
 			if layer.owner==id:
+				print_debug("setting layer %d to unowned" % layer.key)
 				self.curwindow.addGiveUpLayerToQueue(layer.key,id)
 
 	def closeEvent(self,event):

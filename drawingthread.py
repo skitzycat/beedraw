@@ -148,6 +148,7 @@ class DrawingThread(qtcore.QThread):
 			y=command[4]
 			image=command[5]
 			clippath=command[6]
+			compmode=command[7]
 
 			layerimagelock=qtcore.QWriteLocker(layer.imagelock)
 
@@ -161,7 +162,6 @@ class DrawingThread(qtcore.QThread):
 			oldimage=layer.image.copy(dirtyrect)
 			historycommand=DrawingCommand(layerkey,oldimage,dirtyrect)
 
-			compmode=qtgui.QPainter.CompositionMode_Source
 			layer.compositeFromCorner(image,x,y,compmode,clippath,lock=layerimagelock)
 			window.logCommand(command,self.type)
 
