@@ -280,6 +280,7 @@ class BeeSessionState:
 			self.addCommandToHistory(AddLayerCommand(layer.key))
 
 		self.requestLayerListRefresh()
+		self.reCompositeImage()
 
 	def requestLayerListRefresh(self):
 		""" Only needed in subclasses that display a list of layers
