@@ -221,7 +221,7 @@ class XmlToQueueEventsConverter:
 			self.rawstring=self.xml.readElementText()
 
 			if self.image:
-				self.window.addRawEventToQueue(self.layerkey,self.image,self.x,self.y,self.clippath,type)
+				self.window.addRawEventToQueue(self.layerkey,self.image,self.x,self.y,self.clippath,source=type)
 
 		elif name == 'point':
 			time.sleep(self.stepdelay)
@@ -296,7 +296,7 @@ class XmlToQueueEventsConverter:
 			image=qtgui.QImage()
 			image.loadFromData(data,"PNG")
 
-			self.window.addRawEventToQueue(self.layerkey,image,self.x,self.y,None,type)
+			self.window.addRawEventToQueue(self.layerkey,image,self.x,self.y,None,source=type)
 		elif name == 'clippath':
 			poly=qtgui.QPolygonF(self.clippoints)
 			self.clippath=qtgui.QPainterPath()

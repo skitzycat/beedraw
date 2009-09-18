@@ -358,8 +358,8 @@ class BeeSessionState:
 		# when the source is local like this the owner will always be me (id 0)
 		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.insertlayer,key,index,None,0))
 
-	def addRawEventToQueue(self,key,image,x,y,path,source=ThreadTypes.user):
-		self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.rawevent,key,x,y,image,path),source)
+	def addRawEventToQueue(self,key,image,x,y,path,compmode=qtgui.QPainter.CompositionMode_SourceOver,source=ThreadTypes.user):
+		self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.rawevent,key,x,y,image,path,compmode),source)
 
 	def addResyncStartToQueue(self,remoteid,width,height,source=ThreadTypes.network):
 		self.queueCommand((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.resyncstart,remoteid,width,height),source)
