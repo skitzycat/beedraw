@@ -28,6 +28,8 @@ import Image
 from beeglobals import *
 import math
 
+from datetime import datetime
+
 try:
 	import NumPy as numpy
 except:
@@ -371,3 +373,8 @@ def getCurSelectionModType():
 		return SelectionModTypes.intersect
 
 	return SelectionModTypes.new
+
+def getTimeString():
+	now=datetime.now()
+	returnstring="%d-%002d-%002d %002d:%002d:%002d-%d" % ( now.year, now.month, now.day, now.hour, now.minute, now.second, now.microsecond )
+	return returnstring

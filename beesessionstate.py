@@ -23,6 +23,7 @@ from beeapp import BeeApp
 from beetypes import *
 from beeeventstack import *
 from beelayer import BeeLayer
+from beeutil import getTimeString
 
 from Queue import Queue
 import os
@@ -221,7 +222,7 @@ class BeeSessionState:
 		""" start logging the session, starting with a base image of it in it's current state, if no file name is provided use make a name up based on current time
 		"""
 		if not filename:
-			filename=os.path.join('logs',str(datetime.now()) + '.slg')
+			filename=os.path.join('logs',getTimeString() + '.slg')
 
 		locks=[]
 		self.filename=filename
