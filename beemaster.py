@@ -166,7 +166,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 				parser=BeeMasterConfigParser(configfile)
 				fileconfig=parser.loadOptions()
 
-		self.config.update(fileconfig)
+				self.config.update(fileconfig)
 
 		BEE_DEBUG=self.config['debug']
 
