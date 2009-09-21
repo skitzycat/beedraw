@@ -11,8 +11,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>281</width>
-    <height>503</height>
+    <width>304</width>
+    <height>586</height>
    </rect>
   </property>
   <property name="sizePolicy" >
@@ -37,10 +37,10 @@
      <verstretch>0</verstretch>
     </sizepolicy>
    </property>
+   <property name="contextMenuPolicy" >
+    <enum>Qt::PreventContextMenu</enum>
+   </property>
    <layout class="QVBoxLayout" >
-    <property name="spacing" >
-     <number>0</number>
-    </property>
     <property name="leftMargin" >
      <number>0</number>
     </property>
@@ -138,11 +138,34 @@
      </layout>
     </item>
     <item>
-     <widget class="QPushButton" name="tooloptionsbutton" >
-      <property name="text" >
-       <string>Configure Tool</string>
+     <layout class="QHBoxLayout" >
+      <property name="leftMargin" >
+       <number>0</number>
       </property>
-     </widget>
+      <property name="topMargin" >
+       <number>0</number>
+      </property>
+      <property name="rightMargin" >
+       <number>0</number>
+      </property>
+      <property name="bottomMargin" >
+       <number>0</number>
+      </property>
+      <item>
+       <widget class="QPushButton" name="saveToolOptionsButton" >
+        <property name="text" >
+         <string>Save Tool Options</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="tooloptionsbutton" >
+        <property name="text" >
+         <string>Configure Tool</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </item>
     <item>
      <widget class="QFrame" name="swatch_frame" >
@@ -185,7 +208,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>281</width>
+     <width>304</width>
      <height>35</height>
     </rect>
    </property>
@@ -211,7 +234,14 @@
     </property>
     <addaction name="actionLayers" />
    </widget>
+   <widget class="QMenu" name="menuEdit_2" >
+    <property name="title" >
+     <string>Edit</string>
+    </property>
+    <addaction name="action_Edit_Configure" />
+   </widget>
    <addaction name="menuMain_Window" />
+   <addaction name="menuEdit_2" />
    <addaction name="menuWindow" />
    <addaction name="menuEdit" />
   </widget>
@@ -283,6 +313,11 @@
    </property>
    <property name="text" >
     <string>Layers</string>
+   </property>
+  </action>
+  <action name="action_Edit_Configure" >
+   <property name="text" >
+    <string>Configure</string>
    </property>
   </action>
  </widget>

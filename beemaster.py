@@ -31,11 +31,12 @@ from BeeMasterUI import Ui_BeeMasterSpec
 from AboutDisplayDialogUi import Ui_About_Dialog
 from PickNewCanvasSizeDialogUi import Ui_canvas_size_dialog
 from ConnectionDialogUi import Ui_ConnectionInfoDialog
+from BeeDrawOptionsUi import Ui_BeeMasterOptions
 from colorswatch import *
 from beelayer import BeeLayersWindow
 from beeutil import *
-from beesave import PaletteXmlWriter
-from beeload import PaletteParser
+from beesave import PaletteXmlWriter,BeeToolConfigWriter,BeeMasterConfigWriter
+from beeload import PaletteParser,BeeToolConfigParser, BeeMasterConfigParser
 
 from beeapp import BeeApp
 
@@ -119,6 +120,14 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		qtgui.QMainWindow.__init__(self)
 		AbstractBeeMaster.__init__(self)
 
+		# read tool options from file if needed
+		toolconfigfilename=os.path.join("config","tooloptions.xml")
+		toolconfigfile=qtcore.QFile(toolconfigfilename)
+		if toolconfigfile.exists():
+			if toolconfigfile.open(qtcore.QIODevice.ReadOnly):
+				parser=BeeToolConfigParser(toolconfigfile)
+				parser.loadToToolBox(self.toolbox)
+
 		# setup interface according to designer code
 		self.ui=Ui_BeeMasterSpec()
 		self.ui.setupUi(self)
@@ -138,6 +147,28 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 		# set initial tool
 		self.curtoolindex=0
+
+		# set default config values
+		self.configlock=qtcore.QReadWriteLock()
+		self.config={}
+		self.config['username']=""
+		self.config['server']="localhost"
+		self.config['port']=8333
+		self.config['autolog']=False
+		self.config['autosave']=False
+		self.config['debug']=False
+
+		# then load from config file if possible
+		configfilename=os.path.join("config","beedrawoptions.xml")
+		configfile=qtcore.QFile(configfilename)
+		if configfile.exists():
+			if configfile.open(qtcore.QIODevice.ReadOnly):
+				parser=BeeMasterConfigParser(configfile)
+				fileconfig=parser.loadOptions()
+
+		self.config.update(fileconfig)
+
+		BEE_DEBUG=self.config['debug']
 
 		# setup foreground and background swatches
 		# default foreground to black and background to white
@@ -166,6 +197,13 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			colors=[]
 
 		self.ui.swatch_frame.setupSwatches(colors)
+
+	def getConfigOption(self,key):
+		lock=qtcore.QReadLocker(self.configlock)
+		if key in self.config:
+			return self.config[key]
+		print_debug("couldn't find config option: %s" % key)
+		return None
 
 	def registerWindow(self,window):
 		self.drawingwindows.append(window)
@@ -223,6 +261,17 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 	def on_tooloptionsbutton_pressed(self):
 		self.getCurToolDesc().runOptionsDialog(self)
+
+	def on_saveToolOptionsButton_pressed(self):
+		filename=os.path.join("config","tooloptions.xml")
+		outfile=qtcore.QFile(filename,self)
+		outfile.open(qtcore.QIODevice.Truncate|qtcore.QIODevice.WriteOnly)
+		writer=BeeToolConfigWriter(outfile)
+		writer.startLog()
+		for tool in self.toolbox.toolslist:
+			writer.logToolConfig(tool.name,tool.options)
+		writer.endLog()
+		outfile.close()
 
 	def on_save_palette_button_pressed(self):
 		filename=qtgui.QFileDialog.getSaveFileName(self,"Choose File Name",".","Palette save (*.pal)")
@@ -345,6 +394,58 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			height=dialogui.height_box.value()
 			self.curwindow=BeeDrawingWindow(self,width=width,height=height)
 			self.refreshLayersList()
+
+	def on_action_Edit_Configure_triggered(self,accept=True):
+		if not accept:
+			return
+
+		dialog=qtgui.QDialog(self)
+		dialogui=Ui_BeeMasterOptions()
+		dialogui.setupUi(dialog)
+
+		# put current values into GUI
+		lock=qtcore.QWriteLocker(self.configlock)
+
+		if self.config['debug']:
+			dialogui.debug_checkBox.setCheckState(qtcore.Qt.Checked)
+		if self.config['autolog']:
+			dialogui.autolog_checkBox.setCheckState(qtcore.Qt.Checked)
+		if self.config['autosave']:
+			dialogui.autosave_checkBox.setCheckState(qtcore.Qt.Checked)
+		dialogui.username_entry.setText(self.config['username'])
+		
+		ok=dialog.exec_()
+
+		if not ok:
+			return
+
+		# get values out of GUI
+		self.config['username']=dialogui.username_entry.text()
+
+		if dialogui.debug_checkBox.isChecked():
+			self.config['debug']=True
+		else:
+			self.config['debug']=False
+
+		BEE_DEBUG=self.config['debug']
+
+		if dialogui.autolog_checkBox.isChecked():
+			self.config['autolog']=True
+		else:
+			self.config['autolog']=False
+
+		if dialogui.autosave_checkBox.isChecked():
+			self.config['autosave']=True
+		else:
+			self.config['autosave']=False
+
+		# write out everything to file
+		filename=os.path.join("config","beedrawoptions.xml")
+		outfile=qtcore.QFile(filename,self)
+		outfile.open(qtcore.QIODevice.Truncate|qtcore.QIODevice.WriteOnly)
+		writer=BeeMasterConfigWriter(outfile)
+		writer.writeConfig(self.config)
+		outfile.close()
 
 	def on_action_Help_About_triggered(self,accept=True):
 		if not accept:

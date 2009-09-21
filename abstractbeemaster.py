@@ -18,11 +18,15 @@
 import PyQt4.QtCore as qtcore
 import PyQt4.QtGui as qtgui
 
+import os
+
 from beetools import BeeToolBox
 
 class AbstractBeeMaster:
 	def __init__(self):
+		# setup tool box
 		self.toolbox=BeeToolBox()
+
 		self.curwindow=None
 
 	def refreshLayerThumb(self,window,layer=0):

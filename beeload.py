@@ -60,3 +60,65 @@ class PaletteParser:
 				self.colors.append([])
 
 			self.colors[-1].append((r,g,b))
+
+class BeeToolConfigParser:
+	def __init__(self,device):
+		self.xml=QXmlStreamReader()
+		self.xml.setNamespaceProcessing(False)
+		self.xml.setDevice(device)
+		self.curtool=None
+
+	def loadToToolBox(self,toolbox):
+		self.toolbox=toolbox
+		while not self.xml.atEnd():
+			tokentype=self.xml.readNext()
+			if tokentype==QXmlStreamReader.StartElement:
+				self.processStartElement()
+
+	def processStartElement(self):
+		name=self.xml.name()
+		attrs=self.xml.attributes()
+
+		if name=="toolconfig":
+			toolname="%s" % attrs.value('name').toString()
+			self.curtool=self.toolbox.getToolDescByName(toolname)
+		elif name=="option":
+			if self.curtool:
+				valname="%s" % attrs.value('name').toString()
+				(value,ok)=attrs.value('value').toString().toInt()
+				self.curtool.options[valname]=value
+
+class BeeMasterConfigParser:
+	def __init__(self,device):
+		self.xml=QXmlStreamReader()
+		self.xml.setNamespaceProcessing(False)
+		self.xml.setDevice(device)
+		self.options={}
+
+	def loadOptions(self):
+		while not self.xml.atEnd():
+			tokentype=self.xml.readNext()
+			if tokentype==QXmlStreamReader.StartElement:
+				self.processStartElement()
+
+		return self.options
+
+	def processStartElement(self):
+		name=self.xml.name()
+		attrs=self.xml.attributes()
+
+		if name in ["username","server"]:
+			key="%s" % name.toString()
+			val="%s" % attrs.value("value").toString()
+			self.options[key]=val
+		elif name in ["port"]:
+			key="%s" % name.toString()
+			(val,ok)=attrs.value("value").toString().toInt()
+			self.options[key]=val
+		elif name in ["autolog","autosave","debug"]:
+			key="%s" % name.toString()
+			val="%s" % attrs.value("value").toString()
+			if val=="True":
+				self.options[key]=True
+			else:
+				self.options[key]=False

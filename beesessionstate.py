@@ -19,16 +19,14 @@ import PyQt4.QtCore as qtcore
 import PyQt4.QtGui as qtgui
 
 from sketchlog import SketchLogWriter
-
 from beeapp import BeeApp
-
 from beetypes import *
-
 from beeeventstack import *
-
 from beelayer import BeeLayer
 
 from Queue import Queue
+import os
+from datetime import datetime
 
 class BeeSessionState:
 	""" Represents the state of a current drawing with all layers and the current composition of them to be displayed on the screen
@@ -56,7 +54,6 @@ class BeeSessionState:
 
 		# initialize values
 		self.backdropcolor=0xFFFFFFFF
-		self.log=None
 		self.remotecommandstacks={}
 		self.curlayerkey=None
 		self.curlayerkeymutex=qtcore.QMutex()
@@ -74,6 +71,13 @@ class BeeSessionState:
 		self.layers=[]
 		# mutex for messing with the list of layer: adding, removing or rearranging
 		self.layersmutex=qtcore.QMutex()
+
+		# start log if autolog is enabled
+		self.log=None
+		if self.master.getConfigOption("autolog"):
+			# don't do this for animations, there's already a log of it if there's an animation
+			if type!=WindowTypes.animation:
+				self.startLog()
 
 	def setRemoteId(self,id):
 		lock=qtcore.QWriteLocker(self.remoteidlock)

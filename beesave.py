@@ -47,3 +47,74 @@ class PaletteXmlWriter:
 				self.out.writeEndElement()
 
 		self.out.writeEndElement()
+
+class BeeDrawConfigWriter:
+	def __init__(self, output):
+		self.out=QXmlStreamWriter(output)
+
+	def startLog(self):
+		self.out.writeStartElement('beeconfig')
+
+	def endLog(self):
+		self.out.writeEndElement()
+
+class BeeToolConfigWriter:
+	def __init__(self, output):
+		self.out=QXmlStreamWriter(output)
+
+	def startLog(self):
+		self.out.writeStartElement('toolboxconfig')
+
+	def endLog(self):
+		self.out.writeEndElement()
+
+	def logToolConfig(self,toolname,tooloptions):
+		self.out.writeStartElement('toolconfig')
+		self.out.writeAttribute('name',toolname)
+
+		for key in tooloptions:
+			self.out.writeStartElement('option')
+			self.out.writeAttribute('name',key)
+			self.out.writeAttribute('value',str(tooloptions[key]))
+			self.out.writeEndElement()
+
+		self.out.writeEndElement()
+
+class BeeMasterConfigWriter:
+	def __init__(self, output):
+		self.out=QXmlStreamWriter(output)
+
+	def writeConfig(self,config):
+		self.startLog()
+		for key in config:
+			if key in ["username","server"]:
+				self.logTextValue(key,config[key])
+			elif key in ["port"]:
+				self.logIntValue(key,config[key])
+			elif key in ["autolog","autosave","debug"]:
+				if config[key]:
+					self.logBoolValue(key,"True")
+				else:
+					self.logBoolValue(key,"False")
+		self.endLog()
+
+	def startLog(self):
+		self.out.writeStartElement('beemasterconfig')
+
+	def endLog(self):
+		self.out.writeEndElement()
+
+	def logTextValue(self,field,value):
+		self.out.writeStartElement(field)
+		self.out.writeAttribute('value',value)
+		self.out.writeEndElement()
+
+	def logBoolValue(self,field,value):
+		self.out.writeStartElement(field)
+		self.out.writeAttribute('value',value)
+		self.out.writeEndElement()
+
+	def logIntValue(self,field,value):
+		self.out.writeStartElement(field)
+		self.out.writeAttribute('value',str(value))
+		self.out.writeEndElement()
