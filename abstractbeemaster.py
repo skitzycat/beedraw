@@ -21,6 +21,7 @@ import PyQt4.QtGui as qtgui
 import os
 
 from beetools import BeeToolBox
+from beeload import BeeMasterConfigParser
 
 class AbstractBeeMaster:
 	def __init__(self):
@@ -29,8 +30,37 @@ class AbstractBeeMaster:
 
 		self.curwindow=None
 
+		# set default config values
+		self.configlock=qtcore.QReadWriteLock()
+		self.config={}
+		self.config['username']=""
+		self.config['server']="localhost"
+		self.config['port']=8333
+		self.config['autolog']=False
+		self.config['autosave']=False
+		self.config['debug']=False
+
+		# then load from config file if possible
+		configfilename=os.path.join("config","beedrawoptions.xml")
+		configfile=qtcore.QFile(configfilename)
+		if configfile.exists():
+			if configfile.open(qtcore.QIODevice.ReadOnly):
+				parser=BeeMasterConfigParser(configfile)
+				fileconfig=parser.loadOptions()
+
+				self.config.update(fileconfig)
+
+		BEE_DEBUG=self.config['debug']
+
+	def getConfigOption(self,key):
+		lock=qtcore.QReadLocker(self.configlock)
+		if key in self.config:
+			return self.config[key]
+		print_debug("couldn't find config option: %s" % key)
+		return None
+
 	def refreshLayerThumb(self,window,layer=0):
-		""" May need to be implemented in a subclass """
+		""" Indicates that layer thumbnails need to be updated, this may or may not need to be reimplemented in the subclass """
 		return
 
 	def getToolClassByName(self,name):

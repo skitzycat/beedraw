@@ -36,7 +36,7 @@ from colorswatch import *
 from beelayer import BeeLayersWindow
 from beeutil import *
 from beesave import PaletteXmlWriter,BeeToolConfigWriter,BeeMasterConfigWriter
-from beeload import PaletteParser,BeeToolConfigParser, BeeMasterConfigParser
+from beeload import PaletteParser,BeeToolConfigParser
 
 from beeapp import BeeApp
 
@@ -148,28 +148,6 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		# set initial tool
 		self.curtoolindex=0
 
-		# set default config values
-		self.configlock=qtcore.QReadWriteLock()
-		self.config={}
-		self.config['username']=""
-		self.config['server']="localhost"
-		self.config['port']=8333
-		self.config['autolog']=False
-		self.config['autosave']=False
-		self.config['debug']=False
-
-		# then load from config file if possible
-		configfilename=os.path.join("config","beedrawoptions.xml")
-		configfile=qtcore.QFile(configfilename)
-		if configfile.exists():
-			if configfile.open(qtcore.QIODevice.ReadOnly):
-				parser=BeeMasterConfigParser(configfile)
-				fileconfig=parser.loadOptions()
-
-				self.config.update(fileconfig)
-
-		BEE_DEBUG=self.config['debug']
-
 		# setup foreground and background swatches
 		# default foreground to black and background to white
 		self.ui.FGSwatch=FGSwatch(self,replacingwidget=self.ui.FGSwatch)
@@ -197,13 +175,6 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			colors=[]
 
 		self.ui.swatch_frame.setupSwatches(colors)
-
-	def getConfigOption(self,key):
-		lock=qtcore.QReadLocker(self.configlock)
-		if key in self.config:
-			return self.config[key]
-		print_debug("couldn't find config option: %s" % key)
-		return None
 
 	def registerWindow(self,window):
 		self.drawingwindows.append(window)
