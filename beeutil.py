@@ -376,5 +376,5 @@ def getCurSelectionModType():
 
 def getTimeString():
 	now=datetime.now()
-	returnstring="%d-%002d-%002d %002d:%002d:%002d-%d" % ( now.year, now.month, now.day, now.hour, now.minute, now.second, now.microsecond )
+	returnstring="%d-%002d-%002d %002d-%002d-%002d-%d" % ( now.year, now.month, now.day, now.hour, now.minute, now.second, now.microsecond )
 	return returnstring
