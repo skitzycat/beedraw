@@ -149,7 +149,6 @@ class ServerDrawingThread(DrawingThread):
 			image=command[5]
 			path=command[6]
 			compmode=qtgui.QPainter.CompositionMode_Source
-			layer.compositeFromCorner(image,x,y,compmode,path)
 
 			cachedcommand=CachedRawEvent(layer,x,y,image,path,compmode,owner)
 
