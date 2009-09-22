@@ -554,8 +554,8 @@ class AnimationDrawingWindow(BeeDrawingWindow):
 	""" Represents a window that plays a log file
 	"""
 	def __init__(self,master,filename):
-		BeeDrawingWindow.__init__(self,master,startlayer=False,type=WindowTypes.animation)
 		self.playfilename=filename
+		BeeDrawingWindow.__init__(self,master,startlayer=False,type=WindowTypes.animation)
 
 	def startRemoteDrawingThreads(self):
 		self.remotedrawingthread=DrawingThread(self.remotecommandqueue,self.id,ThreadTypes.animation,master=self.master)
