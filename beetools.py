@@ -230,16 +230,21 @@ class DrawingTool(AbstractTool):
  
 		# scaled size for brush
 		bdiameter=self.options["maxdiameter"]*pressure
-		self.diameter=int(math.ceil(bdiameter))
+		self.diameter=int(math.ceil(bdiameter))+1
+
+		# make target size an odd number
+		if self.diameter%2==0:
+			self.diameter+=1
 
 		# calculate offset into target
-		targetoffset=(1-(bdiameter%1))/2.0
+		targetoffsetx=((self.diameter-bdiameter)/2.)-.5+subpixelx
+		targetoffsety=((self.diameter-bdiameter)/2.)-.5+subpixely
  
 		# bounding radius for pixels to update
 		side=self.diameter
  
 		fullsizedrect=qtcore.QRectF(0,0,self.fullsizedbrush.width(),self.fullsizedbrush.height())
-		cursizerect=qtcore.QRectF(targetoffset,targetoffset,bdiameter,bdiameter)
+		cursizerect=qtcore.QRectF(targetoffsetx,targetoffsety,bdiameter,bdiameter)
  
 		self.brushimage=qtgui.QImage(side,side,qtgui.QImage.Format_ARGB32_Premultiplied)
 		self.brushimage.fill(0)
@@ -249,6 +254,10 @@ class DrawingTool(AbstractTool):
 		painter.drawImage(cursizerect,self.fullsizedbrush,fullsizedrect)
 
 		painter.end()
+
+		# make sure brush isn't blank by pasting the brush color onto the center pixel
+		center=int(self.diameter/2)
+		self.brushimage.setPixel(center,center,self.getColorRGBA())
  
 	def penDown(self,x,y,pressure=1):
 		#print "pen down point:", x, y
