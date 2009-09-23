@@ -52,12 +52,12 @@ class AbstractBeeMaster:
 
 		BEE_DEBUG=self.config['debug']
 
-	def getConfigOption(self,key):
+	def getConfigOption(self,key,default=None):
 		lock=qtcore.QReadLocker(self.configlock)
 		if key in self.config:
 			return self.config[key]
 		print_debug("couldn't find config option: %s" % key)
-		return None
+		return default
 
 	def refreshLayerThumb(self,window,layer=0):
 		""" Indicates that layer thumbnails need to be updated, this may or may not need to be reimplemented in the subclass """

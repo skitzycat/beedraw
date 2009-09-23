@@ -298,7 +298,7 @@ class DrawingTool(AbstractTool):
 		return self.fullsizedbrush.width()
 
 	def penMotion(self,x,y,pressure):
-		#print "pen motion point:", x, y
+		#print "pen motion point,pressure:", x, y, pressure
 		# if it hasn't moved just do nothing
 		if not self.movedFarEnough(x,y):
 			return

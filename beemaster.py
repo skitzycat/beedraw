@@ -329,7 +329,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			width=l[0][1]
 			height=l[0][2]
 
-			if version > fileformatversion:
+			if version > BEE_FILE_FORMAT_VERSION:
 				print_debug("Error unsuppored file format version, please upgrade bee draw version")
 
 			self.curwindow=BeeDrawingWindow(self,width,height,False)
@@ -435,6 +435,10 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		dialog=qtgui.QDialog(self)
 		dialogui=Ui_ConnectionInfoDialog()
 		dialogui.setupUi(dialog)
+
+		# set default options
+		dialogui.usernamefield.setText(self.getConfigOption('username',""))
+
 		ok=dialog.exec_()
 
 		if not ok:
@@ -444,6 +448,11 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		port=dialogui.portbox.value()
 		username=dialogui.usernamefield.text()
 		password=dialogui.passwordfield.text()
+
+		# error if username is blank
+		if username=="":
+			qtgui.QMessageBox.warning(None,"No username","You must enter a username")
+			return
 
 		socket=self.getServerConnection(username,password,hostname,port)
 

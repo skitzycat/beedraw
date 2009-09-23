@@ -122,7 +122,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 				# a compressed qbytearray with PNG data, opacity, visibility, blend mode
 			l=[]
 			# first item in list is file format version and size of image
-			l.append((fileformatversion,self.docwidth,self.docheight))
+			l.append((BEE_FILE_FORMAT_VERSION,self.docwidth,self.docheight))
 			for layer in self.layers:
 				bytearray=qtcore.QByteArray()
 				buf=qtcore.QBuffer(bytearray)
