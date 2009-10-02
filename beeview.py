@@ -44,6 +44,9 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 		self.docheight=height
 		self.refreshView()
 
+	def getZoom(self):
+		return self.zoom
+
 	def newZoom(self,zoom):
 		self.zoom=zoom
 		self.refreshView()
@@ -250,6 +253,15 @@ class BeeViewScrollArea(qtgui.QScrollArea):
 
 	def getVisibleRect(self):
 		return self.widget().visibleRegion().boundingRect()
+
+	def getVisibleImageRect(self):
+		widgetrect=self.getVisibleRect()
+		zoom=self.widget().getZoom()
+		x=widgetrect.x()/zoom
+		y=widgetrect.y()/zoom
+		width=widgetrect.width()/zoom
+		height=widgetrect.height()/zoom
+		return qtcore.QRectF(x,y,width,height)
 
 	def newSize(self,width,height):
 		self.widget().newSize(width,height)

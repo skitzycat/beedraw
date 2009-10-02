@@ -194,8 +194,8 @@ class DrawingTool(AbstractTool):
 		self.inside=True
 		self.returning=False
 
-	def calculateLeavePoint(self,p1,p2):
-		rect=self.window.view.getVisibleRect()
+	def calculateEdgePoint(self,p1,p2):
+		rect=self.window.view.getVisibleImageRect()
 		leftedge=rect.x()
 		topedge=rect.y()
 
@@ -282,7 +282,7 @@ class DrawingTool(AbstractTool):
 		#print "Got penLeave"
 		if self.pendown:
 			if self.pointshistory and len(self.pointshistory) > 1:
-				exitpoint=self.calculateLeavePoint(self.pointshistory[-2],self.pointshistory[-1])
+				exitpoint=self.calculateEdgePoint(self.pointshistory[-2],self.pointshistory[-1])
 				exitpressure=self.calculateLeavePressure(self.pointshistory[-2],self.pointshistory[-1],exitpoint)
 				#print "Exit point:",exitpoint,exitpressure
 
@@ -414,7 +414,7 @@ class DrawingTool(AbstractTool):
 		if not self.pendown or not self.inside:
 			return
 		if self.returning:
-			print "detected pen return"
+			#print "detected pen return"
 			self.returning=False
 			self.penDown(x,y,pressure)
 			return
