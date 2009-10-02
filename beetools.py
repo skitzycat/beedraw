@@ -143,7 +143,7 @@ class AbstractTool:
 		pass
 
 	def cleanUp(self):
-		self.window=None
+		pass
 
 	def validSetUp(self):
 		return True
@@ -189,7 +189,115 @@ class DrawingTool(AbstractTool):
 		self.compmode=qtgui.QPainter.CompositionMode_SourceOver
 		self.pointshistory=None
 		self.layer=None
+		self.pendown=False
+
+		self.inside=True
+		self.returning=False
+
+	def calculateLeavePoint(self,p1,p2):
+		rect=self.window.view.getVisibleRect()
+		leftedge=rect.x()
+		topedge=rect.y()
+
+		rightedge=leftedge+rect.width()
+		bottomedge=topedge+rect.height()
+
+		exitpoint=None
+
+		#print "last two points:", p1,p2
+
+		dx=float(p2[0])-float(p1[0])
+		dy=float(p2[1])-float(p1[1])
+
+		# shouldn't ever get this as input, but just in case
+		if dx==0 and dy==0:
+			return None
+
+		# special case for going parallel to an axis
+		if dx==0:
+			if dy<0:
+				return(p1[0],topedge)
+			else:
+				return(p1[0],bottomedge)
+		if dy==0:
+			if dx<0:
+				return(leftedge,p1[1])
+			else:
+				return(rightedge,p1[1])
+
+		# calculate slope
+		m=dy/dx
+
+		# calculate line offset
+		b=p1[1]-(m*p1[0])
+
+		sides_to_check=[]
+
+		if dy<0:
+			sides_to_check.append("top")
+		elif dy>0:
+			sides_to_check.append("bottom")
+
+		if dx<0:
+			sides_to_check.append("left")
+		elif dx>0:
+			sides_to_check.append("right")
+
+		for side in sides_to_check:
+			if side=="top":
+				x,y=findLineIntersection(-m,1,b,0,1,topedge)
+				if x>leftedge and x<rightedge:
+					exitpoint=(x,y)
+			elif side=="bottom":
+				x,y=findLineIntersection(-m,1,b,0,1,bottomedge)
+				if x>leftedge and x<rightedge:
+					exitpoint=(x,y)
+			elif side=="right":
+				x,y=findLineIntersection(-m,1,b,1,0,rightedge)
+				if y>topedge and y<bottomedge:
+					exitpoint=(x,y)
+			elif side=="left":
+				x,y=findLineIntersection(-m,1,b,1,0,leftedge)
+				if y>topedge and y<bottomedge:
+					exitpoint=(x,y)
+
+		return exitpoint
+
+	def calculateLeavePressure(self,p1,p2,pexit):
+		last_distance=distance2d(p1[0],p1[1],p2[0],p2[1])
+		end_distance=distance2d(p2[0],p2[1],pexit[0],pexit[1])
+
+		pressure_trend=p2[2]-p1[2]
+
+		new_pressure=p2[2]+(pressure_trend*end_distance/last_distance)
+
+		if new_pressure>1:
+			new_pressure=1
+		elif new_pressure<0:
+			new_pressure=0
+
+		return new_pressure
  
+	def penLeave(self):
+		#print "Got penLeave"
+		if self.pendown:
+			if self.pointshistory and len(self.pointshistory) > 1:
+				exitpoint=self.calculateLeavePoint(self.pointshistory[-2],self.pointshistory[-1])
+				exitpressure=self.calculateLeavePressure(self.pointshistory[-2],self.pointshistory[-1],exitpoint)
+				#print "Exit point:",exitpoint,exitpressure
+
+				self.penMotion(exitpoint[0],exitpoint[1],exitpressure)
+
+			self.penUp(final=False)
+			self.inside=False
+			self.returning=False
+
+	def penEnter(self):
+		#print "Got penEnter"
+		if self.pendown:
+			self.returning=True
+			self.inside=True
+
 	# for drawing tools make sure there is a valid layer before it will work
 	def validSetUp(self):
 		if layer==None:
@@ -260,6 +368,11 @@ class DrawingTool(AbstractTool):
 		self.brushimage.setPixel(center,center,self.getColorRGBA())
  
 	def penDown(self,x,y,pressure=1):
+		#print "Got penDown"
+		self.returning=False
+		self.inside=True
+		self.pendown=True
+
 		#print "pen down point:", x, y
 		#print "pen pressure:", pressure
 		self.layer=self.window.getLayerForKey(self.layerkey)
@@ -298,6 +411,14 @@ class DrawingTool(AbstractTool):
 		return self.fullsizedbrush.width()
 
 	def penMotion(self,x,y,pressure):
+		if not self.pendown or not self.inside:
+			return
+		if self.returning:
+			print "detected pen return"
+			self.returning=False
+			self.penDown(x,y,pressure)
+			return
+
 		#print "pen motion point,pressure:", x, y, pressure
 		# if it hasn't moved just do nothing
 		if not self.movedFarEnough(x,y):
@@ -395,7 +516,16 @@ class DrawingTool(AbstractTool):
  
 		self.lastpoint=(path[-1][0],path[-1][1])
  
-	def penUp(self,x=None,y=None):
+	def penUp(self,x=None,y=None,final=True):
+		#print "Got penUp"
+		if self.pendown==False:
+			return
+		if final:
+			self.pendown=False
+
+		if not self.pointshistory:
+			return
+
 		radius=int(math.ceil(self.options["maxdiameter"]))
  
 		# get maximum bounds of whole brush stroke
@@ -427,6 +557,8 @@ class DrawingTool(AbstractTool):
 		self.window.addCommandToHistory(command,self.layer.owner)
  
 		BeeApp().master.refreshLayerThumb(self.window.id,self.layerkey)
+
+		self.pointshistory=[]
  
 # basic tool for drawing fuzzy edged stuff on the canvas
 class PaintBrushTool(DrawingTool):
@@ -747,12 +879,15 @@ class SelectionTool(AbstractTool):
 		self.window.view.updateView(refreshregion.boundingRect())
  
 	def penDown(self,x,y,pressure=None):
+		self.pendown=True
 		x=int(x)
 		y=int(y)
 		self.startpoint=(x,y)
 		self.lastpoint=(x,y)
  
 	def penUp(self,x,y,source=0):
+		self.pendown=False
+		x,y=self.window.view.snapPointToView(x,y)
 		x=int(x)
 		y=int(y)
  
@@ -767,6 +902,11 @@ class SelectionTool(AbstractTool):
  
 	# set overlay to display area that would be selected if user lifted up button
 	def penMotion(self,x,y,pressure):
+		if not self.pendown:
+			return
+
+		x,y=self.window.view.snapPointToView(x,y)
+
 		x=int(x)
 		y=int(y)
 		if self.startpoint[0]==x or self.startpoint[1]==y:
@@ -1013,12 +1153,16 @@ class SketchTool(DrawingTool):
 		if belowbrush:
 			# shift both of the nearby brushes
 			scaledaboveimage=self.scaleShiftImage(abovebrush,scale,subpixelx-.5,subpixely-.5,targetwidth,targetheight)
-			scaledbelowimage=self.scaleShiftImage(belowbrush,scale,subpixelx-.5,subpixely-.5,targetwidth,targetheight)
 
-			t = (scale-belowbrush[1])/(abovebrush[1]-belowbrush[1])
+			# BEGIN: temporary change for testing speed and quality when taking out the dual scaling and interpolation
+			outputimage=scaledaboveimage
+			#scaledbelowimage=self.scaleShiftImage(belowbrush,scale,subpixelx-.5,subpixely-.5,targetwidth,targetheight)
+
+			#t = (scale-belowbrush[1])/(abovebrush[1]-belowbrush[1])
 
 			# interpolate between the results, but trust the one that was closer more
-			outputimage = self.interpolate(scaledbelowimage,scaledaboveimage, t)
+			#outputimage = self.interpolate(scaledbelowimage,scaledaboveimage, t)
+			# END: temporary change for testing
 
 		# if the scale is so small it should be at one
 		elif abovebrush[1]!=scale or (abovebrush[0].size[0]==1 and abovebrush[0].size[1]==1):
@@ -1225,7 +1369,6 @@ class SketchTool(DrawingTool):
 		return scaleShiftPIL(srcbrush[0],subpixelx,subpixely,targetwidth,targetheight,scale,scale)
 
 	def scaleImage(self,srcimage,width,height):
-
 		srcwidth,srcheight=srcimage.size
 
 		if srcwidth==width and srcheight==height:

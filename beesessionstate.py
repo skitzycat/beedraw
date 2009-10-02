@@ -80,6 +80,8 @@ class BeeSessionState:
 			if type!=WindowTypes.animation:
 				self.startLog()
 
+		self.curtool=None
+
 	def setRemoteId(self,id):
 		lock=qtcore.QWriteLocker(self.remoteidlock)
 		self.remoteid=id

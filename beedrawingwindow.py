@@ -157,7 +157,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 			layer.adjustCanvasSize(leftadj,topadj,rightadj,bottomadj)
 
 		# finally resize the widget and update image
-		self.ui.PictureViewWidget.newZoom()
+		self.ui.PictureViewWidget.newSize(self.docwidth,self.docheight)
 
 		lock.unlock()
 		self.reCompositeImage()
@@ -185,6 +185,9 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		self.clippath=qtgui.QPainterPath()
 		for select in self.selection:
 			self.clippath.addPath(select)
+
+	def growSelection(self,size):
+		slock=qtcore.QWriteLocker(self.selectionlock)
 
 	# change the current selection path, and update to screen to show it
 	def changeSelection(self,type,newarea=None,slock=None):
@@ -372,10 +375,12 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 
 	# not sure how useful these will be, but just in case a tool wants to do something special when it leaves the drawable area they are here
 	def penEnter(self):
-		self.curtool.penEnter()
+		if self.curtool:
+			self.curtool.penEnter()
 
 	def penLeave(self):
-		self.curtool.penLeave()
+		if self.curtool:
+			self.curtool.penLeave()
 
 	def resizeViewToWindow(self):
 		cw=self.ui.centralwidget
@@ -405,12 +410,12 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 	def on_action_Zoom_In_triggered(self,accept=True):
 		if accept:
 			self.zoom*=1.25
-			self.view.newZoom()
+			self.view.newZoom(self.zoom)
 
 	def on_action_Zoom_Out_triggered(self,accept=True):
 		if accept:
 			self.zoom/=1.25
-			self.view.newZoom()
+			self.view.newZoom(self.zoom)
 
 	def on_action_File_Close_triggered(self,accept=True):
 		if accept:
@@ -419,7 +424,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 	def on_action_Zoom_1_1_triggered(self,accept=True):
 		if accept:
 			self.zoom=1.0
-			self.view.newZoom()
+			self.view.newZoom(self.zoom)
 
 	def on_action_Image_Scale_Image_triggered(self,accept=True):
 		if accept:

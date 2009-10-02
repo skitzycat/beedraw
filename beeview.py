@@ -28,22 +28,31 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 	def __init__(self,window):
 		qtgui.QWidget.__init__(self)
 		self.transform=qtgui.QTransform()
+		self.docwidth=window.docwidth
+		self.docheight=window.docheight
 		self.setGeometry(0,0,window.docwidth,window.docheight)
 		self.windowid=window.id
 		self.show()
-		self.pendown=False
 		# don't draw in the widget background
 		self.setAttribute(qtcore.Qt.WA_NoSystemBackground)
 		# don't double buffer
 		self.setAttribute(qtcore.Qt.WA_PaintOnScreen)
+		self.zoom=1
 
-	def newZoom(self):
-		window=BeeApp().master.getWindowById(self.windowid)
-		# set up a transformation to do all the zoomming
+	def newSize(self,width,height):
+		self.docwidth=width
+		self.docheight=height
+		self.refreshView()
+
+	def newZoom(self,zoom):
+		self.zoom=zoom
+		self.refreshView()
+
+	def refreshView(self):
 		self.transform=qtgui.QTransform()
-		self.transform=self.transform.scale(window.zoom,window.zoom)
+		self.transform=self.transform.scale(self.zoom,self.zoom)
 
-		oldcorner=qtcore.QPoint(window.docwidth,window.docheight)
+		oldcorner=qtcore.QPoint(self.docwidth,self.docheight)
 		newcorner=oldcorner.__mul__(self.transform)
 
 		# update size of widget to be size of zoommed image
@@ -150,9 +159,6 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 	# these are called regardless of if a mouse or tablet event was used
 	def cursorPressEvent(self,x,y,pressure=1,subx=0,suby=0):
 		#print "cursorPressEvent:",x,y,pressure
-
-		if self.pendown:
-			return
 		
 		window=BeeApp().master.getWindowById(self.windowid)
 		# if the window has no layers in it's layers list then just return
@@ -161,7 +167,6 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 
 		self.setCursor(BeeApp().master.getCurToolDesc().getDownCursor())
 
-		self.pendown=True
 		x=x+subx
 		y=y+suby
 		x,y=self.viewCoordsToImage(x,y)
@@ -169,36 +174,29 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 
 	def cursorMoveEvent(self,x,y,pressure=1,subx=0,suby=0):
 		window=BeeApp().master.getWindowById(self.windowid)
-		if self.pendown:
-			#print "cursorMoveEvent:",x,y,pressure
-			x=x+subx
-			y=y+suby
-			x,y=self.viewCoordsToImage(x,y)
-			#print "translates to image coords:",x,y
-			window.addPenMotionToQueue(x,y,pressure,layerkey=window.getCurLayerKey())
+		#print "cursorMoveEvent:",x,y,pressure
+		x=x+subx
+		y=y+suby
+		x,y=self.viewCoordsToImage(x,y)
+		#print "translates to image coords:",x,y
+		window.addPenMotionToQueue(x,y,pressure,layerkey=window.getCurLayerKey())
 
 	def cursorReleaseEvent(self,x,y,pressure=1,subx=0,suby=0):
 		#print "cursorReleaseEvent:",x,y
 		window=BeeApp().master.getWindowById(self.windowid)
-		if self.pendown:
-			self.setCursor(window.master.getCurToolDesc().getCursor())
-			x,y=self.viewCoordsToImage(x,y)
-			window.addPenUpToQueue(x,y,layerkey=window.getCurLayerKey())
-		self.pendown=False
+		self.setCursor(window.master.getCurToolDesc().getCursor())
+		x,y=self.viewCoordsToImage(x,y)
+		window.addPenUpToQueue(x,y,layerkey=window.getCurLayerKey())
 
 	def leaveEvent(self,event):
 		window=BeeApp().master.getWindowById(self.windowid)
-		if self.pendown:
-			window.penLeave()
+		window.penLeave()
 
 	def enterEvent(self,event):
 		window=BeeApp().master.getWindowById(self.windowid)
-		if self.pendown:
-			window.penEnter()
+		window.penEnter()
 
-	def viewCoordsToImage(self,x,y):
-		window=BeeApp().master.getWindowById(self.windowid)
-		#print "translating coords:",x,y
+	def snapPointToView(self,x,y):
 		visible=self.visibleRegion().boundingRect()
 
 		if x<visible.x():
@@ -210,6 +208,12 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 			y=visible.y()
 		elif y>visible.y()+visible.height():
 			y=visible.y()+visible.height()
+
+		return x,y
+
+	def viewCoordsToImage(self,x,y):
+		window=BeeApp().master.getWindowById(self.windowid)
+		#print "translating coords:",x,y
 
 		if window.zoom!=1:
 			x=x/window.zoom
@@ -224,7 +228,6 @@ class BeeViewScrollArea(qtgui.QScrollArea):
 	def __init__(self,oldwidget,window):
 		parent=oldwidget.parentWidget()
 		qtgui.QScrollArea.__init__(self,parent)
-		self.pendown=False
 
 		self.setHorizontalScrollBarPolicy(qtcore.Qt.ScrollBarAlwaysOn)
 		self.setVerticalScrollBarPolicy(qtcore.Qt.ScrollBarAlwaysOn)
@@ -245,8 +248,17 @@ class BeeViewScrollArea(qtgui.QScrollArea):
 		self.show()
 		self.widget().show()
 
-	def newZoom(self):
-		self.widget().newZoom()
+	def getVisibleRect(self):
+		return self.widget().visibleRegion().boundingRect()
+
+	def newSize(self,width,height):
+		self.widget().newSize(width,height)
+
+	def newZoom(self,zoom):
+		self.widget().newZoom(zoom)
+
+	def snapPointToView(self,x,y):
+		return self.widget().snapPointToView(x,y)
 
 	def updateView(self,dirtyrect=None):
 		if not dirtyrect:

@@ -53,6 +53,7 @@ class AbstractBeeMaster:
 		BEE_DEBUG=self.config['debug']
 
 	def getConfigOption(self,key,default=None):
+		""" This function is used to fetch options, I'm well aware that dictionaries have a get function, but I want this function to output a debug message if the key isn't found """
 		lock=qtcore.QReadLocker(self.configlock)
 		if key in self.config:
 			return self.config[key]

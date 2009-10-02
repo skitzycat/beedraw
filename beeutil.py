@@ -378,3 +378,14 @@ def getTimeString():
 	now=datetime.now()
 	returnstring="%d-%002d-%002d %002d-%002d-%002d-%d" % ( now.year, now.month, now.day, now.hour, now.minute, now.second, now.microsecond )
 	return returnstring
+
+# takes constants from 2 line formulas, of the form a1x + b1y = d1 and a2x + b2y = d2
+def findLineIntersection(a1,b1,d1,a2,b2,d2):
+	if a1*b2 - a2*b1 == 0 or a1*b2 - a2*b1 == 0:
+		print "ERROR parrallel lines:"
+		print "x *", a1, "+ y *", b1, "=", d1
+		print "x *", a2, "+ y *", b2, "=", d2
+		return -1,-1
+	x=(b2*d1 - b1*d2)/(a1*b2 - a2*b1)
+	y=(a1*d2 - a2*d1)/(a1*b2 - a2*b1)
+	return x,y
