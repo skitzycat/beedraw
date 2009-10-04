@@ -242,6 +242,7 @@ class BeeViewScrollArea(qtgui.QScrollArea):
 		parent.layout().removeWidget(oldwidget)
 		parent.layout().insertWidget(index,self)
 
+		self.setMinimumSize(oldwidget.minimumSize())
 		self.setSizePolicy(oldwidget.sizePolicy())
 		self.setObjectName(oldwidget.objectName())
 
