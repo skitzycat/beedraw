@@ -201,6 +201,12 @@ class BeeSessionState:
 	def getClipPathCopy(self):
 		return None
 
+	def addPenEnterToQueue(self,layerkey=None,source=ThreadTypes.user,owner=0):
+		self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.penenter,layerkey),source)
+
+	def addPenLeaveToQueue(self,layerkey=None,source=ThreadTypes.user,owner=0):
+		self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.penleave,layerkey),source)
+
 	def addPenDownToQueue(self,x,y,pressure,layerkey=None,tool=None,source=ThreadTypes.user,owner=0):
 		if not tool:
 			tool=self.master.getCurToolInst(self)

@@ -193,11 +193,11 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 
 	def leaveEvent(self,event):
 		window=BeeApp().master.getWindowById(self.windowid)
-		window.penLeave()
+		window.addPenLeaveToQueue(layerkey=window.getCurLayerKey())
 
 	def enterEvent(self,event):
 		window=BeeApp().master.getWindowById(self.windowid)
-		window.penEnter()
+		window.addPenEnterToQueue(layerkey=window.getCurLayerKey())
 
 	def snapPointToView(self,x,y):
 		visible=self.visibleRegion().boundingRect()

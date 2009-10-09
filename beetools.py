@@ -115,6 +115,9 @@ class AbstractTool:
 		self.layer=None
 		self.valid=True
 
+		self.prevpointshistory=[]
+		self.pointshistory=[]
+
 		# these are expected to get set if a tool is set to do raw logging
 		self.oldstate=None
 		self.changedarea=None
@@ -187,12 +190,13 @@ class DrawingTool(AbstractTool):
 		self.name="Pencil"
 		self.lastpressure=-1
 		self.compmode=qtgui.QPainter.CompositionMode_SourceOver
-		self.pointshistory=None
 		self.layer=None
 		self.pendown=False
 
 		self.inside=True
 		self.returning=False
+
+		self.returnpoint=None
 
 	def calculateEdgePoint(self,p1,p2):
 		rect=self.window.view.getVisibleImageRect()
@@ -263,7 +267,7 @@ class DrawingTool(AbstractTool):
 
 		return exitpoint
 
-	def calculateLeavePressure(self,p1,p2,pexit):
+	def calculateEdgePressure(self,p1,p2,pexit):
 		last_distance=distance2d(p1[0],p1[1],p2[0],p2[1])
 		end_distance=distance2d(p2[0],p2[1],pexit[0],pexit[1])
 
@@ -283,12 +287,12 @@ class DrawingTool(AbstractTool):
 		if self.pendown:
 			if self.pointshistory and len(self.pointshistory) > 1:
 				exitpoint=self.calculateEdgePoint(self.pointshistory[-2],self.pointshistory[-1])
-				exitpressure=self.calculateLeavePressure(self.pointshistory[-2],self.pointshistory[-1],exitpoint)
+				if exitpoint:
+					exitpressure=self.calculateEdgePressure(self.pointshistory[-2],self.pointshistory[-1],exitpoint)
 				#print "Exit point:",exitpoint,exitpressure
 
-				self.penMotion(exitpoint[0],exitpoint[1],exitpressure)
+					self.penMotion(exitpoint[0],exitpoint[1],exitpressure)
 
-			self.penUp(final=False)
 			self.inside=False
 			self.returning=False
 
@@ -377,26 +381,8 @@ class DrawingTool(AbstractTool):
 		#print "pen pressure:", pressure
 		self.layer=self.window.getLayerForKey(self.layerkey)
 		self.oldlayerimage=self.layer.getImageCopy()
-		self.pointshistory=[(x,y,pressure)]
-		self.lastpoint=(x,y)
-		self.makeFullSizedBrush()
-		self.updateBrushForPressure(pressure,x%1,y%1)
 
-		targetx=int(x)-int(self.brushimage.width()/2)
-		targety=int(y)-int(self.brushimage.height()/2)
-
-		#print "button pressed on pixel:", x,y
-		#print "pasting corner on pixel:", targetx,targety
-
-		# if this is an even number then do adjustments for the center if needed
-		if self.brushimage.width()%2==0:
-			#print "this is an even sized brush:"
-			if x%1>.5:
-				targetx+=1
-			if y%1>.5:
-				targety+=1
-
-		self.layer.compositeFromCorner(self.brushimage,targetx,targety,self.compmode,self.clippath)
+		self.startLine(x,y,pressure)
 
 	# determine if it's moved far enough that we care
 	def movedFarEnough(self,x,y):
@@ -415,8 +401,23 @@ class DrawingTool(AbstractTool):
 			return
 		if self.returning:
 			#print "detected pen return"
+			if not self.returnpoint:
+				self.returnpoint=(x,y,pressure)
+				return
+
 			self.returning=False
-			self.penDown(x,y,pressure)
+
+			enterpoint=self.calculateEdgePoint((x,y,pressure),self.returnpoint)
+			if enterpoint:
+				enterpressure=self.calculateEdgePressure((x,y,pressure),self.returnpoint,enterpoint)
+
+				self.startLine(enterpoint[0],enterpoint[1],enterpressure)
+				self.penMotion(self.returnpoint[0],self.returnpoint[1],self.returnpoint[2])
+			else:
+				self.startLine(self.returnpoint[0],self.returnpoint[1],self.returnpoint[2])
+			self.penMotion(x,y,pressure)
+
+			self.returnpoint=None
 			return
 
 		#print "pen motion point,pressure:", x, y, pressure
@@ -516,12 +517,31 @@ class DrawingTool(AbstractTool):
  
 		self.lastpoint=(path[-1][0],path[-1][1])
  
-	def penUp(self,x=None,y=None,final=True):
+	def startLine(self,x,y,pressure):
+		if self.pointshistory:
+			self.prevpointshistory.append(self.pointshistory)
+
+		self.pointshistory=[(x,y,pressure)]
+		self.lastpoint=(x,y)
+		self.makeFullSizedBrush()
+		self.updateBrushForPressure(pressure,x%1,y%1)
+
+		targetx=int(x)-int(self.brushimage.width()/2)
+		targety=int(y)-int(self.brushimage.height()/2)
+
+		# if this is an even number then do adjustments for the center if needed
+		if self.brushimage.width()%2==0:
+			#print "this is an even sized brush:"
+			if x%1>.5:
+				targetx+=1
+			if y%1>.5:
+				targety+=1
+
+		self.layer.compositeFromCorner(self.brushimage,targetx,targety,self.compmode,self.clippath)
+
+	def penUp(self,x=None,y=None):
 		#print "Got penUp"
-		if self.pendown==False:
-			return
-		if final:
-			self.pendown=False
+		self.pendown=False
 
 		if not self.pointshistory:
 			return
@@ -533,6 +553,18 @@ class DrawingTool(AbstractTool):
 		right=self.pointshistory[0][0]
 		top=self.pointshistory[0][1]
 		bottom=self.pointshistory[0][1]
+		for line in self.prevpointshistory:
+			for point in line:
+				if point[0]<left:
+					left=point[0]
+				elif point[0]>right:
+					right=point[0]
+
+				if point[1]<top:
+					top=point[1]
+				elif point[1]>bottom:
+					bottom=point[1]
+
 		for point in self.pointshistory:
 			if point[0]<left:
 				left=point[0]
@@ -546,6 +578,7 @@ class DrawingTool(AbstractTool):
  
 		# calculate bounding area of whole event
 		dirtyrect=qtcore.QRect(left-radius,top-radius,right+(radius*2),bottom+(radius*2))
+		
 		# bound it by the area of the layer
 		dirtyrect=rectIntersectBoundingRect(dirtyrect,self.layer.getImageRect())
  

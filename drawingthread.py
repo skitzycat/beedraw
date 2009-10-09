@@ -143,6 +143,14 @@ class DrawingThread(qtcore.QThread):
 				tool.cleanUp()
 				del self.inprocesstools[int(layerkey)]
 
+		elif subtype==LayerCommandTypes.penenter:
+			if int(layerkey) in self.inprocesstools:
+				self.inprocesstools[int(layerkey)].penEnter()
+
+		elif subtype==LayerCommandTypes.penleave:
+			if int(layerkey) in self.inprocesstools:
+				self.inprocesstools[int(layerkey)].penLeave()
+
 		elif subtype==LayerCommandTypes.rawevent:
 			x=command[3]
 			y=command[4]
