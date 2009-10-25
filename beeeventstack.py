@@ -45,7 +45,7 @@ class CommandStack:
 
 	def add(self,command):
 		# if there are commands ahead of this one delete them
-		if self.index>=len(self.commandstack):
+		if self.index<len(self.commandstack):
 			self.commandstack=self.commandstack[0:self.index]
 
 		# if the command stack is full, delete the oldest one
@@ -94,13 +94,13 @@ class DrawingCommand(AbstractCommand):
 		print_debug("running undo in drawing command")
 		layer=BeeApp().master.getLayerById(windowid,self.layerkey)
 		if layer:
-			self.newimage=layer.image.copy(self.location)
+			self.redoimage=layer.image.copy(self.location)
 			layer.compositeFromCorner(self.oldimage,self.location.x(),self.location.y(),qtgui.QPainter.CompositionMode_Source)
 
 	def redo(self,windowid):
 		layer=BeeApp().master.getLayerById(windowid,self.layerkey)
 		if layer:
-			layer.compositeFromCorner(self.newimage,self.location.x(),self.location.y(),qtgui.QPainter.CompositionMode_Source)
+			layer.compositeFromCorner(self.redoimage,self.location.x(),self.location.y(),qtgui.QPainter.CompositionMode_Source)
 
 class AddLayerCommand(AbstractCommand):
 	def __init__(self,layerkey):
