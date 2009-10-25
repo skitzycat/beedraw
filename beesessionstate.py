@@ -92,8 +92,14 @@ class BeeSessionState:
 				return True
 		return False
 
+	def localLayer(self,layerkey):
+		""" return True if the key passed is for a layer that is local, False otherwise """
+		layer=self.getLayerForKey(layerkey)
+		proplock=qtcore.QReadLocker(layer.propertieslock)
+		return self.ownedByMe(layer.owner)
+
 	def ownedByMe(self,owner):
-		""" return True if the layer is under the control of this state keeper or false if it's under the control of something else (ie an animation process or a network client
+		""" return True if the layer is under the control of this state keeper or False if it's under the control of something else (ie an animation process or a network client
 		"""
 		lock=qtcore.QReadLocker(self.remoteidlock)
 		if self.type==WindowTypes.networkclient or self.type==WindowTypes.standaloneserver or self.type==WindowTypes.integratedserver:

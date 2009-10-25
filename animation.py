@@ -223,6 +223,11 @@ class XmlToQueueEventsConverter:
 			if self.image:
 				self.window.addRawEventToQueue(self.layerkey,self.image,self.x,self.y,self.clippath,source=type)
 
+		elif name == 'pointslist':
+			if self.strokestart==True:
+				self.window.addPenLeaveToQueue(self.curlayer,type)
+				self.window.addPenEnterToQueue(self.curlayer,type)
+
 		elif name == 'point':
 			time.sleep(self.stepdelay)
 			(x,ok)=attrs.value('x').toString().toFloat()

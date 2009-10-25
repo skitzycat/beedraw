@@ -198,7 +198,16 @@ class DrawingTool(AbstractTool):
 
 		self.returnpoint=None
 
+	def calculateCloseEdgePoint(self,p1,p2):
+		""" Stub for now, eventually I'd like this algorithm to take over if the other one gets confused by drawing parrellel to the edge right before leaving. """
+		return None
+
 	def calculateEdgePoint(self,p1,p2):
+		""" Calculate where a continuation of two points would have left the canvas, does this by simply creating a line out of the points and looking for where the line crosses the visable area of the canvas"""
+		# don't worry about this if it isn't a local layer
+		if not self.window.localLayer(self.layerkey):
+			return None
+
 		rect=self.window.view.getVisibleImageRect()
 		leftedge=rect.x()
 		topedge=rect.y()
@@ -265,6 +274,14 @@ class DrawingTool(AbstractTool):
 				if y>topedge and y<bottomedge:
 					exitpoint=(x,y)
 
+		
+		pointdistance=distance2d(p1[0],p1[1],p2[0],p2[1])
+		edgedistance=distance2d(p2[0],p2[1],exitpoint[0],exitpoint[1])
+		#print "distance between last two points:", pointdistance
+		#print "distance between last point and edge:", edgedistance
+		if edgedistance>2*pointdistance:
+			#print "going to backup case"
+			return self.calculateCloseEdgePoint(p1,p2)
 		return exitpoint
 
 	def calculateEdgePressure(self,p1,p2,pexit):
@@ -285,6 +302,7 @@ class DrawingTool(AbstractTool):
 	def penLeave(self):
 		#print "Got penLeave"
 		if self.pendown:
+			# the leave point can only be calculated if there are multiple points in the current history
 			if self.pointshistory and len(self.pointshistory) > 1:
 				exitpoint=self.calculateEdgePoint(self.pointshistory[-2],self.pointshistory[-1])
 				if exitpoint:
@@ -372,7 +390,7 @@ class DrawingTool(AbstractTool):
 		self.brushimage.setPixel(center,center,self.getColorRGBA())
  
 	def penDown(self,x,y,pressure=1):
-		#print "Got penDown"
+		#print "Got penDown",x,y
 		self.returning=False
 		self.inside=True
 		self.pendown=True
@@ -399,6 +417,7 @@ class DrawingTool(AbstractTool):
 	def penMotion(self,x,y,pressure):
 		if not self.pendown or not self.inside:
 			return
+		#print "penMotion:",x,y,pressure
 		if self.returning:
 			#print "detected pen return"
 			if not self.returnpoint:
@@ -591,8 +610,6 @@ class DrawingTool(AbstractTool):
  
 		BeeApp().master.refreshLayerThumb(self.window.id,self.layerkey)
 
-		self.pointshistory=[]
- 
 # basic tool for drawing fuzzy edged stuff on the canvas
 class PaintBrushTool(DrawingTool):
 	def __init__(self,options,window):

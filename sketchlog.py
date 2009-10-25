@@ -216,6 +216,7 @@ class SketchLogWriter:
 	def logToolEvent(self,layerkey,tool):
 		lock=qtcore.QMutexLocker(self.mutex)
 
+		prevpoints=tool.prevpointshistory
 		points=tool.pointshistory
 
 		# write clip path if needed
@@ -258,14 +259,26 @@ class SketchLogWriter:
 			self.log.writeAttribute('value',str(tool.options[key]))
 			self.log.writeEndElement()
 
+		for pointlist in prevpoints:
+			self.log.writeStartElement('pointslist')
+			for point in pointlist:
+				self.log.writeStartElement('point')
+				self.log.writeAttribute('x',str(point[0]))
+				self.log.writeAttribute('y',str(point[1]))
+				self.log.writeAttribute('pressure',str(point[2]))
+				self.log.writeEndElement()
+			self.log.writeEndElement()
+
 		# add points to log
+		self.log.writeStartElement('pointslist')
 		for point in points:
 			self.log.writeStartElement('point')
 			self.log.writeAttribute('x',str(point[0]))
 			self.log.writeAttribute('y',str(point[1]))
 			self.log.writeAttribute('pressure',str(point[2]))
 			self.log.writeEndElement()
-			
+		self.log.writeEndElement()
+
 		# end tool event
 		self.log.writeEndElement()
 
