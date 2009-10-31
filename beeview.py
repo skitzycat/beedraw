@@ -191,13 +191,22 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 		x,y=self.viewCoordsToImage(x,y)
 		window.addPenUpToQueue(x,y,layerkey=window.getCurLayerKey())
 
-	def leaveEvent(self,event):
+# I would use the standard leaveEvent and enterEvent methods to handle this, but they don't seem to work under windows
+	def penLeave(self,event):
 		window=BeeApp().master.getWindowById(self.windowid)
 		window.addPenLeaveToQueue(layerkey=window.getCurLayerKey())
 
-	def enterEvent(self,event):
+	def penEnter(self,event):
 		window=BeeApp().master.getWindowById(self.windowid)
 		window.addPenEnterToQueue(layerkey=window.getCurLayerKey())
+
+	def event(self,event):
+		if event.type()==qtcore.QEvent.Enter:
+			self.penEnter(event)
+		elif event.type()==qtcore.QEvent.Leave:
+			self.penLeave(event)
+		return qtgui.QWidget.event(self,event)
+		
 
 	def snapPointToView(self,x,y):
 		visible=self.visibleRegion().boundingRect()
