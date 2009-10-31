@@ -300,7 +300,7 @@ class DrawingTool(AbstractTool):
 		return new_pressure
  
 	def penLeave(self):
-		print "Got penLeave"
+		#print "Got penLeave"
 		if self.pendown:
 			# the leave point can only be calculated if there are multiple points in the current history
 			if self.pointshistory and len(self.pointshistory) > 1:
@@ -315,7 +315,7 @@ class DrawingTool(AbstractTool):
 			self.returning=False
 
 	def penEnter(self):
-		print "Got penEnter"
+		#print "Got penEnter"
 		if self.pendown:
 			self.returning=True
 			self.inside=True

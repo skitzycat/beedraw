@@ -66,6 +66,13 @@ class ServerDrawingThread(DrawingThread):
 			for command in self.commandcaches[c]:
 				command.send(requester,self.master.routinginput)
 
+			backlength=len(self.commandcaches[c]) - self.commandindexes[c]
+			if backlength>0:
+				undocommand=(DrawingCommandTypes.history,HistoryCommandTypes.undo,c)
+				for i in range(backlength):
+					self.master.routinginput.put((undocommand,requester*-1))
+					
+
 	# Change layer owner, must lock down properties layer before calling this
 	def layerOwnerChangeCommand(self,layer,newowner):
 		oldowner=layer.owner
@@ -116,8 +123,9 @@ class ServerDrawingThread(DrawingThread):
 			pressure=command[5]
 			tool=command[6]
 
-			self.inprocesstools[command[2]]=CachedToolEvent(layer,tool)
-			self.inprocesstools[command[2]].points=[(x,y,pressure)]
+			self.inprocesstools[layer]=CachedToolEvent(layer,tool)
+			self.inprocesstools[layer].points=[(x,y,pressure)]
+			self.inprocesstools[layer].prevpoints=[]
 
 		elif subtype==LayerCommandTypes.penmotion:
 			#print "Pen motion event:", command
@@ -125,23 +133,24 @@ class ServerDrawingThread(DrawingThread):
 			y=command[4]
 			pressure=command[5]
 
-			self.inprocesstools[command[2]].points.append((x,y,pressure))
+			self.inprocesstools[layer].points.append((x,y,pressure))
 
 		elif subtype==LayerCommandTypes.penup:
 			x=command[3]
 			y=command[4]
 
-			cachedcommand=self.inprocesstools[command[2]]
+			cachedcommand=self.inprocesstools[layer]
 
 			# make a shallow copy so that the points history won't get changed in the middle of any operations
 			tool=copy.copy(cachedcommand.tool)
 			tool.pointshistory=cachedcommand.points
+			tool.prevpointshistory=cachedcommand.prevpoints
 
 			toolcommand=(DrawingCommandTypes.layer,LayerCommandTypes.tool,cachedcommand.layer.key,tool)
 
 			self.master.routinginput.put((toolcommand,owner))
 
-			del self.inprocesstools[command[2]]
+			del self.inprocesstools[layer]
 
 		elif subtype==LayerCommandTypes.rawevent:
 			x=command[3]
@@ -153,6 +162,14 @@ class ServerDrawingThread(DrawingThread):
 			cachedcommand=CachedRawEvent(layer,x,y,image,path,compmode,owner)
 
 			self.master.routinginput.put((command,owner))
+
+		elif subtype==LayerCommandTypes.penleave:
+			pass
+			
+
+		elif subtype==LayerCommandTypes.penenter:
+			self.inprocesstools[layer].prevpoints.append(self.inprocesstools[layer].points)
+			self.inprocesstools[layer].points=[]
 
 		else:
 			sendcommand=False
@@ -168,7 +185,7 @@ class ServerDrawingThread(DrawingThread):
 			self.commandindexes[owner]=0
 
 		# if there are commands ahead of this one delete them
-		if self.commandindexes[owner] > len(self.commandcaches[owner]):
+		if self.commandindexes[owner] < len(self.commandcaches[owner]):
 			self.commandcaches[owner]=self.commandcaches[owner][0:self.commandindexes[owner]]
 
 		# if the command stack is full, execute and delete the oldest one

@@ -57,15 +57,24 @@ class CachedToolEvent(CachedLayerEvent):
 		CachedLayerEvent.__init__(self,layer)
 		self.tool=tool
 		self.points=[]
+		self.prevpoints=[]
 
 	def process(self):
-		self.tool.penDown(self.points[0][0],self.points[0][1],self.points[0][2])
-		for point in self.points[1:]:
-			self.tool.penMotion(point[0],point[1],point[2])
+		for points in self.prevpoints:
+			if len(points):
+				self.tool.penDown(points[0][0],points[0][1],points[0][2])
+				for point in points[1:]:
+					self.tool.penMotion(point[0],point[1],point[2])
+				self.tool.penUp(points[-1][0],points[-1][1])
 
-		self.tool.penUp(self.points[-1][0],self.points[-1][1])
+		if len(self.points):
+			self.tool.penDown(self.points[0][0],self.points[0][1],self.points[0][2])
+			for point in self.points[1:]:
+				self.tool.penMotion(point[0],point[1],point[2])
+			self.tool.penUp(self.points[-1][0],self.points[-1][1])
 
 	def send(self,id,queue):
+		self.tool.prevpointshistory=self.prevpoints
 		self.tool.pointshistory=self.points
 		queue.put(((DrawingCommandTypes.layer,LayerCommandTypes.tool,self.layer.key,self.tool),id*-1))
 
