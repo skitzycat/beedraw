@@ -300,7 +300,7 @@ class DrawingTool(AbstractTool):
 		return new_pressure
  
 	def penLeave(self):
-		#print "Got penLeave"
+		print "Got penLeave"
 		if self.pendown:
 			# the leave point can only be calculated if there are multiple points in the current history
 			if self.pointshistory and len(self.pointshistory) > 1:
@@ -315,7 +315,7 @@ class DrawingTool(AbstractTool):
 			self.returning=False
 
 	def penEnter(self):
-		#print "Got penEnter"
+		print "Got penEnter"
 		if self.pendown:
 			self.returning=True
 			self.inside=True
@@ -414,7 +414,24 @@ class DrawingTool(AbstractTool):
 	def getFullSizedBrushWidth(self):
 		return self.fullsizedbrush.width()
 
+	# since windows apparently won't catch return and leave events when the button is pressed down I'm forced to do this
+	def checkForPenBounds(self,x,y):
+		if not self.pendown:
+			return
+		# only needed if this is a local layer
+		if not self.window.localLayer(self.layerkey):
+			return
+
+		rect=self.window.view.getVisibleImageRect()
+		inside=rect.contains(qtcore.QPointF(x,y))
+		if inside and not self.inside:
+			self.penEnter()
+
+		if not inside and self.inside:
+			self.penLeave()
+
 	def penMotion(self,x,y,pressure):
+		self.checkForPenBounds(x,y)
 		if not self.pendown or not self.inside:
 			return
 		#print "penMotion:",x,y,pressure
