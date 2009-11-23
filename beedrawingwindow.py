@@ -186,6 +186,25 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		for select in self.selection:
 			self.clippath.addPath(select)
 
+	def penDown(self,x,y,pressure,modkeys,layerkey=None,tool=None,source=ThreadTypes.user):
+		if not tool:
+			tool=self.master.getCurToolInst(self)
+			self.curtool=tool
+
+		self.curtool.guiLevelPenDown(x,y,pressure,modkeys)
+		self.addPenDownToQueue(x,y,pressure,layerkey,tool,source,modkeys=modkeys)
+
+	def penMotion(self,x,y,pressure,modkeys,layerkey=None,source=ThreadTypes.user):
+		if self.curtool:
+			self.curtool.guiLevelPenMotion(x,y,pressure,modkeys)
+			self.addPenMotionToQueue(x,y,pressure,layerkey,source,modkeys=modkeys)
+
+	def penUp(self,x,y,modkeys,layerkey=None,source=ThreadTypes.user):
+		if self.curtool:
+			self.curtool.guiLevelPenUp(x,y,modkeys)
+			self.addPenUpToQueue(x,y,layerkey,source,modkeys=modkeys)
+			self.curtool=None
+
 	def growSelection(self,size):
 		slock=qtcore.QWriteLocker(self.selectionlock)
 

@@ -379,7 +379,7 @@ class LayerConfigWidget(qtgui.QWidget):
 
 		# the layer is owned locally so change it to be owned by no one
 		if win.ownedByMe(layer.owner):
-			print_debug("adding give up layer to queue for layer key: %d" % layer.key)
+			#print_debug("adding give up layer to queue for layer key: %d" % layer.key)
 			win.addGiveUpLayerToQueue(layer.key)
 
 		# if the layer is owned by nobody then request it
@@ -526,9 +526,10 @@ class BeeLayersWindow(qtgui.QMainWindow):
 			if self.master.curwindow:
 				self.master.curwindow.addLayerDownToQueue(self.master.curwindow.curlayerkey)
 
-	#def hideEvent(self,event):
-	#	self.master.ui.actionLayers.setChecked(False)
-	#	return False
+	def hideEvent(self,event):
+		if not self.isMinimized():
+			self.master.uncheckWindowLayerBox()
+		return qtgui.QWidget.hideEvent(self,event)
 
 # custom widget for the thumbnail view of a layer
 class LayerPreviewWidget(qtgui.QWidget):

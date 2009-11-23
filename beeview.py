@@ -139,28 +139,34 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 			
 	def tabletEvent(self,event):
 		if event.type()==qtcore.QEvent.TabletMove:
+			event.accept()
 			# for some reason we don't get a release event when the pen is released
 			# after going off the canvas, this is a quick hack to deal with it
 			if event.pressure()>0:
-				self.cursorMoveEvent(event.x(),event.y(),event.pressure(),event.hiResGlobalX()%1,event.hiResGlobalY()%1)
+				self.cursorMoveEvent(event.x(),event.y(),event.modifiers(),event.pointerType(),event.pressure(),event.hiResGlobalX()%1,event.hiResGlobalY()%1)
 			#else:
 			#	self.cursorReleaseEvent(event.x(),event.y())
 		elif event.type()==qtcore.QEvent.TabletPress:
-			self.cursorPressEvent(event.x(),event.y(),event.pressure(),event.hiResGlobalX()%1,event.hiResGlobalY()%1)
+			event.accept()
+			# for some reason we don't get a release event when the pen is released
+			self.cursorPressEvent(event.x(),event.y(),event.modifiers(),event.pointerType(),event.pressure(),event.hiResGlobalX()%1,event.hiResGlobalY()%1)
 		elif event.type()==qtcore.QEvent.TabletRelease:
-			self.cursorReleaseEvent(event.x(),event.y())
+			event.accept()
+			# for some reason we don't get a release event when the pen is released
+			self.cursorReleaseEvent(event.x(),event.y(),event.modifiers())
+
 
 	def mousePressEvent(self,event):
-		self.cursorPressEvent(event.x(),event.y())
+		self.cursorPressEvent(event.x(),event.y(),event.modifiers())
 
 	def mouseMoveEvent(self,event):
-		self.cursorMoveEvent(event.x(),event.y())
+		self.cursorMoveEvent(event.x(),event.y(),event.modifiers())
 
 	def mouseReleaseEvent(self,event):
-		self.cursorReleaseEvent(event.x(),event.y())
+		self.cursorReleaseEvent(event.x(),event.y(),event.modifiers())
 
 	# these are called regardless of if a mouse or tablet event was used
-	def cursorPressEvent(self,x,y,pressure=1,subx=0,suby=0):
+	def cursorPressEvent(self,x,y,modkeys,pointertype=4,pressure=1,subx=0,suby=0):
 		#print "cursorPressEvent:",x,y,pressure
 		
 		window=BeeApp().master.getWindowById(self.windowid)
@@ -173,23 +179,24 @@ class BeeViewDisplayWidget(qtgui.QWidget):
 		x=x+subx
 		y=y+suby
 		x,y=self.viewCoordsToImage(x,y)
-		window.addPenDownToQueue(x,y,pressure,layerkey=window.getCurLayerKey())
+		window.penDown(x,y,pressure,modkeys,layerkey=window.getCurLayerKey())
 
-	def cursorMoveEvent(self,x,y,pressure=1,subx=0,suby=0):
+	def cursorMoveEvent(self,x,y,modkeys,pointertype=4,pressure=1,subx=0,suby=0):
 		window=BeeApp().master.getWindowById(self.windowid)
 		#print "cursorMoveEvent:",x,y,pressure
 		x=x+subx
 		y=y+suby
 		x,y=self.viewCoordsToImage(x,y)
 		#print "translates to image coords:",x,y
-		window.addPenMotionToQueue(x,y,pressure,layerkey=window.getCurLayerKey())
 
-	def cursorReleaseEvent(self,x,y,pressure=1,subx=0,suby=0):
+		window.penMotion(x,y,pressure,modkeys,layerkey=window.getCurLayerKey())
+
+	def cursorReleaseEvent(self,x,y,modkeys,pressure=1,subx=0,suby=0):
 		#print "cursorReleaseEvent:",x,y
 		window=BeeApp().master.getWindowById(self.windowid)
 		self.setCursor(window.master.getCurToolDesc().getCursor())
 		x,y=self.viewCoordsToImage(x,y)
-		window.addPenUpToQueue(x,y,layerkey=window.getCurLayerKey())
+		window.penUp(x,y,modkeys,layerkey=window.getCurLayerKey())
 
 	def leaveEvent(self,event):
 		window=BeeApp().master.getWindowById(self.windowid)
@@ -251,6 +258,9 @@ class BeeViewScrollArea(qtgui.QScrollArea):
 
 		self.show()
 		self.widget().show()
+
+	def keyPressEvent(self,event):
+		BeeApp().master.newModKeys(event.modifiers())
 
 	def getVisibleRect(self):
 		return self.widget().visibleRegion().boundingRect()

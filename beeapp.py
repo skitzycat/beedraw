@@ -31,7 +31,7 @@ class BeeApp(object):
 		# if there is no instance of this class just make a new one and save what the init function was
 		if BeeApp.instances.get(cls) is None:
 			cls.__original_init__ = cls.__init__
-			BeeApp.instances[cls] = object.__new__(cls, *args, **kwargs)
+			BeeApp.instances[cls] = object.__new__(cls)
 		# if there already was an instance and the init function is the same then make init do nothing so it's not run again and return the already created instance
 		elif cls.__init__ == cls.__original_init__:
 			def nothing(*args, **kwargs):
@@ -39,6 +39,12 @@ class BeeApp(object):
 			cls.__init__ = nothing
 		return BeeApp.instances[cls]
 
-	def __init__(self):
+	def __init__(self,argv,type=1):
 		self.master=None
-		self.app=None
+		self.type=type
+		self.app=BeeGuiApp(argv)
+
+class BeeGuiApp(qtgui.QApplication):
+	def event(self,event):
+		#print "app got event type:", event.type()
+		return qtgui.QApplication.event(self,event)

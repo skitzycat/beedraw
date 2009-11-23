@@ -25,9 +25,9 @@ import PyQt4.QtGui as qtgui
 import pdb
 
 if __name__ == "__main__":
-	beeapp = BeeApp()
-	app = qtgui.QApplication(sys.argv)
-	beeapp.app=app
+	beeapp = BeeApp(sys.argv)
+	#app = qtgui.QApplication(sys.argv)
+	#beeapp.app=app
 	beeapp.master = BeeMasterWindow()
 	#app.setMainWidget(beeMasterWindow.window)
-	app.exec_()
+	beeapp.app.exec_()

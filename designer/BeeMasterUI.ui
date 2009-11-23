@@ -11,8 +11,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>304</width>
-    <height>586</height>
+    <width>324</width>
+    <height>253</height>
    </rect>
   </property>
   <property name="sizePolicy" >
@@ -54,148 +54,108 @@
      <number>0</number>
     </property>
     <item>
-     <layout class="QHBoxLayout" >
-      <property name="spacing" >
-       <number>0</number>
-      </property>
-      <item>
-       <widget class="QPushButton" name="foregroundbutton" >
-        <property name="text" >
-         <string>Foreground:</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QWidget" native="1" name="FGSwatch" >
-        <property name="minimumSize" >
-         <size>
-          <width>30</width>
-          <height>30</height>
-         </size>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="backgroundbutton" >
-        <property name="text" >
-         <string>Background:</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QWidget" native="1" name="BGSwatch" >
-        <property name="minimumSize" >
-         <size>
-          <width>30</width>
-          <height>30</height>
-         </size>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <spacer>
-        <property name="orientation" >
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="sizeHint" >
-         <size>
-          <width>0</width>
-          <height>0</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-     </layout>
-    </item>
-    <item>
-     <layout class="QHBoxLayout" >
-      <property name="spacing" >
-       <number>0</number>
-      </property>
-      <item>
-       <widget class="QLabel" name="label" >
-        <property name="text" >
-         <string>Current Tool:</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QComboBox" name="toolChoiceBox" >
-        <property name="sizePolicy" >
-         <sizepolicy vsizetype="Fixed" hsizetype="MinimumExpanding" >
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="minimumSize" >
-         <size>
-          <width>30</width>
-          <height>0</height>
-         </size>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </item>
-    <item>
-     <layout class="QHBoxLayout" >
-      <property name="leftMargin" >
-       <number>0</number>
-      </property>
-      <property name="topMargin" >
-       <number>0</number>
-      </property>
-      <property name="rightMargin" >
-       <number>0</number>
-      </property>
-      <property name="bottomMargin" >
-       <number>0</number>
-      </property>
-      <item>
-       <widget class="QPushButton" name="saveToolOptionsButton" >
-        <property name="text" >
-         <string>Save Tool Options</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="tooloptionsbutton" >
-        <property name="text" >
-         <string>Configure Tool</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </item>
-    <item>
-     <widget class="QFrame" name="swatch_frame" >
-      <property name="sizePolicy" >
-       <sizepolicy vsizetype="MinimumExpanding" hsizetype="MinimumExpanding" >
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
-      <property name="frameShape" >
-       <enum>QFrame::StyledPanel</enum>
-      </property>
-      <property name="frameShadow" >
-       <enum>QFrame::Raised</enum>
+     <widget class="QLabel" name="label" >
+      <property name="text" >
+       <string>Tools:</string>
       </property>
      </widget>
     </item>
     <item>
-     <layout class="QHBoxLayout" >
-      <item>
-       <widget class="QPushButton" name="load_palette_button" >
+     <layout class="QGridLayout" >
+      <item row="0" column="0" >
+       <widget class="QPushButton" name="pencil_button" >
         <property name="text" >
-         <string>Load Palette</string>
+         <string>Pencil</string>
+        </property>
+        <property name="checkable" >
+         <bool>true</bool>
+        </property>
+        <property name="checked" >
+         <bool>true</bool>
+        </property>
+        <property name="autoExclusive" >
+         <bool>true</bool>
         </property>
        </widget>
       </item>
-      <item>
-       <widget class="QPushButton" name="save_palette_button" >
+      <item row="0" column="1" >
+       <widget class="QPushButton" name="paint_bucket_button" >
         <property name="text" >
-         <string>Save Palette</string>
+         <string>Paint Bucket</string>
+        </property>
+        <property name="checkable" >
+         <bool>true</bool>
+        </property>
+        <property name="checked" >
+         <bool>false</bool>
+        </property>
+        <property name="autoExclusive" >
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0" >
+       <widget class="QPushButton" name="brush_button" >
+        <property name="text" >
+         <string>Brush</string>
+        </property>
+        <property name="checkable" >
+         <bool>true</bool>
+        </property>
+        <property name="autoExclusive" >
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1" >
+       <widget class="QPushButton" name="eye_dropper_button" >
+        <property name="text" >
+         <string>Eye Dropper</string>
+        </property>
+        <property name="checkable" >
+         <bool>true</bool>
+        </property>
+        <property name="autoExclusive" >
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0" >
+       <widget class="QPushButton" name="eraser_button" >
+        <property name="text" >
+         <string>Eraser</string>
+        </property>
+        <property name="checkable" >
+         <bool>true</bool>
+        </property>
+        <property name="autoExclusive" >
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1" >
+       <widget class="QPushButton" name="rectangle_select_button" >
+        <property name="text" >
+         <string>Rectangle Select</string>
+        </property>
+        <property name="checkable" >
+         <bool>true</bool>
+        </property>
+        <property name="autoExclusive" >
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1" >
+       <widget class="QPushButton" name="feather_select_button" >
+        <property name="text" >
+         <string>Feather Select</string>
+        </property>
+        <property name="checkable" >
+         <bool>true</bool>
+        </property>
+        <property name="autoExclusive" >
+         <bool>true</bool>
         </property>
        </widget>
       </item>
@@ -208,7 +168,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>304</width>
+     <width>324</width>
      <height>35</height>
     </rect>
    </property>
@@ -232,7 +192,9 @@
     <property name="title" >
      <string>Window</string>
     </property>
-    <addaction name="actionLayers" />
+    <addaction name="Window_Layers" />
+    <addaction name="Window_Palette" />
+    <addaction name="Window_Tool_Options" />
    </widget>
    <widget class="QMenu" name="menuEdit_2" >
     <property name="title" >
@@ -240,9 +202,20 @@
     </property>
     <addaction name="action_Edit_Configure" />
    </widget>
+   <widget class="QMenu" name="menuTool" >
+    <property name="title" >
+     <string>Tools</string>
+    </property>
+    <addaction name="Tool_save_default" />
+    <addaction name="Tool_load_default" />
+    <addaction name="separator" />
+    <addaction name="Tool_save_as" />
+    <addaction name="Tool_load_from" />
+   </widget>
    <addaction name="menuMain_Window" />
    <addaction name="menuEdit_2" />
    <addaction name="menuWindow" />
+   <addaction name="menuTool" />
    <addaction name="menuEdit" />
   </widget>
   <widget class="QStatusBar" name="statusbar" >
@@ -304,7 +277,7 @@
     <string>About</string>
    </property>
   </action>
-  <action name="actionLayers" >
+  <action name="Window_Layers" >
    <property name="checkable" >
     <bool>true</bool>
    </property>
@@ -318,6 +291,48 @@
   <action name="action_Edit_Configure" >
    <property name="text" >
     <string>Configure</string>
+   </property>
+  </action>
+  <action name="Window_Palette" >
+   <property name="checkable" >
+    <bool>true</bool>
+   </property>
+   <property name="checked" >
+    <bool>true</bool>
+   </property>
+   <property name="text" >
+    <string>Palette</string>
+   </property>
+  </action>
+  <action name="Tool_save_default" >
+   <property name="text" >
+    <string>Save as defaults</string>
+   </property>
+  </action>
+  <action name="Tool_load_default" >
+   <property name="text" >
+    <string>Load defaults</string>
+   </property>
+  </action>
+  <action name="Tool_save_as" >
+   <property name="text" >
+    <string>Save options as</string>
+   </property>
+  </action>
+  <action name="Tool_load_from" >
+   <property name="text" >
+    <string>Load from file</string>
+   </property>
+  </action>
+  <action name="Window_Tool_Options" >
+   <property name="checkable" >
+    <bool>true</bool>
+   </property>
+   <property name="checked" >
+    <bool>true</bool>
+   </property>
+   <property name="text" >
+    <string>Tool Options</string>
    </property>
   </action>
  </widget>

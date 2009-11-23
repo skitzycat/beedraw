@@ -86,17 +86,30 @@
     </property>
     <addaction name="Palette_save" />
     <addaction name="Palette_load" />
+    <addaction name="separator" />
+    <addaction name="actionSave_as" />
+    <addaction name="actionLoad_from_file" />
    </widget>
    <addaction name="menuPalette" />
   </widget>
   <action name="Palette_save" >
    <property name="text" >
-    <string>Save</string>
+    <string>Save as Default</string>
    </property>
   </action>
   <action name="Palette_load" >
    <property name="text" >
-    <string>Load</string>
+    <string>Load from Defaults</string>
+   </property>
+  </action>
+  <action name="actionSave_as" >
+   <property name="text" >
+    <string>Save as</string>
+   </property>
+  </action>
+  <action name="actionLoad_from_file" >
+   <property name="text" >
+    <string>Load from file</string>
    </property>
   </action>
  </widget>

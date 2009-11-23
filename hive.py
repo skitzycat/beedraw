@@ -25,8 +25,8 @@ from beeapp import BeeApp
 import pdb
 
 if __name__ == "__main__":
-	beeapp = BeeApp()
-	app = qtgui.QApplication(sys.argv)
-	beeapp.app = app
+	beeapp = BeeApp(sys.argv)
+	#app = qtgui.QApplication(sys.argv)
+	#beeapp.app = app
 	beeapp.master = HiveMasterWindow()
-	app.exec_()
+	beeapp.app.exec_()

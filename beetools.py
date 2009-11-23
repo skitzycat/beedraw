@@ -23,10 +23,10 @@ from beetypes import *
 from beeeventstack import *
 from ImageQt import ImageQt
  
-from PencilOptionsDialogUi import *
-from BrushOptionsDialogUi import *
-from EraserOptionsDialogUi import *
-from PaintBucketOptionsDialogUi import *
+from PencilOptionsWidgetUi import *
+from BrushOptionsWidgetUi import *
+from EraserOptionsWidgetUi import *
+from PaintBucketOptionsWidgetUi import *
 
 from beeapp import BeeApp
  
@@ -63,6 +63,13 @@ class BeeToolBox:
  
 	def setCurToolIndex(self,index):
 		self.curtoolindex=index
+
+	def setCurToolByName(self,name):
+		for i in range(len(self.toolslist)):
+			if name==self.toolslist[i].name:
+				self.curtoolindex=i
+				return True
+		return False
  
 	def getToolDescByName(self,name):
 		for tool in self.toolslist:
@@ -70,14 +77,16 @@ class BeeToolBox:
 				return tool
 		print "Error, toolbox couldn't find tool with name:", name
 		return None
- 
+
 # Base class for a class to describe all tools and spawn tool instances
 class AbstractToolDesc:
 	def __init__(self,name):
 		self.clippath=None
 		self.options={}
 		self.name=name
+		self.displayname=name
 		self.setDefaultOptions()
+		self.optionswidget=None
  
 	def getCursor(self):
 		return qtcore.Qt.ArrowCursor
@@ -90,6 +99,9 @@ class AbstractToolDesc:
  
 	def getOptionsWidget(self,parent):
 		return qtgui.QWidget(parent)
+
+	def newModKeys(self,modkeys):
+		pass
  
 	def runOptionsDialog(self,parent):
 		qtgui.QMessageBox(qtgui.QMessageBox.Information,"Sorry","No Options Avialable for this tool",qtgui.QMessageBox.Ok).exec_()
@@ -113,7 +125,6 @@ class AbstractTool:
 		self.options=options
 		self.window=window
 		self.layer=None
-		self.valid=True
 
 		self.prevpointshistory=[]
 		self.pointshistory=[]
@@ -123,7 +134,17 @@ class AbstractTool:
 		self.changedarea=None
 
 	# some things are better handled in the GUI thread (ability to use pixmaps) so if needed put it in this function
-	def guiLevelCommand(self,x,y):
+	# also anything that doesn't go out to remote sessions can be put here, such as selection controls.
+	def guiLevelPenDown(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
+		pass
+
+	def guiLevelPenMotion(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
+		pass
+
+	def guiLevelPenUp(self,x,y,modkeys=qtcore.Qt.NoModifier):
+		pass
+
+	def newModKeys(self,modkeys):
 		pass
 
 	def setOption(self,key,value):
@@ -148,12 +169,9 @@ class AbstractTool:
 	def cleanUp(self):
 		pass
 
-	def validSetUp(self):
-		return True
- 
 class EyeDropperToolDesc(AbstractToolDesc):
 	def __init__(self):
-		AbstractToolDesc.__init__(self,"Eye Dropper")
+		AbstractToolDesc.__init__(self,"eyedropper")
 
 	def setDefaultOptions(self):
 		# option for if it should get color for a single layer or the whole visible image
@@ -175,19 +193,18 @@ class EyeDropperTool(AbstractTool):
 		AbstractTool.__init__(self,options,window)
 		self.name="Eye Dropper"
 
-	def penDown(self,x,y,pressure=None):
+	def guiLevelPenDown(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
 		if self.options["singlelayer"]==0:
 			color=self.window.getImagePixelColor(x,y)
 		else:
 			color=self.window.getCurLayerPixelColor(x,y)
-		self.window.master.updateFGColor(qtgui.QColor(color))
+		self.window.master.setFGColor(qtgui.QColor(color))
 
 # basic tool for everything that draws points on the canvas
 class DrawingTool(AbstractTool):
-	logtype=ToolLogTypes.regular
 	def __init__(self,options,window):
 		AbstractTool.__init__(self,options,window)
-		self.name="Pencil"
+		self.name="pencil"
 		self.lastpressure=-1
 		self.compmode=qtgui.QPainter.CompositionMode_SourceOver
 		self.layer=None
@@ -197,6 +214,13 @@ class DrawingTool(AbstractTool):
 		self.returning=False
 
 		self.returnpoint=None
+		self.logtype=ToolLogTypes.regular
+
+	def guiLevelPenDown(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
+		if modkeys==qtcore.Qt.ControlModifier:
+			color=self.window.getImagePixelColor(x,y)
+			self.window.master.setFGColor(qtgui.QColor(color))
+			self.logtype=ToolLogTypes.unlogable
 
 	def calculateCloseEdgePoint(self,p1,p2):
 		""" Stub for now, eventually I'd like this algorithm to take over if the other one gets confused by drawing parrellel to the edge right before leaving. """
@@ -315,17 +339,13 @@ class DrawingTool(AbstractTool):
 			self.returning=False
 
 	def penEnter(self):
+		if self.logtype==ToolLogTypes.unlogable:
+			return
 		#print "Got penEnter"
 		if self.pendown:
 			self.returning=True
 			self.inside=True
 
-	# for drawing tools make sure there is a valid layer before it will work
-	def validSetUp(self):
-		if layer==None:
-			return False
-		return True
- 
 	def getColorRGBA(self):
 		return self.fgcolor.rgba()
  
@@ -390,6 +410,9 @@ class DrawingTool(AbstractTool):
 		self.brushimage.setPixel(center,center,self.getColorRGBA())
  
 	def penDown(self,x,y,pressure=1):
+		if self.logtype==ToolLogTypes.unlogable:
+			return
+
 		#print "Got penDown",x,y
 		self.returning=False
 		self.inside=True
@@ -762,7 +785,8 @@ class PaintBrushTool(DrawingTool):
 # this is the most basic drawing tool
 class PencilToolDesc(AbstractToolDesc):
 	def __init__(self):
-		AbstractToolDesc.__init__(self,"Hard Edge Brush")
+		AbstractToolDesc.__init__(self,"pencil")
+		self.displayname="Pencil"
  
 	def getCursor(self):
 		return qtcore.Qt.CrossCursor
@@ -813,10 +837,35 @@ class PencilToolDesc(AbstractToolDesc):
 			self.options["maxdiameter"]=dialog.ui.brushdiameter.value()
 			self.options["pressurebalance"]=dialog.ui.pressurebalance.value()
 			self.options["step"]=dialog.ui.stepsize.value()
+
+	def getOptionsWidget(self,parent):
+		if not self.optionswidget:
+			self.optionswidget=DrawingToolOptionsWidget(parent,self)
+			self.optionswidget.updateDisplayFromOptions()
+		return self.optionswidget
+
+class DrawingToolOptionsWidget(qtgui.QWidget):
+	def __init__(self,parent,tooldesc):
+		qtgui.QWidget.__init__(self,parent)
+		self.tooldesc=tooldesc
+
+		# setup user interface
+		self.ui=Ui_PencilOptionsWidget()
+		self.ui.setupUi(self)
+
+	def updateDisplayFromOptions(self):
+		self.ui.brushdiameter.setValue(self.tooldesc.options["maxdiameter"])
+		self.ui.stepsize.setValue(self.tooldesc.options["step"])
+
+	def on_brushdiameter_sliderMoved(self,value):
+		self.tooldesc.options["maxdiameter"]=value
+
+	def on_stepsize_sliderMoved(self,value):
+		self.tooldesc.options["step"]=value
  
 class PaintBrushToolDesc(PencilToolDesc):
 	def __init__(self):
-		AbstractToolDesc.__init__(self,"paintbrush")
+		AbstractToolDesc.__init__(self,"brush")
  
 	def setDefaultOptions(self):
 		PencilToolDesc.setDefaultOptions(self)
@@ -899,6 +948,31 @@ class EraserToolDesc(AbstractToolDesc):
 		tool.clippath=window.getClipPathCopy()
 		tool.layerkey=window.curlayerkey
 		return tool
+
+	def getOptionsWidget(self,parent):
+		if not self.optionswidget:
+			self.optionswidget=EraserOptionsWidget(parent,self)
+			self.optionswidget.updateDisplayFromOptions()
+		return self.optionswidget
+
+class EraserOptionsWidget(qtgui.QWidget):
+	def __init__(self,parent,tooldesc):
+		qtgui.QWidget.__init__(self,parent)
+		self.tooldesc=tooldesc
+
+		# setup user interface
+		self.ui=Ui_EraserOptionsWidget()
+		self.ui.setupUi(self)
+
+	def updateDisplayFromOptions(self):
+		self.ui.eraserdiameter.setValue(self.tooldesc.options["maxdiameter"])
+		self.ui.stepsize.setValue(self.tooldesc.options["step"])
+
+	def on_eraserdiameter_sliderMoved(self,value):
+		self.tooldesc.options["maxdiameter"]=value
+
+	def on_stepsize_sliderMoved(self,value):
+		self.tooldesc.options["step"]=value
  
 # selection overlay information
 class SelectionOverlay:
@@ -945,14 +1019,14 @@ class SelectionTool(AbstractTool):
  
 		self.window.view.updateView(refreshregion.boundingRect())
  
-	def penDown(self,x,y,pressure=None):
+	def guiLevelPenDown(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
 		self.pendown=True
 		x=int(x)
 		y=int(y)
 		self.startpoint=(x,y)
 		self.lastpoint=(x,y)
  
-	def penUp(self,x,y,source=0):
+	def guiLevelPenUp(self,x,y,source=0):
 		self.pendown=False
 		x,y=self.window.view.snapPointToView(x,y)
 		x=int(x)
@@ -968,7 +1042,7 @@ class SelectionTool(AbstractTool):
 			self.window.changeSelection(selectionmod,newpath)
  
 	# set overlay to display area that would be selected if user lifted up button
-	def penMotion(self,x,y,pressure):
+	def guiLevelPenMotion(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
 		if not self.pendown:
 			return
 
@@ -986,7 +1060,7 @@ class SelectionTool(AbstractTool):
 # this is the most basic selection tool (rectangular)
 class RectSelectionToolDesc(AbstractToolDesc):
 	def __init__(self):
-		AbstractToolDesc.__init__(self,"rectangle select")
+		AbstractToolDesc.__init__(self,"rectselect")
 	def setupTool(self,window,layerkey=None):
 		self.layerkey=layerkey
 		tool=self.getTool(window)
@@ -1000,7 +1074,7 @@ class RectSelectionToolDesc(AbstractToolDesc):
 # fuzzy selection tool description
 class FeatherSelectToolDesc(AbstractToolDesc):
 	def __init__(self):
-		AbstractToolDesc.__init__(self,"Feather Select")
+		AbstractToolDesc.__init__(self,"featherselect")
 
 	def setDefaultOptions(self):
 		self.options["similarity"]=10
@@ -1019,7 +1093,7 @@ class FeatherSelectTool(AbstractTool):
 	def __init__(self,options,window):
 		AbstractTool.__init__(self,options,window)
 
-	def guiLevelCommand(self,x,y):
+	def guiLevelPenDown(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
 		self.selectionmod=getCurSelectionModType()
 		self.newpath=getSimilarColorPath(self.window.image,x,y,self.options['similarity'])
 
@@ -1029,7 +1103,7 @@ class FeatherSelectTool(AbstractTool):
 # paint bucket tool description
 class PaintBucketToolDesc(AbstractToolDesc):
 	def __init__(self):
-		AbstractToolDesc.__init__(self,"Paint Bucket Fill")
+		AbstractToolDesc.__init__(self,"bucket")
 
 	def setDefaultOptions(self):
 		self.options["similarity"]=10
@@ -1074,6 +1148,36 @@ class PaintBucketToolDesc(AbstractToolDesc):
 			else:
 				self.options["wholeselection"]=1
 
+	def getOptionsWidget(self,parent):
+		if not self.optionswidget:
+			self.optionswidget=PaintBucketOptionsWidget(parent,self)
+			self.optionswidget.updateDisplayFromOptions()
+		return self.optionswidget
+
+class PaintBucketOptionsWidget(qtgui.QWidget):
+	def __init__(self,parent,tooldesc):
+		qtgui.QWidget.__init__(self,parent)
+		self.tooldesc=tooldesc
+
+		# setup user interface
+		self.ui=Ui_PaintBucketOptions()
+		self.ui.setupUi(self)
+
+	def updateDisplayFromOptions(self):
+		if self.tooldesc.options["wholeselection"]==1:
+			self.ui.whole_selection_check.setCheckState(qtcore.Qt.Checked)
+		else:
+			self.ui.whole_selection_check.setCheckState(qtcore.Qt.Unchecked)
+		self.ui.color_threshold_box.setValue(self.tooldesc.options["similarity"])
+
+	def on_color_threshold_box_valueChanged(self,value):
+		if type(value)==int:
+			self.tooldesc.options["similarity"]=value
+
+	def on_whole_selection_check_clicked(self,bool=None):
+		if bool!=None:
+			self.tooldesc.options["wholeselection"]=bool
+
 # paint bucket tool
 class PaintBucketTool(AbstractTool):
 	logtype=ToolLogTypes.raw
@@ -1082,7 +1186,7 @@ class PaintBucketTool(AbstractTool):
 		self.pointshistory=[]
 		self.newpath=None
 
-	def guiLevelCommand(self,x,y):
+	def guiLevelPenDown(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
 		if self.options['wholeselection']==0:
 			self.newpath=getSimilarColorPath(self.window.image,x,y,self.options['similarity'])
 
@@ -1134,7 +1238,7 @@ class ElipseSelectionToolDesc(AbstractToolDesc):
 
 class SketchToolDesc(PencilToolDesc):
 	def __init__(self):
-		AbstractToolDesc.__init__(self,"Soft Edge Brush")
+		AbstractToolDesc.__init__(self,"brush")
  
 	def setDefaultOptions(self):
 		PencilToolDesc.setDefaultOptions(self)
@@ -1150,24 +1254,31 @@ class SketchToolDesc(PencilToolDesc):
 		tool=SketchTool(self.options,window)
 		tool.name=self.name
 		return tool
- 
-	def runOptionsDialog(self,parent):
-		dialog=qtgui.QDialog()
-		dialog.ui=Ui_BrushOptionsDialog()
-		dialog.ui.setupUi(dialog)
- 
-		dialog.ui.brushdiameter.setValue(self.options["maxdiameter"])
-		dialog.ui.pressurebalance.setValue(self.options["pressurebalance"])
-		dialog.ui.stepsize.setValue(self.options["step"])
-		dialog.ui.blurslider.setValue(self.options["blur"])
- 
-		dialog.exec_()
- 
-		if dialog.result():
-			self.options["maxdiameter"]=dialog.ui.brushdiameter.value()
-			self.options["pressurebalance"]=dialog.ui.pressurebalance.value()
-			self.options["step"]=dialog.ui.stepsize.value()
-			self.options["blur"]=dialog.ui.blurslider.value()
+
+	def getOptionsWidget(self,parent):
+		if not self.optionswidget:
+			self.optionswidget=BrushOptionsWidget(parent,self)
+			self.optionswidget.updateDisplayFromOptions()
+		return self.optionswidget
+
+class BrushOptionsWidget(qtgui.QWidget):
+	def __init__(self,parent,tooldesc):
+		qtgui.QWidget.__init__(self,parent)
+		self.tooldesc=tooldesc
+
+		# setup user interface
+		self.ui=Ui_BrushOptionsWidget()
+		self.ui.setupUi(self)
+
+	def updateDisplayFromOptions(self):
+		self.ui.brushdiameter.setValue(self.tooldesc.options["maxdiameter"])
+		self.ui.stepsize.setValue(self.tooldesc.options["step"])
+
+	def on_brushdiameter_sliderMoved(self,value):
+		self.tooldesc.options["maxdiameter"]=value
+
+	def on_stepsize_sliderMoved(self,value):
+		self.tooldesc.options["step"]=value
 
 class SketchTool(DrawingTool):
 	def __init__(self,options,window):

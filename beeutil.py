@@ -389,3 +389,13 @@ def findLineIntersection(a1,b1,d1,a2,b2,d2):
 	x=(b2*d1 - b1*d2)/(a1*b2 - a2*b1)
 	y=(a1*d2 - a2*d1)/(a1*b2 - a2*b1)
 	return x,y
+
+def replaceWidget(oldwidget,newwidget):
+	""" replace one widget with another """
+	parent=oldwidget.parentWidget()
+
+	index=parent.layout().indexOf(oldwidget)
+	parent.layout().removeWidget(oldwidget)
+	oldwidget.hide()
+	newwidget.show()
+	parent.layout().insertWidget(index,newwidget)

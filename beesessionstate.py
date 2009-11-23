@@ -207,25 +207,19 @@ class BeeSessionState:
 	def getClipPathCopy(self):
 		return None
 
-	def addPenEnterToQueue(self,layerkey=None,source=ThreadTypes.user,owner=0):
+	def addPenEnterToQueue(self,layerkey=None,source=ThreadTypes.user):
 		self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.penenter,layerkey),source)
 
-	def addPenLeaveToQueue(self,layerkey=None,source=ThreadTypes.user,owner=0):
+	def addPenLeaveToQueue(self,layerkey=None,source=ThreadTypes.user):
 		self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.penleave,layerkey),source)
 
-	def addPenDownToQueue(self,x,y,pressure,layerkey=None,tool=None,source=ThreadTypes.user,owner=0):
-		if not tool:
-			tool=self.master.getCurToolInst(self)
-			self.curtool=tool
-
-		tool.guiLevelCommand(x,y)
-
+	def addPenDownToQueue(self,x,y,pressure,layerkey,tool,source=ThreadTypes.user,modkeys=qtcore.Qt.NoModifier):
 		self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.pendown,layerkey,x,y,pressure,tool),source)
 
-	def addPenMotionToQueue(self,x,y,pressure,layerkey=None,source=ThreadTypes.user):
+	def addPenMotionToQueue(self,x,y,pressure,layerkey,source=ThreadTypes.user,modkeys=qtcore.Qt.NoModifier):
 		self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.penmotion,layerkey,x,y,pressure),source)
 
-	def addPenUpToQueue(self,x,y,layerkey=None,source=ThreadTypes.user):
+	def addPenUpToQueue(self,x,y,layerkey,source=ThreadTypes.user,modkeys=qtcore.Qt.NoModifier):
 		self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.penup,layerkey,x,y),source)
 
 	def recreateBackdrop(self):

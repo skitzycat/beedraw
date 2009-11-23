@@ -70,11 +70,11 @@ class ColorSwatch(qtgui.QWidget):
 		self.master.setFGColor(self.color)
 
 	def setCurrentToFG(self):
-		self.updateColor(self.master.fgcolor)
+		self.updateColor(self.master.getFGColor())
 
 	def swapFGandBG(self):
-		tmp=self.master.fgcolor
-		self.master.setFGColor(self.master.bgcolor)
+		tmp=self.master.getFGColor()
+		self.master.setFGColor(self.master.getBGColor())
 		self.master.setBGColor(tmp)
 
 class FGSwatch(ColorSwatch):
@@ -85,13 +85,13 @@ class FGSwatch(ColorSwatch):
 			self.swapFGandBG()
 
 	def changeColorDialog(self):
-		color=qtgui.QColorDialog.getColor(self.master.fgcolor,self)
+		color=qtgui.QColorDialog.getColor(self.master.getFGColor(),self)
 		if color.isValid():
 			self.updateColor(color)
+			self.master.setFGColor(color)
 
 	def updateColor(self,color):
 		ColorSwatch.updateColor(self,color)
-		self.master.fgcolor=color
 
 class BGSwatch(ColorSwatch):
 	def mousePressEvent(self,event):
@@ -101,10 +101,10 @@ class BGSwatch(ColorSwatch):
 			self.swapFGandBG()
 
 	def changeColorDialog(self):
-		color=qtgui.QColorDialog.getColor(self.master.bgcolor,self)
+		color=qtgui.QColorDialog.getColor(self.master.getBGColor(),self)
 		if color.isValid():
 			self.updateColor(color)
+			self.master.setBGColor(color)
 
 	def updateColor(self,color):
 		ColorSwatch.updateColor(self,color)
-		self.master.bgcolor=color

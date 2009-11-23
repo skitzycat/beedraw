@@ -32,88 +32,18 @@ from AboutDisplayDialogUi import Ui_About_Dialog
 from PickNewCanvasSizeDialogUi import Ui_canvas_size_dialog
 from ConnectionDialogUi import Ui_ConnectionInfoDialog
 from BeeDrawOptionsUi import Ui_BeeMasterOptions
-from colorswatch import *
 from beelayer import BeeLayersWindow
 from beeutil import *
 from beesave import PaletteXmlWriter,BeeToolConfigWriter,BeeMasterConfigWriter
 from beeload import PaletteParser,BeeToolConfigParser
+from beepalette import PaletteWindow
+from toolwindow import ToolWindow
 
 from beeapp import BeeApp
 
 from abstractbeemaster import AbstractBeeMaster
 from beedrawingwindow import BeeDrawingWindow, NetworkClientDrawingWindow, AnimationDrawingWindow
 
-class BeeSwatchScrollArea(qtgui.QScrollArea):
-	def __init__(self,master,oldwidget,rows=15,columns=12,boxsize=15):
-		parent=oldwidget.parentWidget()
-		qtgui.QScrollArea.__init__(self,parent)
-
-		self.master=master
-
-		self.boxsize=boxsize
-		self.swatchrows=rows
-		self.swatchcolumns=columns
-
-		# steal attributes from old widget
-		self.setSizePolicy(oldwidget.sizePolicy())
-		self.setObjectName(oldwidget.objectName())
-
-		# remove old widget and insert this one
-		self.replaceWidget(oldwidget)
-
-		self.setWidget(qtgui.QFrame(self))
-
-		self.show()
-
-		# only the gui thread should mess with these so there shouldn't be a need for any locks
-		self.fgcolor=qtgui.QColor(0,0,0)
-		self.bgcolor=qtgui.QColor(0,0,0)
-
-	def replaceWidget(self,oldwidget):
-		parent=oldwidget.parentWidget()
-		index=parent.layout().indexOf(oldwidget)
-		parent.layout().removeWidget(oldwidget)
-		parent.layout().insertWidget(index,self)
-
-	def setupSwatches(self,colors):
-		self.widget().setLayout(qtgui.QGridLayout(self.widget()))
-		self.widget().layout().setSpacing(0)
-		if colors:
-			self.rows=len(colors)
-			self.columns=len(colors[0])
-		# keep around pointer to all the swatches to read from them all later if needed
-
-		curcolor=None
-		self.swatches=[]
-		widget=self.widget()
-		layout=widget.layout()
-		for i in range(self.swatchrows):
-			curswatchrow=[]
-			for j in range(self.swatchcolumns):
-				if colors:
-					rownum=len(curswatchrow)
-					colnum=len(self.swatches)
-					curcolor=colors[colnum][rownum]
-				# just to make it look better, put each swatch in a frame with a border
-				curframe=qtgui.QFrame(widget)
-				curframe.setFrameShape(qtgui.QFrame.StyledPanel)
-				curframe.setLayout(qtgui.QHBoxLayout(curframe))
-				curswatch=ColorSwatch(self.master,parent=curframe,boxsize=self.boxsize,color=curcolor)
-				curframe.layout().addWidget(curswatch)
-				curswatchrow.append(curswatch)
-				curframe.layout().setMargin(0)
-
-				# readjust subframe size to swatch size
-				curframe.adjustSize()
-				curframe.show()
-
-				# add the widget at the right place
-				layout.addWidget(curframe,i,j)
-
-			self.swatches.append(curswatchrow)
-
-		# readjust the whole palette widget to the right size
-		widget.adjustSize()
 
 class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 	def __init__(self):
@@ -136,25 +66,23 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		# list to hold drawing windows created
 		self.drawingwindows=[]
 
-		# add list of tools to tool choice drop down
-		for tool in self.toolbox.toolNameGenerator():
-			self.ui.toolChoiceBox.addItem(tool)
-
-		# set signal so we know when the tool changes
-		self.connect(self.ui.toolChoiceBox,qtcore.SIGNAL("activated(int)"),self.on_tool_changed)
-
 		self.curwindow=None
 
-		# set initial tool
-		self.curtoolindex=0
+		self.curpointertype=-1
+		self.curtoolname=self.toolbox.getCurToolDesc().name
+
+		self.pointertoolmap={}
+		# set some initial default values for tool pointers
+		self.pointertoolmap[1]="brush"
+		self.pointertoolmap[3]="eraser"
 
 		# setup foreground and background swatches
 		# default foreground to black and background to white
-		self.ui.FGSwatch=FGSwatch(self,replacingwidget=self.ui.FGSwatch)
-		self.setFGColor(qtgui.QColor(0,0,0))
+		#self.ui.FGSwatch=FGSwatch(self,replacingwidget=self.ui.FGSwatch)
+		#self.setFGColor(qtgui.QColor(0,0,0))
 
-		self.ui.BGSwatch=BGSwatch(self,replacingwidget=self.ui.BGSwatch)
-		self.setBGColor(qtgui.QColor(255,255,255))
+		#self.ui.BGSwatch=BGSwatch(self,replacingwidget=self.ui.BGSwatch)
+		#self.setBGColor(qtgui.QColor(255,255,255))
 
 		# vars for dialog windows that there should only be one of each
 		self.layerswindow=BeeLayersWindow(self)
@@ -162,8 +90,15 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		# keep track of current ID so each window gets a unique ID
 		self.nextwindowid=0
 
-		# replace widget with scroll area to hold them
-		self.ui.swatch_frame=BeeSwatchScrollArea(self,self.ui.swatch_frame)
+		# setup window with tool options
+		self.tooloptionswindow=ToolWindow(self)
+		self.tooloptionswindow.updateCurrentTool()
+
+		# setup window with colors
+		self.palettewindow=PaletteWindow(self)
+
+		self.fgcolor=qtgui.QColor(0,0,0)
+		self.bgcolor=qtgui.QColor(255,255,255)
 
 		palfilename=os.path.join(BEE_CONFIG_DIR,"config/default.pal")
 		palfile=qtcore.QFile(palfilename)
@@ -174,7 +109,20 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		else:
 			colors=[]
 
-		self.ui.swatch_frame.setupSwatches(colors)
+	# I don't think these currently need to have mutexes, but if they ever do it can be done here
+	def setFGColor(self,color):
+		self.fgcolor=color
+		self.palettewindow.ui.FGSwatch.updateColor(color)
+
+	def setBGColor(self,color):
+		self.bgcolor=color
+		self.palettewindow.ui.BGSwatch.updateColor(color)
+
+	def getFGColor(self):
+		return self.fgcolor
+
+	def getBGColor(self):
+		return self.bgcolor
 
 	def registerWindow(self,window):
 		self.drawingwindows.append(window)
@@ -211,6 +159,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		return None
 
 	def removeWindow(self,window):
+		"""remove a drawing window from the list of current windows"""
 		try:
 			self.drawingwindows.remove(window)
 		except:
@@ -219,11 +168,61 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			self.curwindow=None
 
 	def getCurToolInst(self,window):
+		"""return new instance of current tool type, with layer set to current layer"""
 		curtool=self.getCurToolDesc()
 		return curtool.setupTool(window,window.getCurLayerKey())
 
 	def getCurToolDesc(self):
+		"""return pointer to the currently selected tool description object"""
 		return self.toolbox.getCurToolDesc()
+
+	def changeCurToolByName(self,name):
+		if self.toolbox.setCurToolByName(name):
+			self.curtoolname=name
+			self.tooloptionswindow.updateCurrentTool()
+
+	def newModKeys(self,modkeys):
+		#print "master got new mod keys"
+		pass
+
+	def pointerTypeCheck(self,pointertype):
+		if pointertype!=self.curpointertype:
+			#print "changing pointer type to:", pointertype
+			self.pointertoolmap[self.curpointertype]=self.curtoolname
+
+			if pointertype in self.pointertoolmap:
+				self.changeCurToolByName(self.pointertoolmap[pointertype])
+
+			self.curpointertype=pointertype
+
+	# connect signals for tool buttons
+	def on_pencil_button_clicked(self,accept=False):
+		if accept:
+			self.changeCurToolByName("pencil")
+
+	def on_brush_button_clicked(self,accept=False):
+		if accept:
+			self.changeCurToolByName("brush")
+
+	def on_eraser_button_clicked(self,accept=False):
+		if accept:
+			self.changeCurToolByName("eraser")
+
+	def on_paint_bucket_button_clicked(self,accept=False):
+		if accept:
+			self.changeCurToolByName("bucket")
+
+	def on_eye_dropper_button_clicked(self,accept=False):
+		if accept:
+			self.changeCurToolByName("eyedropper")
+
+	def on_rectangle_select_button_clicked(self,accept=False):
+		if accept:
+			self.changeCurToolByName("rectselect")
+
+	def on_feather_select_button_clicked(self,accept=False):
+		if accept:
+			self.changeCurToolByName("featherselect")
 
 	def on_tool_changed(self,index):
 		self.toolbox.setCurToolIndex(index)
@@ -233,7 +232,10 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 	def on_tooloptionsbutton_pressed(self):
 		self.getCurToolDesc().runOptionsDialog(self)
 
-	def on_saveToolOptionsButton_pressed(self):
+	def on_Tool_save_default_triggered(self,accept=True):
+		if not accept:
+			return
+
 		filename=os.path.join("config","tooloptions.xml")
 		outfile=qtcore.QFile(filename,self)
 		outfile.open(qtcore.QIODevice.Truncate|qtcore.QIODevice.WriteOnly)
@@ -244,39 +246,11 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		writer.endLog()
 		outfile.close()
 
-	def on_save_palette_button_pressed(self):
-		filename=qtgui.QFileDialog.getSaveFileName(self,"Choose File Name",".","Palette save (*.pal)")
-		if not filename:
-			return
-		if filename[-4:] != ".pal":
-			filename+=".pal"
-		outfile=qtcore.QFile(filename)
-		outfile.open(qtcore.QIODevice.WriteOnly)
-		writer=PaletteXmlWriter(outfile)
-		writer.logPalette(self.ui.swatch_frame.swatches)
-
-	def on_load_palette_button_pressed(self):
-		filename=qtgui.QFileDialog.getOpenFileName(self,"Choose Palette File To Load",".","Palette save (*.pal)")
-		if not filename:
-			return
-
-		infile=qtcore.QFile(filename)
-		infile.open(qtcore.QIODevice.ReadOnly)
-		reader=PaletteParser(infile)
-		colors=reader.getColors()
-		self.ui.swatch_frame.setupSwatches(colors)
-
 	def on_backgroundbutton_pressed(self):
 		self.ui.BGSwatch.changeColorDialog()
 
 	def on_foregroundbutton_pressed(self):
 		self.ui.FGSwatch.changeColorDialog()
-
-	def setFGColor(self,color):
-		self.ui.FGSwatch.updateColor(color)
-
-	def setBGColor(self,color):
-		self.ui.BGSwatch.updateColor(color)
 
 	def on_action_File_Exit_triggered(self,accept=True):
 		if not accept:
@@ -517,12 +491,28 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		self.curwindow=BeeDrawingWindow.startNetworkServer(self)
 		self.refreshLayersList()
 
-	def on_actionLayers_toggled(self,state):
+	def uncheckWindowLayerBox(self):
+		self.ui.Window_Layers.setChecked(False)
+
+	def on_Window_Layers_triggered(self,state=None):
+		if state==None:
+			return
 		if state:
 			self.layerswindow.show()
 			self.refreshLayersList()
 		else:
 			self.layerswindow.hide()
+
+	def uncheckWindowPaletteBox(self):
+		self.ui.Window_Palette.setChecked(False)
+
+	def on_Window_Palette_triggered(self,state=None):
+		if state==None:
+			return
+		if state:
+			self.palettewindow.show()
+		else:
+			self.palettewindow.hide()
 
 	# destroy all subwindows
 	def cleanUp(self):
@@ -535,6 +525,12 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 		self.layerswindow.close()
 		self.layerswindow=None
+
+		self.palettewindow.close()
+		self.palettewindow=None
+
+		self.tooloptionswindow.close()
+		self.tooloptionswindow=None
 
 	def closeEvent(self,event):
 		# destroy subwindows
