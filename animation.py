@@ -17,11 +17,14 @@
 
 from base64 import b64decode
 import time
+from StringIO import StringIO
 from beeglobals import *
 from beetypes import *
 from beeutil import *
 from sketchlog import SketchLogWriter
 
+import Image
+from ImageQt import ImageQt
 import PyQt4.QtCore as qtcore
 import PyQt4.QtGui as qtgui
 import PyQt4.QtXml as qtxml
@@ -47,7 +50,6 @@ class XmlToQueueEventsConverter:
 		self.id=id
 		self.window=window
 		self.type=type
-		self.inrawevent=False
 		self.stepdelay=stepdelay
 		self.keymap={}
 
@@ -199,26 +201,32 @@ class XmlToQueueEventsConverter:
 			(value,ok)=attrs.value('value').toString().toInt()
 			self.curtool.setOption("%s" % attrs.value('name').toString(),value)
 		elif name == 'image':
-			self.rawstring=self.xml.readElementText()
+			rawstring=self.xml.readElementText()
+
+			#encstr=str(rawstring)
+
+			#decstr=b64decode(encstr)
 
 			data=qtcore.QByteArray()
-			data=data.append(self.rawstring)
+			data=data.append(rawstring)
 			data=qtcore.QByteArray.fromBase64(data)
 			data=qtcore.qUncompress(data)
 
-			image=qtgui.QImage()
-			image.loadFromData(data,"PNG")
+			iostr=StringIO(str(data))
+
+			pilimage=Image.open(iostr)
+			pilimage.load()
+
+			image=ImageQt(pilimage)
 
 			self.image=image
 
 		elif name == 'rawevent':
-			self.inrawevent=True
 			self.raweventargs=[]
 			(self.x,ok)=attrs.value('x').toString().toInt()
 			(self.y,ok)=attrs.value('y').toString().toInt()
 			(layerkey,ok)=attrs.value('layerkey').toString().toInt()
 			self.layerkey=self.translateKey(layerkey)
-			self.rawstring=self.xml.readElementText()
 
 			if self.image:
 				self.window.addRawEventToQueue(self.layerkey,self.image,self.x,self.y,self.clippath,source=type)
@@ -288,20 +296,6 @@ class XmlToQueueEventsConverter:
 			self.window.addPenUpToQueue(self.lastx,self.lasty,self.curlayer,type)
 			self.curtool=None
 
-		elif name == 'rawevent':
-			return
-			self.inrawevent=False
-
-			# convert data out of base 64 then uncompress
-			data=qtcore.QByteArray()
-			data=data.append(self.rawstring)
-			data=qtcore.QByteArray.fromBase64(data)
-			data=qtcore.qUncompress(data)
-
-			image=qtgui.QImage()
-			image.loadFromData(data,"PNG")
-
-			self.window.addRawEventToQueue(self.layerkey,image,self.x,self.y,None,source=type)
 		elif name == 'clippath':
 			poly=qtgui.QPolygonF(self.clippoints)
 			self.clippath=qtgui.QPainterPath()

@@ -173,6 +173,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 
 	# update the clipping path to match the current selection
 	def updateClipPath(self,slock=None):
+		""" updates the clip path to match current selections, should be called every time selections are updated """
 		if not slock:
 			slock=qtcore.QReadLocker(self.selectionlock)
 
@@ -435,10 +436,6 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		if accept:
 			self.zoom/=1.25
 			self.view.newZoom(self.zoom)
-
-	def on_action_File_Close_triggered(self,accept=True):
-		if accept:
-			self.close()
 
 	def on_action_Zoom_1_1_triggered(self,accept=True):
 		if accept:

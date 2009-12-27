@@ -24,6 +24,8 @@ from beetools import BeeToolBox
 from beeload import BeeMasterConfigParser
 
 class AbstractBeeMaster:
+	""" This is a class that can be inherited from to provide a bee master object that controls tools, windows, layers, and options
+	"""
 	def __init__(self):
 		# setup tool box
 		self.toolbox=BeeToolBox()
@@ -71,12 +73,14 @@ class AbstractBeeMaster:
 		pass
 
 	def getCurToolDesc(self):
+		"""	return description object for current tool """
 		return self.toolbox.getCurToolDesc()
 
 	def registerWindow(self,window):
 		pass
 
 	def getLayerById(self,win_id,layer_id):
+		""" return layer of current window that has specified ID, return None if no layer with that ID is found """
 		return self.curwindow.getLayerByKey(layer_id)
 
 	def getLayerById(self,win_id):

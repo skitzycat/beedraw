@@ -58,8 +58,9 @@ class LayerTypes:
 				user: layer that can be drawn on by the user
         animation: layer that is being drawn on by a local process reading it out of a file
         network: layer in a network session that the user cannot draw on
+        floating: layer that is a floating selection used to paste something, this not shared in a network session until anchored to another layer
 	"""
-	user, animation, network = range(3)
+	user, animation, network, floating = range(4)
 
 class WindowTypes:
 	""" Represents types of windows:

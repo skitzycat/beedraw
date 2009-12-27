@@ -12,7 +12,7 @@
     <x>0</x>
     <y>0</y>
     <width>324</width>
-    <height>253</height>
+    <height>273</height>
    </rect>
   </property>
   <property name="sizePolicy" >
@@ -41,16 +41,7 @@
     <enum>Qt::PreventContextMenu</enum>
    </property>
    <layout class="QVBoxLayout" >
-    <property name="leftMargin" >
-     <number>0</number>
-    </property>
-    <property name="topMargin" >
-     <number>0</number>
-    </property>
-    <property name="rightMargin" >
-     <number>0</number>
-    </property>
-    <property name="bottomMargin" >
+    <property name="margin" >
      <number>0</number>
     </property>
     <item>
@@ -159,6 +150,19 @@
         </property>
        </widget>
       </item>
+      <item row="3" column="0" >
+       <widget class="QPushButton" name="move_selection_button" >
+        <property name="text" >
+         <string>Move Selection</string>
+        </property>
+        <property name="checkable" >
+         <bool>true</bool>
+        </property>
+        <property name="autoExclusive" >
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
      </layout>
     </item>
    </layout>
@@ -169,7 +173,7 @@
      <x>0</x>
      <y>0</y>
      <width>324</width>
-     <height>35</height>
+     <height>38</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuMain_Window" >
@@ -337,5 +341,22 @@
   </action>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>action_File_Exit</sender>
+   <signal>triggered()</signal>
+   <receiver>BeeMasterSpec</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel" >
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel" >
+     <x>161</x>
+     <y>136</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

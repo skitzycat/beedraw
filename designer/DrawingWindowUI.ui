@@ -20,16 +20,7 @@
   </property>
   <widget class="QWidget" name="centralwidget" >
    <layout class="QHBoxLayout" >
-    <property name="leftMargin" >
-     <number>0</number>
-    </property>
-    <property name="topMargin" >
-     <number>0</number>
-    </property>
-    <property name="rightMargin" >
-     <number>0</number>
-    </property>
-    <property name="bottomMargin" >
+    <property name="margin" >
      <number>0</number>
     </property>
     <item>
@@ -56,7 +47,7 @@
      <x>0</x>
      <y>0</y>
      <width>619</width>
-     <height>35</height>
+     <height>38</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile" >
@@ -232,5 +223,22 @@
   </action>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>action_File_Close</sender>
+   <signal>triggered()</signal>
+   <receiver>DrawingWindowSpec</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel" >
+     <x>82</x>
+     <y>113</y>
+    </hint>
+    <hint type="destinationlabel" >
+     <x>309</x>
+     <y>223</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

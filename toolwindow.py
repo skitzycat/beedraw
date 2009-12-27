@@ -25,3 +25,8 @@ class ToolWindow(qtgui.QMainWindow):
 
 		replaceWidget(self.curwidget,newwidget)
 		self.curwidget=newwidget
+
+	def hideEvent(self,event):
+		if not self.isMinimized():
+			self.master.uncheckWindowToolOptionsBox()
+		return qtgui.QWidget.hideEvent(self,event)

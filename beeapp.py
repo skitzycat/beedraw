@@ -43,8 +43,14 @@ class BeeApp(object):
 		self.master=None
 		self.type=type
 		self.app=BeeGuiApp(argv)
+		#self.app=qtgui.QApplication(argv)
 
 class BeeGuiApp(qtgui.QApplication):
 	def event(self,event):
-		#print "app got event type:", event.type()
-		return qtgui.QApplication.event(self,event)
+		if event.type()==qtcore.QEvent.TabletEnterProximity:
+			BeeApp().master.pointerTypeCheck(event.pointerType())
+			return True
+		# not sure why this is needed, but the application doesn't end it's process properly without it
+		elif event.type()==20:
+			return qtgui.QApplication.event(self,event)
+		return False

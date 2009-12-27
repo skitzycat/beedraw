@@ -50,6 +50,9 @@ class BeeLayer:
 		# for floting selections and temporary overlays for tools and such
 		self.tooloverlay=None
 
+		# list to hold floating selections
+		self.floatingselections=[]
+
 		if image:
 			self.image=image
 		else:
@@ -179,6 +182,9 @@ class BeeLayer:
 		retimage=self.image.copy()
 		return retimage
 
+	#def cutImage(self):
+	#	selection=win.getClipPathCopy()
+
 	# composite section of layer onto paint object passed
 	def compositeLayerOn(self,painter,dirtyrect):
 		# if layer is not visible just return
@@ -246,6 +252,17 @@ class BeeLayer:
 		painter.end()
 
 		self.image=newimage
+
+	# shift image by specified x and y
+	#def shiftImage(self,x,y):
+
+class FloatingSelection(BeeLayer):
+	def __init__(self,image,parentlayer):
+		self.key=BeeApp().master.getNextLayerKey()
+		self.image=image
+
+	# paste the selection on it's layer
+	#def anchor(self,layer):
 
 # widget that we can use to set the options of each layer
 class LayerConfigWidget(qtgui.QWidget):
