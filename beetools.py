@@ -106,9 +106,6 @@ class AbstractToolDesc:
 	def newModKeys(self,modkeys):
 		pass
  
-	def runOptionsDialog(self,parent):
-		qtgui.QMessageBox(qtgui.QMessageBox.Information,"Sorry","No Options Avialable for this tool",qtgui.QMessageBox.Ok).exec_()
- 
 	# setup needed parts of tool using knowledge of current window
 	# this should be implemented in subclass if needed
 	def setupTool(self,window,layerkey=None):
@@ -175,6 +172,7 @@ class AbstractTool:
 class EyeDropperToolDesc(AbstractToolDesc):
 	def __init__(self):
 		AbstractToolDesc.__init__(self,"eyedropper")
+		self.displayname="Eye Dropper"
 
 	def setDefaultOptions(self):
 		# option for if it should get color for a single layer or the whole visible image
@@ -356,20 +354,40 @@ class DrawingTool(AbstractTool):
 		return self.fgcolor.rgba()
  
 	def makeFullSizedBrush(self):
-		diameter=self.options["maxdiameter"]
-		self.diameter=self.options["maxdiameter"]
+		fgr=self.fgcolor.red()
+		fgg=self.fgcolor.green()
+		fgb=self.fgcolor.blue()
 
-		color=self.getColorRGBA()
- 
-		center=diameter/2.0
-		self.fullsizedbrush=qtgui.QImage(diameter,diameter,qtgui.QImage.Format_ARGB32_Premultiplied)
-		self.fullsizedbrush.fill(0)
-		for i in range(diameter):
-			for j in range(diameter):
-				# add in .5 to each point so we measure from the center of the pixel
-				distance=math.sqrt(((i+.5-center)**2)+((j+.5-center)**2))
-				if distance <= center:
-					self.fullsizedbrush.setPixel(i,j,color)
+		opacity=int(self.options["opacity"]*255./100.)
+
+		colortuple=(fgr,fgg,fgb,opacity)
+
+		self.diameter=self.options["maxdiameter"]
+		width=self.diameter
+		height=self.diameter
+
+		radius=width/2.
+		imgwidth=int(math.ceil(width))
+		imgheight=int(math.ceil(height))
+
+		# use a greyscale image here to reduce number of calculations
+		self.fullsizedbrush=Image.new("RGBA",(imgwidth,imgheight),(0,0,0,0))
+
+		# create raw access object for faster pixel setting
+		pix=self.fullsizedbrush.load()
+
+		for i in range(width):
+			for j in range(height):
+				distance=math.sqrt(((i+.5-radius)**2)+((j+.5-radius)**2))
+				if distance <= radius:
+					pix[i,j]=colortuple
+
+		self.fullsizedbrush=PILtoQImage(self.fullsizedbrush)
+
+	def updateBrushForOpacity(self):
+		if self.opacity==100:
+			return
+		return
 
 	def updateBrushForPressure(self,pressure,subpixelx=0,subpixely=0):
 		# see if we need to update at all
@@ -378,7 +396,7 @@ class DrawingTool(AbstractTool):
  
 		self.lastpressure=pressure
  
-		# if we can use the full sized brush, then do it
+		# if we can use the full sized brush do it
 		if self.options["pressuresize"]==0 or pressure==1:
 			self.brushimage=self.fullsizedbrush
 			self.lastpressure=1
@@ -703,22 +721,6 @@ class PencilToolDesc(AbstractToolDesc):
  
 		return tool
  
-	def runOptionsDialog(self,parent):
-		dialog=qtgui.QDialog()
-		dialog.ui=Ui_PencilOptionsDialog()
-		dialog.ui.setupUi(dialog)
- 
-		dialog.ui.brushdiameter.setValue(self.options["maxdiameter"])
-		dialog.ui.pressurebalance.setValue(self.options["pressurebalance"])
-		dialog.ui.stepsize.setValue(self.options["step"])
- 
-		dialog.exec_()
- 
-		if dialog.result():
-			self.options["maxdiameter"]=dialog.ui.brushdiameter.value()
-			self.options["pressurebalance"]=dialog.ui.pressurebalance.value()
-			self.options["step"]=dialog.ui.stepsize.value()
-
 	def getOptionsWidget(self,parent):
 		if not self.optionswidget:
 			self.optionswidget=DrawingToolOptionsWidget(parent,self)
@@ -743,6 +745,9 @@ class DrawingToolOptionsWidget(qtgui.QWidget):
 
 	def on_stepsize_sliderMoved(self,value):
 		self.tooldesc.options["step"]=value
+
+	def on_opacity_sliderMoved(self,value):
+		self.tooldesc.options["opacity"]=value
  
 class EraserToolDesc(AbstractToolDesc):
 	# describe actual tool
@@ -758,6 +763,7 @@ class EraserToolDesc(AbstractToolDesc):
 	# back to description stuff
 	def __init__(self):
 		AbstractToolDesc.__init__(self,"eraser")
+		self.displayname="Eraser"
  
 	def pressToolButton(self):
 		BeeApp().master.ui.eraser_button.setChecked(True)
@@ -768,22 +774,6 @@ class EraserToolDesc(AbstractToolDesc):
 		self.options["pressuresize"]=1
 		self.options["pressurebalance"]=100
 		self.options["blur"]=100
- 
-	def runOptionsDialog(self,parent):
-		dialog=qtgui.QDialog()
-		dialog.ui=Ui_EraserOptionsDialog()
-		dialog.ui.setupUi(dialog)
- 
-		dialog.ui.eraserdiameter.setValue(self.options["maxdiameter"])
-		dialog.ui.stepsize.setValue(self.options["step"])
-		dialog.ui.blurpercent.setValue(self.options["blur"])
- 
-		dialog.exec_()
- 
-		if dialog.result():
-			self.options["maxdiameter"]=dialog.ui.eraserdiameter.value()
-			self.options["step"]=dialog.ui.stepsize.value()
-			self.options["blur"]=dialog.ui.blurpercent.value()
  
 	def getTool(self,window):
 		tool=self.Tool(self.options,window)
@@ -909,6 +899,7 @@ class SelectionTool(AbstractTool):
 class RectSelectionToolDesc(AbstractToolDesc):
 	def __init__(self):
 		AbstractToolDesc.__init__(self,"rectselect")
+		self.displayname="Rectangle Selection"
 
 	def setupTool(self,window,layerkey=None):
 		self.layerkey=layerkey
@@ -927,6 +918,7 @@ class RectSelectionToolDesc(AbstractToolDesc):
 class FeatherSelectToolDesc(AbstractToolDesc):
 	def __init__(self):
 		AbstractToolDesc.__init__(self,"featherselect")
+		self.displayname="Feather Selection"
 
 	def pressToolButton(self):
 		BeeApp().master.ui.feather_select_button.setChecked(True)
@@ -959,6 +951,7 @@ class FeatherSelectTool(AbstractTool):
 class PaintBucketToolDesc(AbstractToolDesc):
 	def __init__(self):
 		AbstractToolDesc.__init__(self,"bucket")
+		self.displayname="Paint Bucket"
 
 	def pressToolButton(self):
 		BeeApp().master.ui.paint_bucket_button.setChecked(True)
@@ -985,26 +978,6 @@ class PaintBucketToolDesc(AbstractToolDesc):
 		tool.clippath=window.getClipPathCopy()
 
 		return tool
-
-	def runOptionsDialog(self,parent):
-		dialog=qtgui.QDialog()
-		dialog.ui=Ui_PaintBucketOptionsDialog()
-		dialog.ui.setupUi(dialog)
-
-		if self.options["wholeselection"]==1:
-			dialog.ui.whole_selection_check.setCheckState(qtcore.Qt.Checked)
-		else:
-			dialog.ui.whole_selection_check.setCheckState(qtcore.Qt.Unchecked)
-		dialog.ui.color_threshold_box.setValue(self.options["similarity"])
- 
-		dialog.exec_()
-
-		if dialog.result():
-			self.options["similarity"]=dialog.ui.color_threshold_box.value()
-			if dialog.ui.whole_selection_check.checkState()==qtcore.Qt.Unchecked:
-				self.options["wholeselection"]=0
-			else:
-				self.options["wholeselection"]=1
 
 	def getOptionsWidget(self,parent):
 		if not self.optionswidget:
@@ -1083,9 +1056,11 @@ class PaintBucketTool(AbstractTool):
 		BeeApp().master.refreshLayerThumb(self.window.id,self.layerkey)
 
 # elipse selection tool
-class ElipseSelectionToolDesc(AbstractToolDesc):
+class EllipseSelectionToolDesc(AbstractToolDesc):
 	def __init__(self):
-		AbstractToolDesc.__init__(self,"elipse select")
+		AbstractToolDesc.__init__(self,"ellipse select")
+		self.displayname="Ellipse Selection"
+
 	def setupTool(self,window,layerkey=None):
 		self.layerkey=layerkey
 		tool=self.getTool(window)
@@ -1097,6 +1072,7 @@ class ElipseSelectionToolDesc(AbstractToolDesc):
 class SketchToolDesc(PencilToolDesc):
 	def __init__(self):
 		AbstractToolDesc.__init__(self,"brush")
+		self.displayname="Brush"
 
 	def pressToolButton(self):
 		BeeApp().master.ui.brush_button.setChecked(True)
@@ -1244,7 +1220,7 @@ class SketchTool(DrawingTool):
 				curfade=self.ellipseBrushFadeAt(i,j,radius,brushwidth,brushheight,0)
 				pix[i,j]=(int(round(curfade*255)))
 
-		return scaleShiftPIL(brushimage,subpixelx,subpixely,5,5,1,1)
+		return scaleShiftPIL(brushimage,subpixelx,subpixely,5,5,1,1,Image.AFFINE)
 
 	# do special case calculations for brush of single pixel size
 	def scaleSinglePixelImage(self,scale,pixel,subpixelx,subpixely):
@@ -1253,7 +1229,7 @@ class SketchTool(DrawingTool):
 		#print "single pixel image:"
 		#printPILImage(pixel)
 
-		outputimage=scaleShiftPIL(pixel,subpixelx,subpixely,2,2,scale,scale)
+		outputimage=scaleShiftPIL(pixel,subpixelx,subpixely,2,2,scale,scale,Image.AFFINE)
 
 		#print "Scaled single pixel brush:"
 		#printPILImage(outputimage)
@@ -1267,10 +1243,10 @@ class SketchTool(DrawingTool):
 			return image1
 
 		if t < 0:
-			print  "Error: interploate function passed bad t value:", t
+			print "Error: interploate function passed bad t value:", t
 			return image2
 		elif t > 1:
-			print  "Error: interploate function passed bad t value:", t
+			print "Error: interploate function passed bad t value:", t
 			return image1
 
 		#print "t value:", t
@@ -1365,6 +1341,7 @@ class SketchTool(DrawingTool):
 
 		fadepercent=self.options["fade percent"]
 
+		# use a greyscale image here to reduce number of calculations
 		brushimage=Image.new("L",(imgwidth,imgheight),0)
 
 		# create raw access object for faster pixel setting
@@ -1378,7 +1355,6 @@ class SketchTool(DrawingTool):
 
 		return brushimage
 
-	# 
 	def ellipseBrushFadeAt(self,x,y,radius,imgwidth,imgheight,fadepercent):
 		centerx=math.ceil(imgwidth)/2.
 		centery=math.ceil(imgheight)/2.
@@ -1405,7 +1381,7 @@ class SketchTool(DrawingTool):
 		scale=targetscale/srcbrush[1]
 		#print "going from scale:", srcbrush[1], "to scale", targetscale
 		#print "calculated conversion:", scale
-		return scaleShiftPIL(srcbrush[0],subpixelx,subpixely,targetwidth,targetheight,scale,scale)
+		return scaleShiftPIL(srcbrush[0],subpixelx,subpixely,targetwidth,targetheight,scale,scale,Image.AFFINE)
 
 	def scaleImage(self,srcimage,width,height):
 		srcwidth,srcheight=srcimage.size
@@ -1416,7 +1392,7 @@ class SketchTool(DrawingTool):
 		xscale=width/float(srcwidth)
 		yscale=height/float(srcheight)
 
-		return scaleShiftPIL(srcimage,0,0,width,height,xscale,yscale)
+		return scaleShiftPIL(srcimage,0,0,width,height,xscale,yscale,Image.AFFINE)
 
 	def getFullSizedBrushWidth(self):
 		return self.fullsizedbrush.size[0]
@@ -1424,6 +1400,7 @@ class SketchTool(DrawingTool):
 class SelectionMoveToolDesc(AbstractToolDesc):
 	def __init__(self):
 		AbstractToolDesc.__init__(self,"selection move")
+		self.displayname="Eye Dropper"
 
 	#def setDefaultOptions(self):
 
@@ -1445,7 +1422,7 @@ class SelectionMoveTool(AbstractTool):
 		AbstractTool.__init__(self,options,window)
 
 	# figure out if pen is over selection or not, if it is over selection then do a move, if not do an anchor if current layer is a floating selection
-  # command does not change any layers or even go through the drawing thread until the cursor is let up, at that point it puts an event through the drawing thread that moves it all at once
+	# command does not change any layers or even go through the drawing thread until the cursor is let up, at that point it puts an event through the drawing thread that moves it all at once
 	#def guiLevelPenDown(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
 	#def guiLevelPenMotion(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
 	#def PenUp(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
