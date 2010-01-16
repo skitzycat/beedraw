@@ -185,7 +185,7 @@ class DrawingThread(qtcore.QThread):
 		window=self.master.getWindowById(self.windowid)
 		subtype=command[1]
 		if subtype==AllLayerCommandTypes.resize:
-			window.adjustCanvasSize(command[2],command[3],command[4],command[5])
+			window.adjustCanvasSize((command[2],command[3],command[4],command[5]))
 
 		elif subtype==AllLayerCommandTypes.scale:
 			pass
@@ -228,7 +228,7 @@ class DrawingThread(qtcore.QThread):
 			width=command[3]
 			height=command[4]
 			window.clearAllLayers()
-			window.setCanvasSize(width,height)
+			window.setCanvasSize(width,height,history=False)
 			window.setRemoteId(owner)
 
 		elif subtype==NetworkControlCommandTypes.giveuplayer:

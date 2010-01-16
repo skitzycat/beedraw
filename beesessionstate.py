@@ -137,6 +137,9 @@ class BeeSessionState:
 		""" remove layer with key equal to passed value, each layer should have a unique key so there is no need to check for multiples
       The history argument is 0 if the event should be added to the undo/redo history and -1 if it shouldn't.  This is needed so when running an undo/redo command it doesn't get added again.
 		"""
+		if key==None:
+			return (None,None)
+
 		print_debug("calling removeLayerByKey for %d" % key)
 		# get a lock so we don't get a collision ever
 		lock=qtcore.QMutexLocker(self.layersmutex)
@@ -169,11 +172,11 @@ class BeeSessionState:
 
 	def layerDown(self,key):
 		index=self.getLayerIndexForKey(key)
-		self.layersmutex=qtcore.QMutex()
+		lock=qtcore.QMutexLocker(self.layersmutex)
 		if index>0:
 			self.layers[index],self.layers[index-1]=self.layers[index-1],self.layers[index]
-			self.reCompositeImage()
 			self.requestLayerListRefresh()
+			self.reCompositeImage()
 
 			# if we are only running locally add command to local history
 			# otherwise do nothing
@@ -185,14 +188,14 @@ class BeeSessionState:
 		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.layerup,key),source)
 
 	def layerUp(self,key):
-		self.layersmutex=qtcore.QMutex()
+		lock=qtcore.QMutexLocker(self.layersmutex)
 		index=self.getLayerIndexForKey(key)
 		if index==None:
 			return
 		if index<len(self.layers)-1:
 			self.layers[index],self.layers[index+1]=self.layers[index+1],self.layers[index]
-			self.reCompositeImage()
 			self.requestLayerListRefresh()
+			self.reCompositeImage()
 
 			# if we are only running locally add command to local history
 			# otherwise do nothing
@@ -200,7 +203,7 @@ class BeeSessionState:
 				self.addCommandToHistory(LayerUpCommand(key))
 
 	def reCompositeImage(self,dirtyrect=None):
-		""" This is not needed to actually do anything in all state keepers, but it needs to be here so it can be called
+		""" This is not needed to actually do anything in all state keepers, but it needs to be here so it can be called.  Should be called whenever the whole image has changed in some way.
 		"""
 		pass
 
@@ -245,7 +248,7 @@ class BeeSessionState:
 		# log everything to get upto this point
 		pos=0
 		for layer in self.layers:
-			locks.append(ReadWriteLocker(layer.imagelock,True))
+			locks.append(qtcore.QWriteLocker(layer.imagelock))
 			log.logLayerAdd(pos,layer.key, layer.image)
 			#log.logRawEvent(0,0,layer.key,layer.image)
 			pos+=1
@@ -270,10 +273,12 @@ class BeeSessionState:
 		self.reCompositeImage()
 
 	def insertRawLayer(self,layer,index,history=0):
+		lock=qtcore.QMutexLocker(self.layersmutex)
 		self.layers.insert(index,layer)
 		self.requestLayerListRefresh()
 		self.reCompositeImage()
-		curlaylock=qtcore.QMutexLocker(self.curlayerkeymutex)
+
+		#curlaylock=qtcore.QMutexLocker(self.curlayerkeymutex)
 		# only select it immediately if we can draw on it
 		#if layer.type==LayerTypes.user:
 		#	self.curlayerkey=layer.key
@@ -285,6 +290,7 @@ class BeeSessionState:
 	# insert a layer at a given point in the list of layers
 	def insertLayer(self,key,index,type=LayerTypes.user,image=None,opacity=None,visible=None,compmode=None,owner=0,history=0):
 		layer=BeeLayer(self.id,type,key,image,opacity=opacity,visible=visible,compmode=compmode,owner=owner)
+		lock=qtcore.QMutexLocker(self.layersmutex)
 
 		self.layers.insert(index,layer)
 
@@ -342,23 +348,37 @@ class BeeSessionState:
 	def addAdjustCanvasSizeRequestToQueue(self,leftadj,topadj,rightadj,bottomadj,source=ThreadTypes.user,owner=0):
 		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.resize,leftadj,topadj,rightadj,bottomadj),source,owner)
 
-	def setCanvasSize(self,width,height):
-		lock=ReadWriteLocker(self.docsizelock,False)
+	def setCanvasSize(self,width,height,history=True):
+		lock=qtcore.QWriteLocker(self.docsizelock)
 		rightadj=width-self.docwidth
 		bottomadj=height-self.docheight
-		lock.unlock()
-		self.adjustCanvasSize(0,0,rightadj,bottomadj)
+		self.adjustCanvasSize((0,0,rightadj,bottomadj),sizelock=lock,history=history)
 
 	# grow or crop canvas according to adjustments on each side
-	def adjustCanvasSize(self,leftadj,topadj,rightadj,bottomadj):
-		# get lock on adjusting the document size
-		sizelock=ReadWriteLocker(self.docsizelock,True)
+	def adjustCanvasSize(self,adjustments,sizelock=None,history=True):
+		if history:
+			historycommand=ResizeCanvasCommand(self.layers,self.id,adjustments)
 
-		self.docwidth=self.docwidth+leftadj+rightadj
-		self.docheight=self.docheight+topadj+bottomadj
+		# get lock on adjusting the document size
+		if not sizelock:
+			sizelock=qtcore.QWriteLocker(self.docsizelock)
+
+		self.docwidth=self.docwidth+adjustments[0]+adjustments[2]
+		self.docheight=self.docheight+adjustments[1]+adjustments[3]
+
+		# adjust size of all the layers
+		for layer in self.layers:
+			layer.adjustCanvasSize(adjustments)
+
+		imglock=qtcore.QWriteLocker(self.imagelock)
+
+		self.image=qtgui.QImage(self.docwidth,self.docheight,qtgui.QImage.Format_ARGB32_Premultiplied)
 
 		# update all layer preview thumbnails
 		self.master.refreshLayerThumb(self.id)
+
+		if history:
+			self.localcommandstack.add(historycommand)
 
 	def addInsertLayerEventToQueue(self,index,key,image=None,source=ThreadTypes.user,owner=0):
 		# when the source is local like this the owner will always be me (id 0)
@@ -378,15 +398,14 @@ class BeeSessionState:
 	def addResyncStartToQueue(self,remoteid,width,height,source=ThreadTypes.network):
 		self.queueCommand((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.resyncstart,remoteid,width,height),source)
 
-	def addFatalErrorNotificationToQueue(self,remoteid,errormessage,source=ThreadTypes.network):
-		self.queueCommand((DrawingCommandTypes.quit,),source)
-		qtgui.QMessageBox.warning(None,"Network Session Ended","Server has severed connection due to: %s" % errormessage)
-
 	def addOpacityChangeToQueue(self,key,value,source=ThreadTypes.user):
 		self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.alpha,key,value),source)
 
 	def addBlendModeChangeToQueue(self,key,value,source=ThreadTypes.user):
 		self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.mode,key,value),source)
+
+	def xmlError(self,id,errorstring):
+		pass
 
 	def logServerCommand(self,command,id=0):
 		if self.log:

@@ -302,15 +302,16 @@ def PILtoQImage(im):
 	return ImageQt.ImageQt(im)
 
 def printPILImage(im):
-	pix=im.load()
-	for i in range(im.size[0]):
-		for j in range(im.size[1]):
-			print pix[i,j],
-		print
+	printImage(PILtoQImage(im))
+	#pix=im.load()
+	#for i in range(im.size[0]):
+	#	for j in range(im.size[1]):
+	#		print pix[i,j],
+	#	print
 
 # scale a PIL image, the dx and dy values should only be between 0 and 1
 # xscale and yscale should be between 1 and .5, because that is the only range in which billenar interpolation looks good
-def scaleShiftPIL(im,dx,dy,newsizex,newsizey,xscale,yscale):
+def scaleShiftPIL(im,dx,dy,newsizex,newsizey,xscale,yscale,resample=Image.AFFINE):
 	#print "calling scaleShiftPIL with args:", dx,dy,newsizex,newsizey,xscale,yscale
 	#print "on image:"
 	#printPILImage(im)
@@ -351,7 +352,7 @@ def scaleShiftPIL(im,dx,dy,newsizex,newsizey,xscale,yscale):
 
 	#print "transform:", trans
 
-	newim=bordered_image.transform((newsizex,newsizey),Image.AFFINE,trans,Image.BILINEAR)
+	newim=bordered_image.transform((newsizex,newsizey),Image.AFFINE,trans,resample)
 
 	#print "producing image:"
 	#printPILImage(newim)
@@ -399,3 +400,29 @@ def replaceWidget(oldwidget,newwidget):
 	oldwidget.hide()
 	newwidget.show()
 	parent.layout().insertWidget(index,newwidget)
+
+	newwidget.setMinimumSize(oldwidget.minimumSize())
+	newwidget.setSizePolicy(oldwidget.sizePolicy())
+	newwidget.setObjectName(oldwidget.objectName())
+
+def PILcomposite(baseim,newim,pos,comptype,mask=None):
+	if newim.size==baseim.size and pos==(0,0):
+		return compfunc(basim,newim)
+
+	topim=newim.copy()
+
+	if pos[0]<0 or pos[1]<0:
+		topim=topim.crop((abs(min(pos[0],0)),abs(min(pos[1],0)),topim.size[0],topim.size[1]))
+		pos=((max(pos[0],0)),max(pos[1],0))
+
+	if topim.size[0]>baseim.size[0] or topim.size[1]>baseim.size[1]:
+		topim=topim.crop((0,0,min(topim.size[0],baseim.size[0]),min(topim.size[1],baseim.size[1])))
+
+	baseswatch=baseim.crop((pos[0],pos[1],newim.size[0]+pos[0],newim.size[1]+pos[1]))
+
+	if comptype==ImageCombineTypes.composite:
+		newswatch=ImageChops.composite(baseswatch,topim,None)
+	elif newswatch==ImageCombineTypes.darkest:
+		newswatch=ImageChops.darker(baseswatch,topim)
+
+	baseim.paste(newswatch,box=pos,mask=mask)

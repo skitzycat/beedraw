@@ -180,6 +180,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		if self.toolbox.setCurToolByName(name):
 			self.curtoolname=name
 			self.tooloptionswindow.updateCurrentTool()
+			self.toolbox.getCurToolDesc().pressToolButton()
 
 	def newModKeys(self,modkeys):
 		#print "master got new mod keys"
@@ -251,12 +252,6 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 	def on_foregroundbutton_pressed(self):
 		self.ui.FGSwatch.changeColorDialog()
-
-	def on_action_File_Exit_triggered(self,accept=True):
-		if not accept:
-			return
-
-		self.close();
 
 	def on_action_File_Play_triggered(self,accept=True):
 		if not accept:
@@ -513,6 +508,17 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			self.palettewindow.show()
 		else:
 			self.palettewindow.hide()
+
+	def uncheckWindowToolOptionsBox(self):
+		self.ui.Window_Tool_Options.setChecked(False)
+
+	def on_Window_Tool_Options_triggered(self,state=None):
+		if state==None:
+			return
+		if state:
+			self.tooloptionswindow.show()
+		else:
+			self.tooloptionswindow.hide()
 
 	# destroy all subwindows
 	def cleanUp(self):

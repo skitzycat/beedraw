@@ -31,7 +31,7 @@ from LayersWindowUi import Ui_LayersWindow
 
 from beeapp import BeeApp
 
-class BeeLayer:
+class BeeLayerState:
 	def __init__(self,windowid,type,key,image=None,opacity=None,visible=None,compmode=None,owner=0):
 		self.windowid=windowid
 		self.key=key
@@ -49,6 +49,9 @@ class BeeLayer:
 
 		# for floting selections and temporary overlays for tools and such
 		self.tooloverlay=None
+
+		# list to hold floating selections
+		self.floatingselections=[]
 
 		if image:
 			self.image=image
@@ -73,12 +76,12 @@ class BeeLayer:
 		# set default name for layer
 		self.changeName("Layer %d" % key)
 
+	def update(self,rect=None):
+		pass
+
 	def getImageRect(self):
 		lock=qtcore.QReadLocker(self.imagelock)
 		return self.image.rect()
-
-	def getWindow(self):
-		return BeeApp().master.getWindowById(self.windowid)
 
 	def changeName(self,newname):
 		proplock=qtcore.QWriteLocker(self.propertieslock)
@@ -89,6 +92,9 @@ class BeeLayer:
 
 		if self.configwidget:
 			self.configwidget.updateValuesFromLayer()
+
+	def getWindow(self):
+		return BeeApp().master.getWindowById(self.windowid)
 
 	# change the ownership of a layer and remove all undo/redo history for that layer
 	def changeOwner(self,owner):
@@ -155,29 +161,27 @@ class BeeLayer:
 		imagerect=qtcore.QRect(0,0,win.docwidth,win.docheight)
 
 		dirtyregion=dirtyregion.intersect(qtgui.QRegion(imagerect))
+		dirtyrect=dirtyregion.boundingRect()
+
 		lock.unlock()
-		win.reCompositeImage(dirtyregion.boundingRect())
 
-	def getConfigWidget(self):
-		# can't do this in the constructor because that may occur in a thread other than the main thread, this function however should only occur in the main thread
-		if not self.configwidget:
-			self.configwidget=LayerConfigWidget(self.windowid,self.key)
-			self.configwidget.setSizePolicy(qtgui.QSizePolicy.MinimumExpanding,qtgui.QSizePolicy.Fixed)
-			self.configwidget.ui.background_frame.setSizePolicy(qtgui.QSizePolicy.MinimumExpanding,qtgui.QSizePolicy.MinimumExpanding)
-		else:
-			self.configwidget.updateValuesFromLayer()
-		return self.configwidget
-
-	# get color of pixel at specified point, or average color in range
-	def getPixelColor(self,x,y,size):
-		lock=qtcore.QReadLocker(self.imagelock)
-		return self.image.pixel(x,y)
+		win.reCompositeImage(dirtyrect)
+		self.update(qtcore.QRectF(dirtyrect))
 
 	# return copy of image
 	def getImageCopy(self):
 		lock=qtcore.QReadLocker(self.imagelock)
 		retimage=self.image.copy()
 		return retimage
+
+	# set layer image
+	def setImage(self,newimage):
+		lock=qtcore.QWriteLocker(self.imagelock)
+		self.image=newimage
+		self.update()
+
+	#def cutImage(self):
+	#	selection=win.getClipPathCopy()
 
 	# composite section of layer onto paint object passed
 	def compositeLayerOn(self,painter,dirtyrect):
@@ -227,18 +231,16 @@ class BeeLayer:
 
 		BeeApp().master.getWindowById(self.windowid).reCompositeImage()
 
-	def adjustCanvasSize(self,leftadj,topadj,rightadj,bottomadj):
+	def adjustCanvasSize(self,adjustments):
 		lock=ReadWriteLocker(self.imagelock,True)
 
 		win=BeeApp().master.getWindowById(self.windowid)
 		newimage=qtgui.QImage(win.docwidth,win.docheight,qtgui.QImage.Format_ARGB32_Premultiplied)
 		newimage.fill(0)
 
-		oldimagerect=self.image.rect()
-		newimagerect=newimage.rect()
-		srcRect=oldimagerect
-		targetRect=qtcore.QRect(srcRect)
-		targetRect.adjust(leftadj,topadj,leftadj,topadj)
+		srcRect=self.image.rect()
+
+		targetRect=srcRect.adjusted(adjustments[0],adjustments[1],adjustments[0],adjustments[1])
 
 		painter=qtgui.QPainter()
 		painter.begin(newimage)
@@ -246,6 +248,56 @@ class BeeLayer:
 		painter.end()
 
 		self.image=newimage
+
+		self.update()
+
+class BeeLayer(qtgui.QGraphicsPixmapItem,BeeLayerState):
+	def __init__(self,windowid,type,key,image=None,opacity=None,visible=None,compmode=None,owner=0):
+		self.pixmapinit=False
+
+		BeeLayerState.__init__(self,windowid,type,key,image,opacity,visible,compmode,owner)
+
+		win=BeeApp().master.getWindowById(windowid)
+		pixmapupdate=InitLayerPixmapEvent()
+		BeeApp().app.postEvent(win,pixmapupdate)
+
+	def paint(self,painter,options,widget):
+		#print_debug("painting on layer")
+		lock=qtcore.QReadLocker(self.imagelock)
+		painter.setCompositionMode(self.compmode)
+		painter.drawImage(0,0,self.image)
+		#print_debug("done painting on layer")
+
+	def initPixmap(self,dirtyrect):
+		if not self.pixmapinit:
+			win=BeeApp().master.getWindowById(self.windowid)
+			qtgui.QGraphicsPixmapItem.__init__(self,qtgui.QPixmap(self.image),None,win.view.scene())
+			self.pixmapinit=True
+			win.requestLayerListRefresh()
+
+	def getConfigWidget(self):
+		# can't do this in the constructor because that may occur in a thread other than the main thread, this function however should only occur in the main thread
+		if not self.configwidget:
+			self.configwidget=LayerConfigWidget(self.windowid,self.key)
+			self.configwidget.setSizePolicy(qtgui.QSizePolicy.MinimumExpanding,qtgui.QSizePolicy.Fixed)
+			self.configwidget.ui.background_frame.setSizePolicy(qtgui.QSizePolicy.MinimumExpanding,qtgui.QSizePolicy.MinimumExpanding)
+		else:
+			self.configwidget.updateValuesFromLayer()
+		return self.configwidget
+
+	# get color of pixel at specified point, or average color in range
+	def getPixelColor(self,x,y,size):
+		lock=qtcore.QReadLocker(self.imagelock)
+		return self.image.pixel(x,y)
+
+class FloatingPixmapSelection(BeeLayer):
+	def __init__(self,windowid,image,parentlayer):
+		key=BeeApp().master.getNextLayerKey()
+		BeeLayer.__init__(self,windowid,LayerTypes.floating,key)
+		self.image=image
+
+	# paste the selection on it's layer
+	#def anchor(self,layer):
 
 # widget that we can use to set the options of each layer
 class LayerConfigWidget(qtgui.QWidget):

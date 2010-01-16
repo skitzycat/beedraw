@@ -17,11 +17,14 @@
 
 from base64 import b64decode
 import time
+from StringIO import StringIO
 from beeglobals import *
 from beetypes import *
 from beeutil import *
 from sketchlog import SketchLogWriter
 
+import Image
+from ImageQt import ImageQt
 import PyQt4.QtCore as qtcore
 import PyQt4.QtGui as qtgui
 import PyQt4.QtXml as qtxml
@@ -47,7 +50,6 @@ class XmlToQueueEventsConverter:
 		self.id=id
 		self.window=window
 		self.type=type
-		self.inrawevent=False
 		self.stepdelay=stepdelay
 		self.keymap={}
 
@@ -80,7 +82,8 @@ class XmlToQueueEventsConverter:
 
 		# if it's an error that might actually be a problem then print it out
 		if self.xml.hasError() and self.xml.error() != QXmlStreamReader.PrematureEndOfDocumentError:
-				print_debug("error while parsing XML: %s" % self.xml.errorString())
+			print_debug("error while parsing XML for client %d: %s" % (self.id, self.xml.errorString()))
+			self.window.xmlError(self.id,self.xml.errorString())
 
 		return self.xml.error()
 
@@ -199,26 +202,32 @@ class XmlToQueueEventsConverter:
 			(value,ok)=attrs.value('value').toString().toInt()
 			self.curtool.setOption("%s" % attrs.value('name').toString(),value)
 		elif name == 'image':
-			self.rawstring=self.xml.readElementText()
+			rawstring=self.xml.readElementText()
+
+			#encstr=str(rawstring)
+
+			#decstr=b64decode(encstr)
 
 			data=qtcore.QByteArray()
-			data=data.append(self.rawstring)
+			data=data.append(rawstring)
 			data=qtcore.QByteArray.fromBase64(data)
 			data=qtcore.qUncompress(data)
 
-			image=qtgui.QImage()
-			image.loadFromData(data,"PNG")
+			iostr=StringIO(str(data))
+
+			pilimage=Image.open(iostr)
+			pilimage.load()
+
+			image=ImageQt(pilimage)
 
 			self.image=image
 
 		elif name == 'rawevent':
-			self.inrawevent=True
 			self.raweventargs=[]
 			(self.x,ok)=attrs.value('x').toString().toInt()
 			(self.y,ok)=attrs.value('y').toString().toInt()
 			(layerkey,ok)=attrs.value('layerkey').toString().toInt()
 			self.layerkey=self.translateKey(layerkey)
-			self.rawstring=self.xml.readElementText()
 
 			if self.image:
 				self.window.addRawEventToQueue(self.layerkey,self.image,self.x,self.y,self.clippath,source=type)
@@ -271,12 +280,16 @@ class XmlToQueueEventsConverter:
 			(layerkey,ok)=attrs.value('key').toString().toInt()
 			self.window.addLayerRequestToQueue(layerkey,self.id,type)
 
-		elif name == 'fatalerror':
-			errormessage="%s" % attrs.value('errormessage').toString()
+		elif name == 'servermessage':
+			errormessage="%s" % attrs.value('servermessage').toString()
 			self.window.addFatalErrorNotificationToQueue(0,errormessage,type)
 
 		elif name == 'sketchlog':
 			print_debug("DEBUG: got document start tag")
+
+		elif name == 'clientmessage':
+			rawstring=self.xml.readElementText()
+			self.window.stackDisplayMessageEvent("Server Message","%s" % rawstring)
 
 		else:
 			print_debug("WARNING: Don't know how to handle tag: %s" % name.toString())
@@ -288,20 +301,6 @@ class XmlToQueueEventsConverter:
 			self.window.addPenUpToQueue(self.lastx,self.lasty,self.curlayer,type)
 			self.curtool=None
 
-		elif name == 'rawevent':
-			return
-			self.inrawevent=False
-
-			# convert data out of base 64 then uncompress
-			data=qtcore.QByteArray()
-			data=data.append(self.rawstring)
-			data=qtcore.QByteArray.fromBase64(data)
-			data=qtcore.qUncompress(data)
-
-			image=qtgui.QImage()
-			image.loadFromData(data,"PNG")
-
-			self.window.addRawEventToQueue(self.layerkey,image,self.x,self.y,None,source=type)
 		elif name == 'clippath':
 			poly=qtgui.QPolygonF(self.clippoints)
 			self.clippath=qtgui.QPainterPath()
@@ -408,9 +407,13 @@ class NetworkWriterThread (qtcore.QThread):
 	def __init__(self,window,socket):
 		qtcore.QThread.__init__(self)
 		self.socket=socket
+
+		# wrapper to use an QXmlStreamWriter to write to the socket
 		self.gen=SketchLogWriter(self.socket)
 
 		self.window=window
+
+		# Queue class for thread safe communication
 		self.queue=window.remoteoutputqueue
 
 	def run(self):
@@ -425,6 +428,5 @@ class NetworkWriterThread (qtcore.QThread):
 				return
 
 			self.gen.logCommand(command)
-			self.socket.flush()
 			self.socket.waitForBytesWritten(-1)
 			print_debug("finished flushing socket")
