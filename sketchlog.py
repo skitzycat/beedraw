@@ -123,9 +123,8 @@ class SketchLogWriter:
 		elif subtype==NetworkControlCommandTypes.requestlayer:
 			self.logLayerRequest(command[3])
 
-		elif subtype==NetworkControlCommandTypes.fatalerror:
-			self.logFatalError(command[3])
-
+		elif subtype==NetworkControlCommandTypes.clientmessage:
+			self.logClientMessage(command[2])
 
 	def startEvent(self,owner):
 		self.log.writeStartElement('event')
@@ -133,12 +132,6 @@ class SketchLogWriter:
 	def endEvent(self):
 		self.log.writeEndElement()
 
-	def logFatalError(self,errormessage):
-		lock=qtcore.QMutexLocker(self.mutex)
-		self.log.writeStartElement('fatalerror')
-		self.log.writeAttribute('errormessage',str(errormessage))
-		self.log.writeEndElement()
-		
 	def logLayerAdd(self, position, key, image=None, owner=0):
 		lock=qtcore.QMutexLocker(self.mutex)
 
@@ -368,6 +361,11 @@ class SketchLogWriter:
 	def logLayerRequest(self,key):
 		self.log.writeStartElement('layerrequest')
 		self.log.writeAttribute('key',str(key))
+		self.log.writeEndElement()
+
+	def logClientMessage(self,message):
+		self.log.writeStartElement('clientmessage')
+		self.log.writeCharacters(message)
 		self.log.writeEndElement()
 
 	def endLog(self):

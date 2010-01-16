@@ -352,8 +352,8 @@ class DrawingTool(AbstractTool):
 
 	def getColorRGBA(self):
 		return self.fgcolor.rgba()
- 
-	def makeFullSizedBrush(self):
+
+	def getColorTuple(self):
 		fgr=self.fgcolor.red()
 		fgg=self.fgcolor.green()
 		fgb=self.fgcolor.blue()
@@ -361,6 +361,10 @@ class DrawingTool(AbstractTool):
 		opacity=int(self.options["opacity"]*255./100.)
 
 		colortuple=(fgr,fgg,fgb,opacity)
+		return colortuple
+ 
+	def makeFullSizedBrush(self):
+		colortuple=self.getColorTuple()
 
 		self.diameter=self.options["maxdiameter"]
 		width=self.diameter
@@ -382,14 +386,48 @@ class DrawingTool(AbstractTool):
 				if distance <= radius:
 					pix[i,j]=colortuple
 
-		self.fullsizedbrush=PILtoQImage(self.fullsizedbrush)
-
-	def updateBrushForOpacity(self):
+	def updateBrushOpacityForPressure(self):
 		if self.opacity==100:
 			return
 		return
 
-	def updateBrushForPressure(self,pressure,subpixelx=0,subpixely=0):
+	def updateBrushSizeForPressure(self,pressure,subpixelx=0,subpixely=0):
+		# see if we need to update at all
+		if self.lastpressure==pressure:
+			return
+
+		self.lastpressure=pressure
+
+		# if we can use the full sized brush do it
+		if self.options["pressuresize"]==0 or pressure==1:
+			self.brushimage=PILtoQImage(self.fullsizedbrush)
+			self.lastpressure=1
+			return
+
+		# scaled size for brush
+		bdiameter=self.options["maxdiameter"]*pressure
+		self.diameter=int(math.ceil(bdiameter))+1
+
+		# make target size an odd number
+		if self.diameter%2==0:
+			self.diameter+=1
+
+		# calculate offset into target
+		targetoffsetx=((self.diameter-bdiameter)/2.)-.5+subpixelx
+		targetoffsety=((self.diameter-bdiameter)/2.)-.5+subpixely
+ 
+		# bounding radius for pixels to update
+		side=self.diameter
+
+		self.brushimage=scaleShiftPIL(self.fullsizedbrush,0,0,side,side,pressure,pressure,Image.NEAREST)
+
+		# make sure brush isn't blank by pasting the brush color onto the center pixel
+		center=int(self.diameter/2)
+		self.brushimage.putpixel((center,center),self.getColorTuple())
+
+		self.brushimage=PILtoQImage(self.brushimage)
+
+	def old_updateBrushForPressure(self,pressure,subpixelx=0,subpixely=0):
 		# see if we need to update at all
 		if self.lastpressure==pressure:
 			return
@@ -459,7 +497,7 @@ class DrawingTool(AbstractTool):
 		return pressure
 
 	def getFullSizedBrushWidth(self):
-		return self.fullsizedbrush.width()
+		return self.fullsizedbrush.size[0]
 
 	# since windows apparently won't catch return and leave events when the button is pressed down I'm forced to do this
 	def checkForPenBounds(self,x,y):
@@ -564,7 +602,7 @@ class DrawingTool(AbstractTool):
 		#painter.setRenderHint(qtgui.QPainter.HighQualityAntialiasing)
  
 		for point in path:
-			self.updateBrushForPressure(point[2],point[0]%1,point[1]%1)
+			self.updateBrushSizeForPressure(point[2],point[0]%1,point[1]%1)
 
 			xradius=self.brushimage.width()/2
 			yradius=self.brushimage.height()/2
@@ -611,7 +649,7 @@ class DrawingTool(AbstractTool):
 		self.pointshistory=[(x,y,pressure)]
 		self.lastpoint=(x,y)
 		self.makeFullSizedBrush()
-		self.updateBrushForPressure(pressure,x%1,y%1)
+		self.updateBrushSizeForPressure(pressure,x%1,y%1)
 
 		targetx=int(x)-int(self.brushimage.width()/2)
 		targety=int(y)-int(self.brushimage.height()/2)
@@ -1146,7 +1184,7 @@ class SketchTool(DrawingTool):
 
 		return scale
 
-	def updateBrushForPressure(self,pressure,subpixelx=0,subpixely=0):
+	def updateBrushSizeForPressure(self,pressure,subpixelx=0,subpixely=0):
 		self.lastpressure=pressure
 		#print "updating brush for pressure/subpixels:", pressure, subpixelx, subpixely
 		scale=self.scaleForPressure(pressure)

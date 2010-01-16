@@ -82,7 +82,8 @@ class XmlToQueueEventsConverter:
 
 		# if it's an error that might actually be a problem then print it out
 		if self.xml.hasError() and self.xml.error() != QXmlStreamReader.PrematureEndOfDocumentError:
-				print_debug("error while parsing XML: %s" % self.xml.errorString())
+			print_debug("error while parsing XML for client %d: %s" % (self.id, self.xml.errorString()))
+			self.window.xmlError(self.id,self.xml.errorString())
 
 		return self.xml.error()
 
@@ -279,12 +280,16 @@ class XmlToQueueEventsConverter:
 			(layerkey,ok)=attrs.value('key').toString().toInt()
 			self.window.addLayerRequestToQueue(layerkey,self.id,type)
 
-		elif name == 'fatalerror':
-			errormessage="%s" % attrs.value('errormessage').toString()
+		elif name == 'servermessage':
+			errormessage="%s" % attrs.value('servermessage').toString()
 			self.window.addFatalErrorNotificationToQueue(0,errormessage,type)
 
 		elif name == 'sketchlog':
 			print_debug("DEBUG: got document start tag")
+
+		elif name == 'clientmessage':
+			rawstring=self.xml.readElementText()
+			self.window.stackDisplayMessageEvent("Server Message","%s" % rawstring)
 
 		else:
 			print_debug("WARNING: Don't know how to handle tag: %s" % name.toString())
@@ -402,9 +407,13 @@ class NetworkWriterThread (qtcore.QThread):
 	def __init__(self,window,socket):
 		qtcore.QThread.__init__(self)
 		self.socket=socket
+
+		# wrapper to use an QXmlStreamWriter to write to the socket
 		self.gen=SketchLogWriter(self.socket)
 
 		self.window=window
+
+		# Queue class for thread safe communication
 		self.queue=window.remoteoutputqueue
 
 	def run(self):
@@ -419,6 +428,5 @@ class NetworkWriterThread (qtcore.QThread):
 				return
 
 			self.gen.logCommand(command)
-			self.socket.flush()
 			self.socket.waitForBytesWritten(-1)
 			print_debug("finished flushing socket")
