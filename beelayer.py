@@ -251,29 +251,24 @@ class BeeLayerState:
 
 		self.update()
 
-class BeeLayer(qtgui.QGraphicsPixmapItem,BeeLayerState):
+class BeeLayer(qtgui.QGraphicsItem,BeeLayerState):
 	def __init__(self,windowid,type,key,image=None,opacity=None,visible=None,compmode=None,owner=0):
 		self.pixmapinit=False
+		win=BeeApp().master.getWindowById(windowid)
 
 		BeeLayerState.__init__(self,windowid,type,key,image,opacity,visible,compmode,owner)
+		qtgui.QGraphicsItem.__init__(self,None,win.view.scene())
 
-		win=BeeApp().master.getWindowById(windowid)
-		pixmapupdate=InitLayerPixmapEvent()
-		BeeApp().app.postEvent(win,pixmapupdate)
+	def boundingRect(self):
+		return qtcore.QRectF(self.image.rect())
 
 	def paint(self,painter,options,widget):
-		#print_debug("painting on layer")
+		print_debug("painting on layer")
+
 		lock=qtcore.QReadLocker(self.imagelock)
 		painter.setCompositionMode(self.compmode)
 		painter.drawImage(0,0,self.image)
 		#print_debug("done painting on layer")
-
-	def initPixmap(self,dirtyrect):
-		if not self.pixmapinit:
-			win=BeeApp().master.getWindowById(self.windowid)
-			qtgui.QGraphicsPixmapItem.__init__(self,qtgui.QPixmap(self.image),None,win.view.scene())
-			self.pixmapinit=True
-			win.requestLayerListRefresh()
 
 	def getConfigWidget(self):
 		# can't do this in the constructor because that may occur in a thread other than the main thread, this function however should only occur in the main thread

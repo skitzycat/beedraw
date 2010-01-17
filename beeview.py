@@ -164,7 +164,7 @@ class BeeGraphicsView(qtgui.QGraphicsView):
 		if dirtyrect:
 			self.update(dirtyrect)
 		else:
-			self.scene().update()
+			self.update()
 
 # widget that we actually draw the image on for the user to see
 class BeeViewDisplayWidget(qtgui.QWidget):

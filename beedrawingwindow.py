@@ -376,10 +376,6 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		elif event.type()==qtcore.QEvent.DeferredDelete:
 			self.cleanUp()
 
-		elif event.type()==BeeCustomEventTypes.initlayerpixmap:
-			for layer in self.layers:
-				layer.initPixmap(event.dirtyrect)
-
 		elif event.type()==BeeCustomEventTypes.displaymessage:
 			qtgui.QMessageBox.information(None,event.title,event.body)
 

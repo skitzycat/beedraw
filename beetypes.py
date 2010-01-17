@@ -20,19 +20,13 @@ import PyQt4.QtCore as qtcore
 # custom event types
 class BeeCustomEventTypes:
 	refreshlayerslist = qtcore.QEvent.User
-	initlayerpixmap = qtcore.QEvent.User+1
-	displaymessage = qtcore.QEvent.User+2
+	displaymessage = qtcore.QEvent.User+1
 
 class DisplayMessageEvent(qtcore.QEvent):
 	def __init__(self,title,body):
 		qtcore.QEvent.__init__(self,BeeCustomEventTypes.displaymessage)
 		self.title=title
 		self.body=body
-
-class InitLayerPixmapEvent(qtcore.QEvent):
-	def __init__(self,dirtyrect=None):
-		qtcore.QEvent.__init__(self,BeeCustomEventTypes.initlayerpixmap)
-		self.dirtyrect=dirtyrect
 
 # custom enumerated types
 class DrawingCommandTypes:
