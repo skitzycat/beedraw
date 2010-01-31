@@ -35,13 +35,15 @@ class BeeGraphicsScene(qtgui.QGraphicsScene):
 		self.update()
 
 	def drawBackground(self,painter,dirtyrect):
+		print "drawing background"
 		painter.fillRect(dirtyrect,qtgui.QColor(255,255,255))
 
-	#def drawItems(self,painter,items,options,widget):
-	#	for item in items:
-	#		item.paint(painter,options,widget)
+	def drawItems(self,painter,items,options,widget=None):
+		print "drawing Items"
+		qtgui.QGraphicsScene.drawItems(self,painter,items,options,widget)
 
 	def drawForeground(self,painter,dirtyrect):
+		print "drawing foreground"
 		scenepath=qtgui.QPainterPath()
 		scenepath.addRect(self.sceneRect())
 		scenepath.addRect(dirtyrect)
@@ -95,26 +97,35 @@ class BeeGraphicsView(qtgui.QGraphicsView):
 		qtgui.QGraphicsView.__init__(self,window)
 		parent=oldwidget.parentWidget()
 
-		self.setHorizontalScrollBarPolicy(qtcore.Qt.ScrollBarAlwaysOn)
-		self.setVerticalScrollBarPolicy(qtcore.Qt.ScrollBarAlwaysOn)
+		#self.setHorizontalScrollBarPolicy(qtcore.Qt.ScrollBarAlwaysOn)
+		#self.setVerticalScrollBarPolicy(qtcore.Qt.ScrollBarAlwaysOn)
 
-		self.setViewportUpdateMode(qtgui.QGraphicsView.SmartViewportUpdate)
+		#self.setViewportUpdateMode(qtgui.QGraphicsView.SmartViewportUpdate)
+
+		#self.setCacheMode(qtgui.QGraphicsView.CacheNone)
 
 		self.setScene(BeeGraphicsScene(window))
 
 		replaceWidget(oldwidget,self)
 
 		# put scene in center if there is extra space
-		self.setAlignment(qtcore.Qt.AlignCenter)
+		#self.setAlignment(qtcore.Qt.AlignCenter)
 
-		self.setAttribute(qtcore.Qt.WA_PaintOnScreen)
-		self.setAttribute(qtcore.Qt.WA_NoSystemBackground)
+		#self.setAttribute(qtcore.Qt.WA_PaintOnScreen)
+		#self.setAttribute(qtcore.Qt.WA_NoSystemBackground)
 
 		self.zoom=1
+
+	def paintEvent(self,event):
+		print "got paint event in view"
+		qtgui.QGraphicsView.paintEvent(self,event)
 
 	def updateCanvasSize(self,width,height):
 		self.scene().setSceneRect(0,0,width,height)
 		self.update()
+
+	def resizeEvent(self,event):
+		qtgui.QWidget.resizeEvent(self,event)
 
 	def event(self,event):
 		if event.type()==qtcore.QEvent.TabletMove:
@@ -160,287 +171,17 @@ class BeeGraphicsView(qtgui.QGraphicsView):
 	def snapPointToView(self,x,y):
 		return self.scene().snapPointToView(x,y)
 
-	def updateView(self,dirtyrect=None):
-		if dirtyrect:
-			self.update(dirtyrect)
-		else:
-			self.update()
-
-# widget that we actually draw the image on for the user to see
-class BeeViewDisplayWidget(qtgui.QWidget):
-	def __init__(self,window):
-		qtgui.QWidget.__init__(self)
-		self.transform=qtgui.QTransform()
-		self.docwidth=window.docwidth
-		self.docheight=window.docheight
-		self.setGeometry(0,0,window.docwidth,window.docheight)
-		self.windowid=window.id
-		self.show()
-		# don't draw in the widget background
-		self.setAttribute(qtcore.Qt.WA_NoSystemBackground)
-		# don't double buffer
-		self.setAttribute(qtcore.Qt.WA_PaintOnScreen)
-		self.zoom=1
-
-	def newSize(self,width,height):
-		self.docwidth=width
-		self.docheight=height
-		self.refreshView()
-
-	def getZoom(self):
-		return self.zoom
-
-	def newZoom(self,zoom):
-		self.zoom=zoom
-		self.refreshView()
-
-	def refreshView(self):
-		self.transform=qtgui.QTransform()
-		self.transform=self.transform.scale(self.zoom,self.zoom)
-
-		oldcorner=qtcore.QPoint(self.docwidth,self.docheight)
-		newcorner=oldcorner.__mul__(self.transform)
-
-		# update size of widget to be size of zoommed image
-		self.setGeometry(0,0,newcorner.x(),newcorner.y())
-		self.setFixedSize(newcorner.x(),newcorner.y())
-		self.updateGeometry()
+	def updateView(self,dirtyrect=qtcore.QRect()):
+		print "update view called"
+		self.invalidateScene()
+		self.updateScene([qtcore.QRectF(dirtyrect)])
+		self.scene().invalidate()
+		self.update(dirtyrect)
+		self.scene().update(qtcore.QRectF(dirtyrect))
+		self.scene().update()
+		self.resetCachedContent()
 		self.update()
 
-	def paintEvent(self,event):
-		window=BeeApp().master.getWindowById(self.windowid)
-		dirtyregion=event.region()
-
-		if dirtyregion.isEmpty():
-			return
-
-		zoom=window.zoom
-
-		# this rectangle region needs to be updated on the display widget
-		widgetrect=dirtyregion.boundingRect()
-
-		# get reverse matrix transform
-		revtransform,isinvertable=self.transform.inverted()
-		if not isinvertable:
-			print "ERROR: can't invert zoom matrix"
-
-		topleft=qtcore.QPointF(widgetrect.x(),widgetrect.y())
-		bottomright=qtcore.QPointF(widgetrect.width(),widgetrect.height())
-
-		# translate rectangle to what part of the image needs to be updated
-		topleft=topleft.__mul__(revtransform)
-		bottomright=bottomright.__mul__(revtransform)
-		imagerect=qtcore.QRectF(topleft.x(),topleft.y(),bottomright.x(),bottomright.y())
-		#imagerect.adjust(-1,-1,2,2)
-
-		#print "got repaint for rect:", rectToTuple(widgetrect);
-		#print "need to update view (", window.zoom, ") section:", rectToTuple(widgetrect)
-
-		painter=qtgui.QPainter()
-		painter.begin(self)
-
-		painter.setTransform(self.transform)
-
-		# get read lock on the image
-		imagelock=ReadWriteLocker(window.imagelock)
-
-		# draw just what is needed into viewable area
-		painter.drawImage(imagerect,window.image,imagerect)
-
-		# relase the lock
-		imagelock.unlock()
-
-		self.drawViewOverlay(painter)
-
-		painter.end()
-
-		#self.dirtyimage=None
-
-	# draw overlay things on the image, like selections
-	def drawViewOverlay(self,painter):
-		window=BeeApp().master.getWindowById(self.windowid)
-		# this section will highlight selections if there is one
-		selection=window.selection
-
-		# if there is a selection then draw it
-		for select in selection:
-		#if selection:
-			painter.setPen(qtgui.QPen(qtgui.QColor(255,255,255,255)))
-			painter.drawPath(select)
-			painter.setPen(qtgui.QPen(qtcore.Qt.DashDotLine))
-			painter.setBrush(qtgui.QBrush())
-			painter.drawPath(select)
-
-		# draw overlay related to what the cursor is currently doing
-		# for instance if a user has the pen down with a selection tool
-		cursoroverlay=window.cursoroverlay
-
-		if cursoroverlay:
-			painter.setBrush(cursoroverlay.brush)
-			painter.setPen(cursoroverlay.pen)
-			painter.drawPath(cursoroverlay.path)
-			
-	def tabletEvent(self,event):
-		if event.type()==qtcore.QEvent.TabletMove:
-			event.accept()
-			# for some reason we don't get a release event when the pen is released
-			# after going off the canvas, this is a quick hack to deal with it
-			if event.pressure()>0:
-				self.cursorMoveEvent(event.x(),event.y(),event.modifiers(),event.pointerType(),event.pressure(),event.hiResGlobalX()%1,event.hiResGlobalY()%1)
-			#else:
-			#	self.cursorReleaseEvent(event.x(),event.y())
-		elif event.type()==qtcore.QEvent.TabletPress:
-			event.accept()
-			# for some reason we don't get a release event when the pen is released
-			self.cursorPressEvent(event.x(),event.y(),event.modifiers(),event.pointerType(),event.pressure(),event.hiResGlobalX()%1,event.hiResGlobalY()%1)
-		elif event.type()==qtcore.QEvent.TabletRelease:
-			event.accept()
-			# for some reason we don't get a release event when the pen is released
-			self.cursorReleaseEvent(event.x(),event.y(),event.modifiers())
-
-
-	def mousePressEvent(self,event):
-		self.cursorPressEvent(event.x(),event.y(),event.modifiers())
-
-	def mouseMoveEvent(self,event):
-		self.cursorMoveEvent(event.x(),event.y(),event.modifiers())
-
-	def mouseReleaseEvent(self,event):
-		self.cursorReleaseEvent(event.x(),event.y(),event.modifiers())
-
-	# these are called regardless of if a mouse or tablet event was used
-	def cursorPressEvent(self,x,y,modkeys,pointertype=4,pressure=1,subx=0,suby=0):
-		#print "cursorPressEvent:",x,y,pressure
-		
-		window=BeeApp().master.getWindowById(self.windowid)
-		# if the window has no layers in it's layers list then just return
-		if not window.layers:
-			return
-
-		self.setCursor(BeeApp().master.getCurToolDesc().getDownCursor())
-
-		x=x+subx
-		y=y+suby
-		x,y=self.viewCoordsToImage(x,y)
-		window.penDown(x,y,pressure,modkeys,layerkey=window.getCurLayerKey())
-
-	def cursorMoveEvent(self,x,y,modkeys,pointertype=4,pressure=1,subx=0,suby=0):
-		window=BeeApp().master.getWindowById(self.windowid)
-		#print "cursorMoveEvent:",x,y,pressure
-		x=x+subx
-		y=y+suby
-		x,y=self.viewCoordsToImage(x,y)
-		#print "translates to image coords:",x,y
-
-		window.penMotion(x,y,pressure,modkeys,layerkey=window.getCurLayerKey())
-
-	def cursorReleaseEvent(self,x,y,modkeys,pressure=1,subx=0,suby=0):
-		#print "cursorReleaseEvent:",x,y
-		window=BeeApp().master.getWindowById(self.windowid)
-		self.setCursor(window.master.getCurToolDesc().getCursor())
-		x,y=self.viewCoordsToImage(x,y)
-		window.penUp(x,y,modkeys,layerkey=window.getCurLayerKey())
-
-	def leaveEvent(self,event):
-		window=BeeApp().master.getWindowById(self.windowid)
-		window.addPenLeaveToQueue(layerkey=window.getCurLayerKey())
-
-	def enterEvent(self,event):
-		window=BeeApp().master.getWindowById(self.windowid)
-		window.addPenEnterToQueue(layerkey=window.getCurLayerKey())
-
-	def snapPointToView(self,x,y):
-		visible=self.visibleRegion().boundingRect()
-
-		if x<visible.x():
-			x=visible.x()
-		elif x>visible.x()+visible.width():
-			x=visible.x()+visible.width()
-
-		if y<visible.y():
-			y=visible.y()
-		elif y>visible.y()+visible.height():
-			y=visible.y()+visible.height()
-
-		return x,y
-
-	def viewCoordsToImage(self,x,y):
-		window=BeeApp().master.getWindowById(self.windowid)
-		#print "translating coords:",x,y
-
-		if window.zoom!=1:
-			x=x/window.zoom
-			y=y/window.zoom
-
-		#print "to coords:",x,y
-
-		return x,y
-
-# this is meant to replace a QWidget in the designer
-class BeeViewScrollArea(qtgui.QScrollArea):
-	def __init__(self,oldwidget,window):
-		parent=oldwidget.parentWidget()
-		qtgui.QScrollArea.__init__(self,parent)
-
-		self.setHorizontalScrollBarPolicy(qtcore.Qt.ScrollBarAlwaysOn)
-		self.setVerticalScrollBarPolicy(qtcore.Qt.ScrollBarAlwaysOn)
-		self.setBackgroundRole(qtgui.QPalette.Dark)
-
-		self.setWidget(BeeViewDisplayWidget(window))
-
-		index=parent.layout().indexOf(oldwidget)
-		parent.layout().removeWidget(oldwidget)
-		parent.layout().insertWidget(index,self)
-
-		self.setMinimumSize(oldwidget.minimumSize())
-		self.setSizePolicy(oldwidget.sizePolicy())
-		self.setObjectName(oldwidget.objectName())
-
-		# put widget in center of scrolled area if thre is extra space
-		self.setAlignment(qtcore.Qt.AlignCenter)
-
-		self.show()
-		self.widget().show()
-
-	def keyPressEvent(self,event):
-		BeeApp().master.newModKeys(event.modifiers())
-
-	def getVisibleRect(self):
-		return self.widget().visibleRegion().boundingRect()
-
-	def getVisibleImageRect(self):
-		widgetrect=self.getVisibleRect()
-		zoom=self.widget().getZoom()
-		x=widgetrect.x()/zoom
-		y=widgetrect.y()/zoom
-		width=widgetrect.width()/zoom
-		height=widgetrect.height()/zoom
-		return qtcore.QRectF(x,y,width,height)
-
-	def newSize(self,width,height):
-		self.widget().newSize(width,height)
-
-	def newZoom(self,zoom):
-		self.widget().newZoom(zoom)
-
-	def snapPointToView(self,x,y):
-		return self.widget().snapPointToView(x,y)
-
-	def updateView(self,dirtyrect=None):
-		if not dirtyrect:
-			self.widget().update()
-			return
-
-		transform=self.widget().transform
-		
-		topleft=qtcore.QPointF(dirtyrect.x(),dirtyrect.y())
-		bottomright=qtcore.QPointF(dirtyrect.width(),dirtyrect.height())
-
-		# the rectangle needs to be according to the view instead of the image
-		topleft=topleft.__mul__(transform)
-		bottomright=bottomright.__mul__(transform)
-
-		dirtyview=qtcore.QRectF(topleft.x(),topleft.y(),bottomright.x(),bottomright.y())
-
-		#self.widget().update(dirtyview.toAlignedRect())
-		self.widget().update(qtgui.QRegion(dirtyview.toAlignedRect()))
+	def drawItems(self,painter,items,options):
+		print "view called drawing items"
+		qtgui.QGraphicsView.drawItems(painter,items,options)
