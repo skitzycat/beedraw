@@ -381,7 +381,6 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 
 		self.layers.insert(index,layer)
 		lock.unlock()
-		print "added layer to list"
 
 		# only add command to history if we are in a local session
 		if self.type==WindowTypes.singleuser and history!=-1:
