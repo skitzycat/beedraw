@@ -21,12 +21,29 @@ import PyQt4.QtCore as qtcore
 class BeeCustomEventTypes:
 	refreshlayerslist = qtcore.QEvent.User
 	displaymessage = qtcore.QEvent.User+1
+	hiveserverstatus = qtcore.QEvent.User+2
+
+class HiveServerStatusEvent(qtcore.QEvent):
+	def __init__(self,status,errorstring=None):
+		qtcore.QEvent.__init__(self,BeeCustomEventTypes.hiveserverstatus)
+		self.status=status
+		self.errorstring=errorstring
+
+class HiveServerStatusTypes:
+	running,starterror,stopped = range(3)
+
+class BeeDisplayMessageTypes:
+	warning,error = range(2)
 
 class DisplayMessageEvent(qtcore.QEvent):
-	def __init__(self,title,body):
+	def __init__(self,boxtype,title,message):
 		qtcore.QEvent.__init__(self,BeeCustomEventTypes.displaymessage)
+		self.boxtype=boxtype
 		self.title=title
-		self.body=body
+		self.message=message
+
+class BeeSocketTypes:
+	qt, python = range(2)
 
 # custom enumerated types
 class DrawingCommandTypes:
@@ -56,9 +73,9 @@ class NetworkControlCommandTypes:
       giveuplayer: sent from client to server to change layer to unowned
       layerowner: sent from server to all clients to show change of a layer owner
       layerowner: sent from server to all clients to show change of a layer owner
-			clientmessage:  sent from server to client to display a pop up message
+      fatalerror: sent from server to client to indicate error occured and that session should end
   """
-	resyncrequest, resyncstart, requestlayer, giveuplayer, revokelayer, layerowner, clientmessage = range(7)
+	resyncrequest, resyncstart, requestlayer, giveuplayer, revokelayer, layerowner, fatalerror= range(7)
 
 class LayerTypes:
 	""" Represents types of layers:

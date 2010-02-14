@@ -54,10 +54,10 @@ class DrawingThread(qtcore.QThread):
 	def run(self):
 		self.windowtype=self.master.getWindowById(self.windowid).type
 
-		#print "starting drawing thread"
 		while 1:
+			#print "Drawing thread ready to get commands from queue:", self.queue
 			command=self.queue.get()
-			#print "got command from queue:", command
+			#print "got command from queue:", command, self.type
 
 			type=command[0]
 
@@ -185,7 +185,7 @@ class DrawingThread(qtcore.QThread):
 		window=self.master.getWindowById(self.windowid)
 		subtype=command[1]
 		if subtype==AllLayerCommandTypes.resize:
-			window.adjustCanvasSize((command[2],command[3],command[4],command[5]))
+			window.adjustCanvasSize(command[2],command[3],command[4],command[5])
 
 		elif subtype==AllLayerCommandTypes.scale:
 			pass
@@ -200,7 +200,6 @@ class DrawingThread(qtcore.QThread):
 			window.removeLayerByKey(command[2])
 
 		elif subtype==AllLayerCommandTypes.insertlayer:
-			#print "processing insert layer command"
 			# in this case we want to fill out the details ourselves
 			key = command[2]
 			index = command[3]
@@ -228,7 +227,7 @@ class DrawingThread(qtcore.QThread):
 			width=command[3]
 			height=command[4]
 			window.clearAllLayers()
-			window.setCanvasSize(width,height,history=False)
+			window.setCanvasSize(width,height)
 			window.setRemoteId(owner)
 
 		elif subtype==NetworkControlCommandTypes.giveuplayer:

@@ -22,11 +22,14 @@ import PyQt4.QtCore as qtcore
 import PyQt4.QtGui as qtgui
 import PyQt4.QtNetwork as qtnet
 
+from beenetwork import BeeTCPServer
+
 try:
 	from PyQt4.QtXml import QXmlStreamReader
 except:
 	from PyQt4.QtCore import QXmlStreamReader
 
+from beenetwork import BeeSocket
 from HiveMasterUi import Ui_HiveMasterSpec
 from HiveOptionsUi import Ui_HiveOptionsDialog
 from beedrawingwindow import BeeDrawingWindow
@@ -124,22 +127,17 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 		username=self.clientnames[id]
 		del self.clientnames[id]
 
+		# remove from list of outgoing queues
+		del self.clientwriterqueues[id]
+
 		# remove from gui
 		items=self.ui.clientsList.findItems(username,qtcore.Qt.MatchFixedString)
 		for item in items:
 			index=self.ui.clientsList.row(item)
 			self.ui.clientsList.takeItem(index)
 
-		# add in a quit command to the client router queue
-		self.routinginput.put(((DrawingCommandTypes.quit,),id))
-
-		# disconnect listener, this should also end the thread there
-		if id in self.socketsmap:
-			self.socketsmap[id].disconnectFromHost()
-			del self.socketsmap[id]
-
 		# set layers owned by that client to unowned
-		layerlistlock=qtcore.QMutexLocker(self.curwindow.layersmutex)
+		lock=qtcore.QWriteLocker(self.curwindow.layerslistlock)
 		for layer in self.curwindow.layers:
 			if layer.owner==id:
 				print_debug("setting layer %d to unowned" % layer.key)
@@ -165,7 +163,25 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 
 		self.serverthread=HiveServerThread(self,self.port)
 		self.serverthread.start()
-		self.ui.statusLabel.setText("Serving on port %d" % self.port )
+
+	def event(self,event):
+		if event.type()==BeeCustomEventTypes.hiveserverstatus:
+			if event.status==HiveServerStatusTypes.running:
+				self.changeStatusLabel("Serving on port: %d" % self.port)
+			elif event.status==HiveServerStatusTypes.starterror:
+				if event.errorstring:
+					body=event.errorstring
+				else:
+					body="Failed to start server on port %d.\nMake sure port is not already in use." % self.port
+				qtgui.QMessageBox.critical(self,"Could not start server",body)
+				self.changeStatusLabel("Failed to start on port %d" % self.port)
+			elif event.status==HiveServerStatusTypes.stopped:
+				self.changeStatusLabel("Server not running")
+
+		return qtgui.QMainWindow.event(self,event)
+
+	def changeStatusLabel(self,text):
+		self.ui.statusLabel.setText(text)
 
 	def stopServer(self):
 		if self.serverthread:
@@ -186,8 +202,8 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 	def kickClient(self,name):
 		for i in self.clientnames.keys():
 			if self.clientnames[i]==name:
-				self.curwindow.sendMessageToClient(i,"Server has kicked you")
-				self.unregisterClient(i)
+				# todo: figure out what goes here to kick off client
+				#self.socketsmap[i].close()
 				break
 
 	def on_actionStart_triggered(self,accept=True):
@@ -215,190 +231,6 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 				self.width=dialog.ui.width_box.value()
 				self.height=dialog.ui.height_box.value()
 
-# thread to setup connection, authenticate and then
-# listen to a socket and add incomming client commands to queue
-class HiveClientListener(qtcore.QThread):
-	def __init__(self,parent,socket,master,id):
-		qtcore.QThread.__init__(self,parent)
-		self.socket=socket
-
-		self.mutex=qtcore.QMutex()
-
-		self.master=master
-		self.id=id
-
-		self.authenticationerror="Unknown Error"
-
-	def authenticate(self):
-		# attempt to read stream of data, which should include version, username and password
-		# make sure someone dosen't overload the buffer while wating for authentication info
-		authstring=qtcore.QString()
-		while authstring.count('\n')<3 and len(authstring)<100:
-			if self.socket.waitForReadyRead(-1):
-				data=self.socket.read(100)
-				authstring.append(data)
-
-			# if error exit
-			else:
-				self.authenticationerror="Error: Lost connection during authentication request"
-				return False
-
-		authlist=authstring.split('\n')
-
-		# if loop ended without getting enough separators just return false
-		if len(authlist)<3:
-			self.authenticationerror="Error parsing authentication information"
-			return False
-
-		self.username=authlist[0]
-		password=authlist[1]
-		try:
-			version=int(authlist[2])
-		except ValueError:
-			self.authenticationerror="Error parsing authentication information"
-			return False
-
-		if version != PROTOCOL_VERSION:
-			self.authenticationerror="Protocol version mismatch, please change to server version: %d" % PROTOCOL_VERSION
-			return False
-
-		# if password is blank, let authentication pass
-		if self.master.password=="":
-			return True
-
-		# otherwise trim off whitespace and compare to password string
-		if password.trimmed().toAscii()==self.master.password:
-			return True
-
-		self.authenticationerror="Incorrect Password"
-		return False
-
-	def register(self):
-		# register this new connection
-		return self.master.registerClient(self.username,self.id,self.socket)
-
-	def disconnected(self):
-		print_debug("Listener has disconnected from client with ID: %d" % self.id)
-		self.master.unregisterClient(self.id)
-		#self.
-
-	def readyRead(self):
-		lock=qtcore.QMutexLocker(self.mutex)
-		readybytes=self.socket.bytesAvailable()
-
-		if readybytes>0:
-			data=self.socket.read(readybytes)
-			print_debug("got animation data from socket: %s" % qtcore.QString(data))
-			self.parser.xml.addData(data)
-			error=self.parser.read()
-
-			#self.socket.waitForBytesWritten()
-
-			if error!=QXmlStreamReader.PrematureEndOfDocumentError and error!=QXmlStreamReader.NoError:
-				return error
-
-			return None
-
-	def run(self):
-		# try to authticate user
-		if not self.authenticate():
-			# if authentication fails send close socket and exit
-			print_debug("authentication failed")
-			self.socket.write(qtcore.QByteArray("Authtication failed\n%s\n" % self.authenticationerror))
-			self.socket.waitForBytesWritten()
-			self.socket.disconnectFromHost()
-			self.socket.waitForDisconnected(1000)
-			return
-
-		print_debug("authentication succeded")
-
-		if not self.register():
-			print_debug("register failed, probably due to duplicate username")
-			self.socket.write(qtcore.QByteArray("Regististration failed\nRegistration with server failed, the username you chose is probably in use already, try a different one\n"))
-			self.socket.waitForBytesWritten()
-			self.socket.disconnectFromHost()
-			self.socket.waitForDisconnected(1000)
-			return
-
-		print_debug("registered")
-		self.parser=XmlToQueueEventsConverter(None,self.master.curwindow,0,type=ThreadTypes.server,id=self.id)
-		print_debug("created parser")
-
-		# pass initial data to client here
-		self.socket.write(qtcore.QByteArray("Success\nConnected To Server\n"))
-
-		# wait for client to respond so it doesn't get confused and mangle the setup data with the start of the XML file
-		self.socket.waitForReadyRead(-1)
-		print_debug("got client response")
-
-		qtcore.QObject.connect(self.socket, qtcore.SIGNAL("readyRead()"), self.readyRead)
-		qtcore.QObject.connect(self.socket, qtcore.SIGNAL("disconnected()"), self.disconnected)
-
-		# start writing thread
-		newwriter=HiveClientWriter(self,self.socket,self.master,self.id)
-		newwriter.start()
-
-		self.exec_()
-		# while the "correct" way to do this might be to start an event loop, but for some reason that causes the socket to not read correctly.   It was reading the same data multiple times as if it was reading before it had a chance to reset.
-		#while 1:
-			# make sure we've waited long enough
-		#	self.socket.waitForReadyRead(-1)
-		#	error=self.readyRead()
-
-		#	if error:
-				# queue up command for client to be disconnected
-		#		self.master.curwindow.xmlError(self.id,"XML Stream Parse Error")
-		#		break
-
-		#	if self.socket.state() != qtnet.QAbstractSocket.ConnectedState:
-		#		break
-
-		# this should be run when the socket is disconnected
-		#self.disconnected()
-
-
-# this thread will write to a specific client
-class HiveClientWriter(qtcore.QThread):
-	def __init__(self,parent,socket,master,id):
-		qtcore.QThread.__init__(self)
-		self.setParent(self)
-
-		self.socket=socket
-		self.master=master
-		self.id=id
-
-		# add to list of writing threads
-		lock=qtcore.QReadLocker(self.master.clientslistmutex)
-		self.queue=self.master.clientwriterqueues[id]
-
-		# create custom QXmlStreamWriter
-		self.xmlgenerator=SketchLogWriter(self.socket)
-
-	def run(self):
-		while 1:
-			# block until item is available from thread safe queue
-			data=self.queue.get()
-			if self.socket.state()==qtnet.QAbstractSocket.UnconnectedState:
-				self.master.unregisterClient(self.id)
-				return
-
-			# need to put in check for quit command
-			if data[0]==DrawingCommandTypes.quit:
-				self.socket.close()
-				self.master.unregisterClient(self.id)
-				break
-
-			# write xml data to socket
-			self.xmlgenerator.logCommand(data)
-
-			# flush so command goes out on network right away
-			self.socket.flush()
-
-			# test to make sure the delay isn't in the XML buffer
-			self.socket.write(" ")
-			self.socket.waitForBytesWritten(-1)
-			self.socket.flush()
-
 # class to handle running the TCP server and handling new connections
 class HiveServerThread(qtcore.QThread):
 	def __init__(self,master,port=8333):
@@ -406,7 +238,6 @@ class HiveServerThread(qtcore.QThread):
 		self.threads=[]
 		self.port=port
 		self.master=master
-		self.nextid=1
 
 		# connect the signals we want
 		qtcore.QObject.connect(self, qtcore.SIGNAL("finished()"), self.finished)
@@ -414,34 +245,30 @@ class HiveServerThread(qtcore.QThread):
 
 	def started(self):
 		# needs to be done here because this is running in the proper thread
-		self.server=qtnet.QTcpServer(self)
-
-		# tell me when the server has gotten a new connection
-		qtcore.QObject.connect(self.server, qtcore.SIGNAL("newConnection()"), self.newConnection)
-
-		ret=self.server.listen(qtnet.QHostAddress("0.0.0.0"),self.port)
+		self.server=BeeTCPServer(BeeSocketTypes.qt,8333,self,self.master)
+		self.server.start()
 
 	def finished(self):
-		print_debug("running finished")
+		print_debug("server thread has finished")
 
 	def run(self):
 		self.exec_()
 
 	# signal for the server getting a new connection
-	def newConnection(self):
-		print_debug("found new connection")
-		while self.server.hasPendingConnections():
-			newsock=self.server.nextPendingConnection()
+#	def newConnection(self):
+#		print_debug("found new connection")
+#		while self.server.hasPendingConnections():
+#			newsock=self.server.nextPendingConnection()
 
 			# start the listener, that will authenticate client and finish setup
-			newlistener=HiveClientListener(self,newsock,self.master,self.nextid)
-			self.nextid+=1
+#			newlistener=HiveClientListener(self,BeeSocket(BeeSocketTypes.qt,newsock),self.master,self.nextid)
+#			self.nextid+=1
 
 			# push responsibility to new thread
-			newsock.setParent(None)
-			newsock.moveToThread(newlistener)
+#			newsock.setParent(None)
+#			newsock.moveToThread(newlistener)
 
-			newlistener.start()
+#			newlistener.start()
 
 # this thread will route communication as needed between client listeners, the gui and client writers
 class HiveRoutingThread(qtcore.QThread):
@@ -456,22 +283,12 @@ class HiveRoutingThread(qtcore.QThread):
 			print_debug("routing info recieved: %s" % str(data))
 			(command,owner)=data
 			# a negative number is a flag that we only send it to one client
-			if command[0]==DrawingCommandTypes.quit:
-				self.closeConnection(abs(owner))
-			elif owner<0:
+			if owner<0:
 				self.sendToSingleClient(abs(owner),command)
 			elif command[0]==DrawingCommandTypes.alllayer or command[0]==DrawingCommandTypes.networkcontrol:
 				self.sendToAllClients(command)
 			else:
 				self.sendToAllButOwner(owner,command)
-
-	def closeConnection(self,client):
-		lock=qtcore.QWriteLocker(self.master.clientslistmutex)
-		if client in self.master.clientwriterqueues:
-			self.master.clientwriterqueues[client].put((DrawingCommandTypes.quit,))
-			del(self.master.clientwriterqueues[client])
-		else:
-			print_debug("WARNING: Can't find client %s for sending data to" % client)
 
 	# I'd eventually put a check in here for if the queue is full and if so clear the queue and replace it with a raw event update to the current state
 	def sendToAllClients(self,command):
@@ -486,6 +303,7 @@ class HiveRoutingThread(qtcore.QThread):
 		for id in self.master.clientwriterqueues.keys():
 			if source!=id:
 				print_debug("sending to client: %d" % id)
+				print "putting in queue:", self.master.clientwriterqueues[id]
 				self.master.clientwriterqueues[id].put(command)
 
 	def sendToSingleClient(self,id,command):

@@ -52,6 +52,8 @@ class XmlToQueueEventsConverter:
 		self.type=type
 		self.stepdelay=stepdelay
 		self.keymap={}
+		self.imagestarted=True
+		self.imagedata=None
 
 		if type==ThreadTypes.animation:
 			self.layertype=LayerTypes.animation
@@ -82,8 +84,7 @@ class XmlToQueueEventsConverter:
 
 		# if it's an error that might actually be a problem then print it out
 		if self.xml.hasError() and self.xml.error() != QXmlStreamReader.PrematureEndOfDocumentError:
-			print_debug("error while parsing XML for client %d: %s" % (self.id, self.xml.errorString()))
-			self.window.xmlError(self.id,self.xml.errorString())
+				print_debug("error while parsing XML: %s" % self.xml.errorString())
 
 		return self.xml.error()
 
@@ -202,25 +203,23 @@ class XmlToQueueEventsConverter:
 			(value,ok)=attrs.value('value').toString().toInt()
 			self.curtool.setOption("%s" % attrs.value('name').toString(),value)
 		elif name == 'image':
-			rawstring=self.xml.readElementText()
+			print "DEBUG: starting image read"
+			self.imagestarted=True
+			#rawstring=self.xml.readElementText()
 
 			#encstr=str(rawstring)
 
 			#decstr=b64decode(encstr)
 
-			data=qtcore.QByteArray()
-			data=data.append(rawstring)
-			data=qtcore.QByteArray.fromBase64(data)
-			data=qtcore.qUncompress(data)
 
-			iostr=StringIO(str(data))
+			#iostr=StringIO(str(data))
 
-			pilimage=Image.open(iostr)
-			pilimage.load()
+			#pilimage=Image.open(iostr)
+			#pilimage.load()
 
-			image=ImageQt(pilimage)
+			#image=ImageQt(pilimage)
 
-			self.image=image
+			#self.image=image
 
 		elif name == 'rawevent':
 			self.raweventargs=[]
@@ -280,16 +279,15 @@ class XmlToQueueEventsConverter:
 			(layerkey,ok)=attrs.value('key').toString().toInt()
 			self.window.addLayerRequestToQueue(layerkey,self.id,type)
 
-		elif name == 'servermessage':
-			errormessage="%s" % attrs.value('servermessage').toString()
+		elif name == 'fatalerror':
+			errormessage="%s" % attrs.value('errormessage').toString()
 			self.window.addFatalErrorNotificationToQueue(0,errormessage,type)
 
 		elif name == 'sketchlog':
 			print_debug("DEBUG: got document start tag")
 
-		elif name == 'clientmessage':
-			rawstring=self.xml.readElementText()
-			self.window.stackDisplayMessageEvent("Server Message","%s" % rawstring)
+		elif name == 'null':
+			pass
 
 		else:
 			print_debug("WARNING: Don't know how to handle tag: %s" % name.toString())
@@ -307,7 +305,15 @@ class XmlToQueueEventsConverter:
 			self.clippath.addPolygon(poly)
 
 	def processCharacterData(self):
-		pass
+		if self.imagestarted:
+			self.imagestarted=False
+			rawstring=self.xml.text().toString()
+			data=qtcore.QByteArray()
+			data=data.append(rawstring)
+			data=qtcore.QByteArray.fromBase64(data)
+			data=qtcore.qUncompress(data)
+
+			self.image=qtgui.QImage.fromData(data,"PNG")
 
 class AnimationEventsConverter(XmlToQueueEventsConverter):
 	def translateKey(self,key):
@@ -341,7 +347,6 @@ class NetworkListenerThread (qtcore.QThread):
 		qtcore.QThread.__init__(self)
 		self.window=window
 		self.socket=socket
-		self.disconnectmessage="Unknown reason for disconnecting"
 
 		# during the destructor this seems to forget about qtnet so keep this around to check aginst it then
 		self.connectedstate=qtnet.QAbstractSocket.ConnectedState
@@ -365,42 +370,28 @@ class NetworkListenerThread (qtcore.QThread):
 
 		# enter read loop, read till socket closes
 		while 1:
-			# make sure we've waited long enough and if something goes wrong just disconnect
 			print_debug("Ready to read from server")
-			if not self.socket.waitForReadyRead(-1):
+			data=self.socket.read(1024)
+
+			if not data:
 				print_debug("Error due to closed remote connection")
-				self.disconnectmessage="Server has closed connection"
+				self.window.setDisconnectMessage("Server has closed connection")
 				break
 
-			error=self.readyRead()
-
-			# if there was an error then disconnect
-			if error:
-				self.disconnectmessage="Error in XML stream"
-				self.window.addExitEventToQueue(source=ThreadTypes.network)
-				break
-
-		# this should be run when the socket is disconnected and the buffer is empty
-		self.window.disconnected(self.disconnectmessage)
-
-	def readyRead(self):
-		readybytes=self.socket.bytesAvailable()
-
-		if readybytes>0:
-			data=self.socket.read(readybytes)
-			print_debug("got animation data from socket: %s" % qtcore.QString(data))
+			#print_debug("got animation data from socket: %s" % data)
 
 			self.parser.xml.addData(data)
 			error=self.parser.read()
 
-			self.socket.waitForBytesWritten()
-
 			# if there was an error and it wasn't a premature end of document error then we can't recover and need to disconnect
 			if error!=QXmlStreamReader.PrematureEndOfDocumentError and error!=QXmlStreamReader.NoError:
-				return error
+				self.window.setDisconnectMessage("Error in XML stream")
+				self.window.addExitEventToQueue(source=ThreadTypes.network)
+				break
 
-			return None
-				
+		# this should be run when the socket is disconnected and the buffer is empty
+		self.window.disconnected()
+
 class NetworkWriterThread (qtcore.QThread):
 	""" class representing a client thread that is sending information to server
   """
@@ -408,17 +399,24 @@ class NetworkWriterThread (qtcore.QThread):
 		qtcore.QThread.__init__(self)
 		self.socket=socket
 
-		# wrapper to use an QXmlStreamWriter to write to the socket
-		self.gen=SketchLogWriter(self.socket)
+		self.buffer=qtcore.QBuffer()
+		self.buffer.open(qtcore.QIODevice.ReadWrite)
+		self.gen=SketchLogWriter(self.buffer)
 
 		self.window=window
-
-		# Queue class for thread safe communication
 		self.queue=window.remoteoutputqueue
 
 	def run(self):
 		while 1:
-			if self.socket.state()==qtnet.QAbstractSocket.UnconnectedState:
+			# write out initial document start tag
+			datastr="%s" % qtcore.QString(self.buffer.data())
+			#print "wrote to buffer: %s" % datastr
+			self.socket.write(datastr)
+			self.buffer.buffer().resize(0)
+			self.buffer.seek(0)
+
+			#if self.socket.state()==qtnet.QAbstractSocket.UnconnectedState:
+			if not self.socket.isConnected():
 				break
 
 			print_debug("attempting to get item from queue")
@@ -428,5 +426,3 @@ class NetworkWriterThread (qtcore.QThread):
 				return
 
 			self.gen.logCommand(command)
-			self.socket.waitForBytesWritten(-1)
-			print_debug("finished flushing socket")

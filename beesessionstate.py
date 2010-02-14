@@ -22,7 +22,7 @@ from sketchlog import SketchLogWriter
 from beeapp import BeeApp
 from beetypes import *
 from beeeventstack import *
-from beelayer import BeeLayer
+from beelayer import BeeLayerState
 from beeutil import getTimeString
 
 from Queue import Queue
@@ -59,7 +59,6 @@ class BeeSessionState:
 		self.curlayerkey=None
 		self.curlayerkeymutex=qtcore.QMutex()
 
-		self.imagelock=qtcore.QReadWriteLock()
 		self.docsizelock=qtcore.QReadWriteLock()
 
 		self.nextlayerkey=0
@@ -71,7 +70,7 @@ class BeeSessionState:
 
 		self.layers=[]
 		# mutex for messing with the list of layer: adding, removing or rearranging
-		self.layersmutex=qtcore.QMutex()
+		self.layerslistlock=qtcore.QReadWriteLock()
 
 		# start log if autolog is enabled
 		self.log=None
@@ -131,22 +130,12 @@ class BeeSessionState:
 		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.deletelayer,key),source)
 
 	def addExitEventToQueue(self,source=ThreadTypes.user):
-		self.queueCommand((DrawingCommandTypes.quit),source)
+		self.queueCommand((DrawingCommandTypes.quit,),source)
 
-	def removeLayerByKey(self,key,history=0):
-		""" remove layer with key equal to passed value, each layer should have a unique key so there is no need to check for multiples
-      The history argument is 0 if the event should be added to the undo/redo history and -1 if it shouldn't.  This is needed so when running an undo/redo command it doesn't get added again.
-		"""
-		if key==None:
-			return (None,None)
-
-		print_debug("calling removeLayerByKey for %d" % key)
-		# get a lock so we don't get a collision ever
-		lock=qtcore.QMutexLocker(self.layersmutex)
-		curlaylock=qtcore.QMutexLocker(self.curlayerkeymutex)
-		
-		layer=self.getLayerForKey(key)
+	def removeLayer(self,layer,history=0,lock=None):
 		if(layer):
+			if not lock:
+				lock=qtcore.QWriteLocker(self.layerslistlock)
 			index=self.layers.index(layer)
 			if history!=-1:
 				self.addCommandToHistory(DelLayerCommand(layer,index))
@@ -161,22 +150,38 @@ class BeeSessionState:
 			else:
 				self.curlayerkey=self.layers[index-1].key
 
+			lock.unlock()
 			self.requestLayerListRefresh()
 			self.reCompositeImage()
 			return (layer,index)
 
 		return (None,None)
 
+	def removeLayerByKey(self,key,history=0,lock=None):
+		""" remove layer with key equal to passed value, each layer should have a unique key so there is no need to check for multiples
+      The history argument is 0 if the event should be added to the undo/redo history and -1 if it shouldn't.  This is needed so when running an undo/redo command it doesn't get added again.
+		"""
+		print_debug("calling removeLayerByKey for %d" % key)
+		# get a lock so we don't get a collision ever
+		if not lock:
+			lock=qtcore.QWriteLocker(self.layerslistlock)
+
+		curlaylock=qtcore.QMutexLocker(self.curlayerkeymutex)
+		
+		layer=self.getLayerForKey(key,lock)
+		return self.removeLayer(layer,history,lock)
+
 	def addLayerDownToQueue(self,key,source=ThreadTypes.user):
 		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.layerdown,key),source)
 
 	def layerDown(self,key):
 		index=self.getLayerIndexForKey(key)
-		lock=qtcore.QMutexLocker(self.layersmutex)
+		lock=qtcore.QWriteLocker(self.layerslistlock)
 		if index>0:
 			self.layers[index],self.layers[index-1]=self.layers[index-1],self.layers[index]
-			self.requestLayerListRefresh()
+			lock.unlock()
 			self.reCompositeImage()
+			self.requestLayerListRefresh()
 
 			# if we are only running locally add command to local history
 			# otherwise do nothing
@@ -188,12 +193,13 @@ class BeeSessionState:
 		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.layerup,key),source)
 
 	def layerUp(self,key):
-		lock=qtcore.QMutexLocker(self.layersmutex)
+		lock=qtcore.QWriteLocker(self.layerslistlock)
 		index=self.getLayerIndexForKey(key)
 		if index==None:
 			return
 		if index<len(self.layers)-1:
 			self.layers[index],self.layers[index+1]=self.layers[index+1],self.layers[index]
+			lock.unlock()
 			self.requestLayerListRefresh()
 			self.reCompositeImage()
 
@@ -203,7 +209,7 @@ class BeeSessionState:
 				self.addCommandToHistory(LayerUpCommand(key))
 
 	def reCompositeImage(self,dirtyrect=None):
-		""" This is not needed to actually do anything in all state keepers, but it needs to be here so it can be called.  Should be called whenever the whole image has changed in some way.
+		""" This is not needed to actually do anything in all state keepers, but it needs to be here so it can be called
 		"""
 		pass
 
@@ -248,7 +254,7 @@ class BeeSessionState:
 		# log everything to get upto this point
 		pos=0
 		for layer in self.layers:
-			locks.append(qtcore.QWriteLocker(layer.imagelock))
+			locks.append(ReadWriteLocker(layer.imagelock,True))
 			log.logLayerAdd(pos,layer.key, layer.image)
 			#log.logRawEvent(0,0,layer.key,layer.image)
 			pos+=1
@@ -267,18 +273,15 @@ class BeeSessionState:
 			key=self.nextLayerKey()
 
 		if not index:
-			index=len(self.layers)
+			index=0
 
 		self.insertLayer(key,index,type,image,opacity=opacity,visible=visible,compmode=compmode)
-		self.reCompositeImage()
 
 	def insertRawLayer(self,layer,index,history=0):
-		lock=qtcore.QMutexLocker(self.layersmutex)
 		self.layers.insert(index,layer)
 		self.requestLayerListRefresh()
 		self.reCompositeImage()
-
-		#curlaylock=qtcore.QMutexLocker(self.curlayerkeymutex)
+		curlaylock=qtcore.QMutexLocker(self.curlayerkeymutex)
 		# only select it immediately if we can draw on it
 		#if layer.type==LayerTypes.user:
 		#	self.curlayerkey=layer.key
@@ -289,17 +292,24 @@ class BeeSessionState:
 
 	# insert a layer at a given point in the list of layers
 	def insertLayer(self,key,index,type=LayerTypes.user,image=None,opacity=None,visible=None,compmode=None,owner=0,history=0):
-		layer=BeeLayer(self.id,type,key,image,opacity=opacity,visible=visible,compmode=compmode,owner=owner)
-		lock=qtcore.QMutexLocker(self.layersmutex)
+		lock=qtcore.QWriteLocker(self.layerslistlock)
+
+		# make sure layer doesn't exist already
+		oldlayer=self.getLayerForKey(key,lock=lock)
+		if oldlayer:
+			print "ERROR: tried to create layer with same key as existing layer"
+			return
+			
+		layer=BeeLayerState(self.id,type,key,image,opacity=opacity,visible=visible,compmode=compmode,owner=owner)
 
 		self.layers.insert(index,layer)
 
 		# only add command to history if we are in a local session
-		if self.type==WindowTypes.singleuser and history!=-1:
-			self.addCommandToHistory(AddLayerCommand(layer.key))
+		#if self.type==WindowTypes.singleuser and history!=-1:
+		#	self.addCommandToHistory(AddLayerCommand(layer.key))
 
-		self.requestLayerListRefresh()
-		self.reCompositeImage()
+		#self.requestLayerListRefresh()
+		#self.reCompositeImage()
 
 	def requestLayerListRefresh(self):
 		""" Only needed in subclasses that display a list of layers
@@ -316,9 +326,11 @@ class BeeSessionState:
 
 	def queueCommand(self,command,source=ThreadTypes.user,owner=0):
 		""" This needs to be reimplemented in subclass """
-		pass
+		print "ERROR: abstract call to queueCommand"
 
-	def getLayerForKey(self,key):
+	def getLayerForKey(self,key,lock=None):
+		if not lock:
+			lock=qtcore.QReadLocker(self.layerslistlock)
 		for layer in self.layers:
 			if layer.key==key:
 				return layer
@@ -348,40 +360,28 @@ class BeeSessionState:
 	def addAdjustCanvasSizeRequestToQueue(self,leftadj,topadj,rightadj,bottomadj,source=ThreadTypes.user,owner=0):
 		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.resize,leftadj,topadj,rightadj,bottomadj),source,owner)
 
-	def setCanvasSize(self,width,height,history=True):
-		lock=qtcore.QWriteLocker(self.docsizelock)
+	def setCanvasSize(self,width,height):
+		print "DEBUG: setting canvas size to:", width, height
+		lock=ReadWriteLocker(self.docsizelock,False)
 		rightadj=width-self.docwidth
 		bottomadj=height-self.docheight
-		self.adjustCanvasSize((0,0,rightadj,bottomadj),sizelock=lock,history=history)
+		lock.unlock()
+		self.adjustCanvasSize(0,0,rightadj,bottomadj)
 
 	# grow or crop canvas according to adjustments on each side
-	def adjustCanvasSize(self,adjustments,sizelock=None,history=True):
-		if history:
-			historycommand=ResizeCanvasCommand(self.layers,self.id,adjustments)
-
+	def adjustCanvasSize(self,leftadj,topadj,rightadj,bottomadj):
 		# get lock on adjusting the document size
-		if not sizelock:
-			sizelock=qtcore.QWriteLocker(self.docsizelock)
+		sizelock=ReadWriteLocker(self.docsizelock,True)
 
-		self.docwidth=self.docwidth+adjustments[0]+adjustments[2]
-		self.docheight=self.docheight+adjustments[1]+adjustments[3]
-
-		# adjust size of all the layers
-		for layer in self.layers:
-			layer.adjustCanvasSize(adjustments)
-
-		imglock=qtcore.QWriteLocker(self.imagelock)
-
-		self.image=qtgui.QImage(self.docwidth,self.docheight,qtgui.QImage.Format_ARGB32_Premultiplied)
+		self.docwidth=self.docwidth+leftadj+rightadj
+		self.docheight=self.docheight+topadj+bottomadj
 
 		# update all layer preview thumbnails
 		self.master.refreshLayerThumb(self.id)
 
-		if history:
-			self.localcommandstack.add(historycommand)
-
 	def addInsertLayerEventToQueue(self,index,key,image=None,source=ThreadTypes.user,owner=0):
 		# when the source is local like this the owner will always be me (id 0)
+		print "adding insert layer to queue"
 		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.insertlayer,key,index,image,owner),source,owner)
 		return key
 
@@ -398,14 +398,15 @@ class BeeSessionState:
 	def addResyncStartToQueue(self,remoteid,width,height,source=ThreadTypes.network):
 		self.queueCommand((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.resyncstart,remoteid,width,height),source)
 
+	def addFatalErrorNotificationToQueue(self,remoteid,errormessage,source=ThreadTypes.network):
+		self.queueCommand((DrawingCommandTypes.quit,),source)
+		requestDisplayMessage(BeeDisplayMessageTypes.warning,"Network Session Ended","Server has severed connection due to: %s" % errormessage,self)
+
 	def addOpacityChangeToQueue(self,key,value,source=ThreadTypes.user):
 		self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.alpha,key,value),source)
 
 	def addBlendModeChangeToQueue(self,key,value,source=ThreadTypes.user):
 		self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.mode,key,value),source)
-
-	def xmlError(self,id,errorstring):
-		pass
 
 	def logServerCommand(self,command,id=0):
 		if self.log:
@@ -499,6 +500,12 @@ class BeeSessionState:
 
 	def refreshLayersList(self):
 		pass
+
+	def displayMessage(self,type,title,message):
+		if type==BeeDisplayMessageTypes.warning:
+			print "WARNING:", title, message
+		elif type==BeeDisplayMessageTypes.error:
+			print "ERROR:", title, message
 
 	def removeOwner(self,id):
 		""" find all layers with indicated owner and set them to be unowned, also remove all history for those layers, needs to be reimplemented in the subclass """

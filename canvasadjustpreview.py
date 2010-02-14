@@ -15,60 +15,111 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+import sys
+sys.path.append("designer")
+
 import PyQt4.QtGui as qtgui
 import PyQt4.QtCore as qtcore
 
-class CanvasAdjustPreview(qtgui.QWidget):
-	def __init__(self,replacingwidget,window):
-		qtgui.QWidget.__init__(self,replacingwidget.parentWidget())
+from beeutil import *
 
-		self.setGeometry(replacingwidget.frameGeometry())
-		self.setObjectName(replacingwidget.objectName())
+from ImageSizeAdjustDialogUi import Ui_CanvasSizeDialog
 
-		self.window=window
+class CanvasAdjustDialog(qtgui.QDialog):
+	def __init__(self,window):
+		qtgui.QDialog.__init__(self)
 
-		self.previewimage=window.image.scaled(200,200,qtcore.Qt.KeepAspectRatio)
+		self.scene=qtgui.QGraphicsScene()
+		self.view=qtgui.QGraphicsView(self.scene,self)
 
-		self.basewidth=window.image.width()
-		self.baseheight=window.image.height()
+		self.ui=Ui_CanvasSizeDialog()
+		self.ui.setupUi(self)
 
-		self.xoffset=(200-self.previewimage.width())/2
-		self.yoffset=(200-self.previewimage.height())/2
+		replaceWidget(self.ui.image_preview,self.view)
 
-		self.sizeratio=self.previewimage.width()/window.image.width()
+		image=window.scene.getImageCopy()
+		self.startwidth=image.width()
+		self.startheight=image.height()
 
-		self.drawrect=qtcore.QRectF(self.xoffset,self.yoffset,self.previewimage.width(),self.previewimage.height())
+		self.item=CanvasAdjustPreview(image)
 
-		self.show()
+		self.scene.addItem(self.item)
+		self.view.fitInView(self.item,qtcore.Qt.KeepAspectRatio)
+		self.view.setHorizontalScrollBarPolicy(qtcore.Qt.ScrollBarAlwaysOff)
+		self.view.setVerticalScrollBarPolicy(qtcore.Qt.ScrollBarAlwaysOff)
+		self.view.setBackgroundBrush(qtgui.QColor(200,200,200))
+		self.view.setAlignment(qtcore.Qt.AlignCenter)
+		self.ui.image_preview=self.scene
 
-	def paintEvent(self,event):
-		painter=qtgui.QPainter()
-		painter.begin(self)
+		self.topadj=0
+		self.leftadj=0
+		self.rightadj=0
+		self.bottomadj=0
 
-		painter.drawImage(self.xoffset,self.yoffset,self.previewimage)
+	def showEvent(self,event):
+		self.refreshPreview()
+		return qtgui.QDialog.showEvent(self,event)
 
-		painter.end()
+	def on_Top_Adjust_Box_valueChanged(self,value):
+		if type(value)==type(int()):
+			self.topadj=value
+			if self.startheight+self.topadj+self.bottomadj<1:
+				self.topadj=1-self.bottomadj-self.startheight
+				self.ui.Top_Adjust_Box.setValue(self.topadj)
+			self.refreshPreview()
+	def on_Bottom_Adjust_Box_valueChanged(self,value):
+		if type(value)==type(int()):
+			self.bottomadj=value
+			if self.startheight+self.topadj+self.bottomadj<1:
+				self.bottomadj=1-self.topadj-self.startheight
+				self.ui.Bottom_Adjust_Box.setValue(self.bottomadj)
+			self.refreshPreview()
+	def on_Left_Adjust_Box_valueChanged(self,value):
+		if type(value)==type(int()):
+			self.leftadj=value
+			if self.startwidth+self.leftadj+self.rightadj<1:
+				self.leftadj=1-self.rightadj-self.startwidth
+				self.ui.Left_Adjust_Box.setValue(self.leftadj)
+			self.refreshPreview()
+	def on_Right_Adjust_Box_valueChanged(self,value):
+		if type(value)==type(int()):
+			self.rightadj=value
+			if self.startwidth+self.leftadj+self.rightadj<1:
+				self.rightadj=1-self.leftadj-self.startwidth
+				self.ui.Left_Adjust_Box.setValue(self.rightadj)
+			self.refreshPreview()
+
+	def refreshPreview(self):
+		self.item.newAdjustments(self.leftadj,self.topadj,self.rightadj,self.bottomadj)
+		self.view.fitInView(self.item,qtcore.Qt.KeepAspectRatio)
+
+class CanvasAdjustPreview(qtgui.QGraphicsItem):
+	def __init__(self,image):
+		qtgui.QGraphicsItem.__init__(self)
+
+		self.oldimagecopy=image
+		self.previewimage=self.oldimagecopy.copy()
+
+	def boundingRect(self):
+		return qtcore.QRectF(self.previewimage.rect())
+
+	def paint(self,painter,options,widget=None):
+		painter.drawImage(0,0,self.previewimage)
 
 	def newAdjustments(self,left,top,right,bottom):
-		newwidth=self.basewidth-left+right
-		newheight=self.baseheight-top+bottom
+		newwidth=self.oldimagecopy.width()+left+right
+		newheight=self.oldimagecopy.height()+top+bottom
 
-		newscalefactor=200/max(newwidth,newheight)
-
-		newscaledwidth=newwidth*newscalefactor
-		newscaledheight=newheight*newscalefactor
-
-		newpreview=qtgui.QImage(newwidth,newheight,qtgui.QImage.Format_ARGB32_Premultiplied)
-
-		oldimagepos_x=left*newscalefactor
-		oldimagepos_y=top*newscalefactor
+		self.previewimage=qtgui.QImage(newwidth,newheight,qtgui.QImage.Format_ARGB32_Premultiplied)
 
 		# fill area with white
-		newpreview.fill(0xFFFFFFFF)
+		self.previewimage.fill(0xFFFFFFFF)
 
 		# draw image onto preview area
 		painter=qtgui.QPainter()
+		painter.begin(self.previewimage)
+		painter.drawImage(qtcore.QPoint(left,top),self.oldimagecopy)
+		#self.drawrect=qtcore.QRectF(leftbound,topbound,width,height)
 
-		self.drawrect=qtcore.QRectF(leftbound,topbound,width,height)
-
+		self.prepareGeometryChange()
 		self.update()
