@@ -76,8 +76,8 @@ class BeeLayerState:
 		# set default name for layer
 		self.changeName("Layer %d" % key)
 
-	def update(self,rect=None):
-		pass
+	#def update(self,rect=None):
+	#	pass
 
 	def getImageRect(self):
 		lock=qtcore.QReadLocker(self.imagelock)
@@ -129,7 +129,6 @@ class BeeLayerState:
 		height=image.size().height()
 		#print "image dimensions:", width, height
 		self.compositeFromCorner(image,x-int((width)/2),y-int((height)/2),compmode,clippath)
-		return
 
 	# composite image onto layer from corner coord
 	def compositeFromCorner(self,image,x,y,compmode,clippath=None,lock=None):
@@ -165,8 +164,10 @@ class BeeLayerState:
 
 		lock.unlock()
 
-		win.reCompositeImage(dirtyrect)
 		self.update(qtcore.QRectF(dirtyrect))
+		self.update()
+		win.reCompositeImage(dirtyrect)
+		self.update()
 
 	# return copy of image
 	def getImageCopy(self):
@@ -251,29 +252,27 @@ class BeeLayerState:
 
 		self.update()
 
-class BeeLayer(qtgui.QGraphicsPixmapItem,BeeLayerState):
+class BeeLayer(BeeLayerState,qtgui.QGraphicsItem):
 	def __init__(self,windowid,type,key,image=None,opacity=None,visible=None,compmode=None,owner=0):
 		self.pixmapinit=False
+		win=BeeApp().master.getWindowById(windowid)
 
 		BeeLayerState.__init__(self,windowid,type,key,image,opacity,visible,compmode,owner)
+		qtgui.QGraphicsItem.__init__(self,None,win.view.scene())
 
-		win=BeeApp().master.getWindowById(windowid)
-		pixmapupdate=InitLayerPixmapEvent()
-		BeeApp().app.postEvent(win,pixmapupdate)
+		#self.setFlag(qtgui.QGraphicsItem.ItemDoesntPropagateOpacityToChildren)
+		self.setFlag(qtgui.QGraphicsItem.ItemUsesExtendedStyleOption)
+
+	def boundingRect(self):
+		return qtcore.QRectF(self.image.rect())
 
 	def paint(self,painter,options,widget):
-		#print_debug("painting on layer")
+		print_debug("painting on layer")
+		print_debug("options exposedRect: %s" % str(rectToTuple(options.exposedRect)))
 		lock=qtcore.QReadLocker(self.imagelock)
 		painter.setCompositionMode(self.compmode)
-		painter.drawImage(0,0,self.image)
+		painter.drawImage(options.exposedRect,self.image)
 		#print_debug("done painting on layer")
-
-	def initPixmap(self,dirtyrect):
-		if not self.pixmapinit:
-			win=BeeApp().master.getWindowById(self.windowid)
-			qtgui.QGraphicsPixmapItem.__init__(self,qtgui.QPixmap(self.image),None,win.view.scene())
-			self.pixmapinit=True
-			win.requestLayerListRefresh()
 
 	def getConfigWidget(self):
 		# can't do this in the constructor because that may occur in a thread other than the main thread, this function however should only occur in the main thread
@@ -582,6 +581,38 @@ class BeeLayersWindow(qtgui.QMainWindow):
 		if not self.isMinimized():
 			self.master.uncheckWindowLayerBox()
 		return qtgui.QWidget.hideEvent(self,event)
+
+# custom widget for the thumbnail view of a layer
+class SingleLayerView(qtgui.QGraphicsView):
+	def __init__(self,oldwidget,windowid,layerkey):
+		self.windowid=windowid
+		self.layerkey=layerkey
+
+		win=BeeApp().master.getWindowById(self.windowid)
+		qtgui.QGraphicsView(self,win.view.scene(),replacingwidget.parentWidget())
+
+		layer=BeeApp().master.getLayerById(self.windowid,self.layerkey)
+
+		replaceWidget(oldwidget,self)
+
+		self.setHorizontalScrollBarPolicy(qtcore.Qt.ScrollBarAlwaysOff)
+		self.setVerticalScrollBarPolicy(qtcore.Qt.ScrollBarAlwaysOff)
+
+		self.refit()
+
+	# draw only the item that corresponds to the layer matching this layer key
+	def drawItems(self,painter,items,options):
+		for i in range(len(items)):
+			if items[i].key==self.layerkey:
+				painter.save()
+				painter.setMatrix(items[i].sceneMatrix(),True);
+				items[i].paint(painter,options[i])
+				painter.restore()
+
+	def refit(self):
+		layer=BeeApp().master.getLayerById(self.windowid,self.layerkey)
+		rect=layer.getImageRect()
+		self.fitInView(rect,qtcore.Qt.KeepAspectRatio)
 
 # custom widget for the thumbnail view of a layer
 class LayerPreviewWidget(qtgui.QWidget):

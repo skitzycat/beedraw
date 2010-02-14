@@ -25,7 +25,6 @@ import os
 import cPickle as pickle
 
 from beetypes import *
-from beeview import BeeViewScrollArea
 from beeview import BeeGraphicsView
 from beelayer import BeeLayer
 from beeutil import *
@@ -310,9 +309,8 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		z=1
 		# redo z values for layers
 		for layer in self.layers:
-			if layer.pixmapinit:
-				layer.setZValue(z)
-				z=z+1
+			layer.setZValue(z)
+			z=z+1
 
 	# recomposite all layers together into the displayed image
 	# when a thread calls this method it shouldn't have a lock on any layers
@@ -375,10 +373,6 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		# once the window has received a deferred delete it needs to have all it's references removed so memory can be freed up
 		elif event.type()==qtcore.QEvent.DeferredDelete:
 			self.cleanUp()
-
-		elif event.type()==BeeCustomEventTypes.initlayerpixmap:
-			for layer in self.layers:
-				layer.initPixmap(event.dirtyrect)
 
 		elif event.type()==BeeCustomEventTypes.displaymessage:
 			qtgui.QMessageBox.information(None,event.title,event.body)
