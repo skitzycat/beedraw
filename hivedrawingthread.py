@@ -75,22 +75,22 @@ class ServerDrawingThread(DrawingThread):
 
 	# Change layer owner, must lock down properties layer before calling this
 	def layerOwnerChangeCommand(self,layer,newowner):
-		print "changing owner of layer:", layer.key
+		#print "changing owner of layer:", layer.key
 		oldowner=layer.owner
-		print "layer was owned by:", oldowner
-		print "layer now owned by:", newowner
+		#print "layer was owned by:", oldowner
+		#print "layer now owned by:", newowner
 		if oldowner in self.commandcaches:
-			print "found old owner in command caches"
+			#print "found old owner in command caches"
 			# make copy of list so removing while iterating works
 			newcache=self.commandcaches[oldowner][:]
 			# go through the command stack for the owner to remove commands that relate to that layer
 			for command in self.commandcaches[oldowner]:
-				print "found command for old owner"
+				#print "found command for old owner"
 				if command.layer.key==layer.key:
 					# if the command is before the current index then decrement the index
 					if newcache.index(command)<self.commandindexes[oldowner]:
 						self.commandindexes[oldowner]-=1
-					print "DEBUG: processing command onto layer"
+					#print "DEBUG: processing command onto layer"
 					command.process()
 					newcache.remove(command)
 
@@ -182,14 +182,14 @@ class ServerDrawingThread(DrawingThread):
 			print "unknown processLayerCommand subtype:", subtype
 
 		if cachedcommand:
-			print "found cached command, adding to cache"
+			#print "found cached command, adding to cache"
 			self.addToCache(cachedcommand)
 
 	def addToCache(self,command):
 		owner=command.layer.owner
-		print "adding command for owner:", owner
+		#print "adding command for owner:", owner
 		if not owner in self.commandcaches:
-			print "creating command cache for owner:", owner
+			#print "creating command cache for owner:", owner
 			self.commandcaches[owner]=[]
 			self.commandindexes[owner]=0
 
@@ -203,7 +203,7 @@ class ServerDrawingThread(DrawingThread):
 			self.commandcaches[owner]=self.commandcaches[owner][1:]
 
 		self.commandcaches[owner].append(command)
-		print "added command to cache:", command, owner
+		#print "added command to cache:", command, owner
 		self.commandindexes[owner]=len(self.commandcaches[owner])
 
 	def processHistoryCommand(self,command):
