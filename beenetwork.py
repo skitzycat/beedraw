@@ -372,10 +372,10 @@ class HiveClientWriter(qtcore.QThread):
 				self.master.unregisterClient(self.id)
 				return
 
-			print "Hive Client Writer is ready to read from queue:", self.queue
+			#print "Hive Client Writer is ready to read from queue:", self.queue
 			# block until item is available from thread safe queue
 			data=self.queue.get()
-			print "Hive Client Writer got command from Queue:", data
+			#print "Hive Client Writer got command from Queue:", data
 			# write xml data to socket
 			self.xmlgenerator.logCommand(data)
 

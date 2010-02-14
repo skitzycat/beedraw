@@ -441,13 +441,13 @@ class DrawingTool(AbstractTool):
 		if self.logtype==ToolLogTypes.unlogable:
 			return
 
-		print "Got penDown",x,y
+		#print "Got penDown",x,y
 		self.returning=False
 		self.inside=True
 		self.pendown=True
 
-		print "pen down point:", x, y
-		print "pen pressure:", pressure
+		#print "pen down point:", x, y
+		#print "pen pressure:", pressure
 		self.layer=self.window.getLayerForKey(self.layerkey)
 		self.oldlayerimage=self.layer.getImageCopy()
 
