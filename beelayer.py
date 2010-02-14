@@ -47,12 +47,6 @@ class BeeLayerState:
 
 		self.type=type
 
-		# for floting selections and temporary overlays for tools and such
-		self.tooloverlay=None
-
-		# list to hold floating selections
-		self.floatingselections=[]
-
 		if image:
 			self.image=image
 		else:
@@ -76,12 +70,12 @@ class BeeLayerState:
 		# set default name for layer
 		self.changeName("Layer %d" % key)
 
-	#def update(self,rect=None):
-	#	pass
-
 	def getImageRect(self):
 		lock=qtcore.QReadLocker(self.imagelock)
 		return self.image.rect()
+
+	def getWindow(self):
+		return BeeApp().master.getWindowById(self.windowid)
 
 	def changeName(self,newname):
 		proplock=qtcore.QWriteLocker(self.propertieslock)
@@ -92,9 +86,6 @@ class BeeLayerState:
 
 		if self.configwidget:
 			self.configwidget.updateValuesFromLayer()
-
-	def getWindow(self):
-		return BeeApp().master.getWindowById(self.windowid)
 
 	# change the ownership of a layer and remove all undo/redo history for that layer
 	def changeOwner(self,owner):
@@ -129,6 +120,7 @@ class BeeLayerState:
 		height=image.size().height()
 		#print "image dimensions:", width, height
 		self.compositeFromCorner(image,x-int((width)/2),y-int((height)/2),compmode,clippath)
+		return
 
 	# composite image onto layer from corner coord
 	def compositeFromCorner(self,image,x,y,compmode,clippath=None,lock=None):
@@ -160,26 +152,29 @@ class BeeLayerState:
 		imagerect=qtcore.QRect(0,0,win.docwidth,win.docheight)
 
 		dirtyregion=dirtyregion.intersect(qtgui.QRegion(imagerect))
-		dirtyrect=dirtyregion.boundingRect()
-
 		lock.unlock()
+		win.reCompositeImage(dirtyregion.boundingRect())
 
-		self.update(qtcore.QRectF(dirtyrect))
-		self.update()
-		win.reCompositeImage(dirtyrect)
-		self.update()
+	def getConfigWidget(self):
+		# can't do this in the constructor because that may occur in a thread other than the main thread, this function however should only occur in the main thread
+		if not self.configwidget:
+			self.configwidget=LayerConfigWidget(self.windowid,self.key)
+			self.configwidget.setSizePolicy(qtgui.QSizePolicy.MinimumExpanding,qtgui.QSizePolicy.Fixed)
+			self.configwidget.ui.background_frame.setSizePolicy(qtgui.QSizePolicy.MinimumExpanding,qtgui.QSizePolicy.MinimumExpanding)
+		else:
+			self.configwidget.updateValuesFromLayer()
+		return self.configwidget
+
+	# get color of pixel at specified point, or average color in range
+	def getPixelColor(self,x,y,size):
+		lock=qtcore.QReadLocker(self.imagelock)
+		return self.image.pixel(x,y)
 
 	# return copy of image
 	def getImageCopy(self):
 		lock=qtcore.QReadLocker(self.imagelock)
 		retimage=self.image.copy()
 		return retimage
-
-	# set layer image
-	def setImage(self,newimage):
-		lock=qtcore.QWriteLocker(self.imagelock)
-		self.image=newimage
-		self.update()
 
 	#def cutImage(self):
 	#	selection=win.getClipPathCopy()
@@ -197,20 +192,7 @@ class BeeLayerState:
 
 		lock=ReadWriteLocker(self.imagelock,True)
 
-		# if we have overlays, make a temporary image that with the overlays composited on it and composite that on the paint object
-		if self.tooloverlay:
-			tmpimage=self.image.copy(dirtyrect)
-			tmprect=tmpimage.rect()
-			tmppainter=qtgui.QPainter()
-			tmppainter.begin(tmpimage)
-			tmppainter.drawImage(tmprect,tooloverlay,dirtyrect)
-			tmppainter.end()
-
-			painter.drawImage(dirtyrect,tmpimage)
-
-		# if there are no overlays we can do this far more optimized method way
-		else:
-			painter.drawImage(dirtyrect,self.image,dirtyrect)
+		painter.drawImage(dirtyrect,self.image,dirtyrect)
 
 	# set any passed layer options
 	def setOptions(self,opacity=None,visibility=None,compmode=None):
@@ -232,67 +214,92 @@ class BeeLayerState:
 
 		BeeApp().master.getWindowById(self.windowid).reCompositeImage()
 
-	def adjustCanvasSize(self,adjustments):
+	def adjustCanvasSize(self,leftadj,topadj,rightadj,bottomadj):
 		lock=ReadWriteLocker(self.imagelock,True)
 
 		win=BeeApp().master.getWindowById(self.windowid)
 		newimage=qtgui.QImage(win.docwidth,win.docheight,qtgui.QImage.Format_ARGB32_Premultiplied)
 		newimage.fill(0)
 
-		srcRect=self.image.rect()
-
-		targetRect=srcRect.adjusted(adjustments[0],adjustments[1],adjustments[0],adjustments[1])
+		oldimagerect=self.image.rect()
+		newimagerect=newimage.rect()
+		srcRect=oldimagerect
+		targetRect=qtcore.QRect(srcRect)
+		targetRect.adjust(leftadj,topadj,leftadj,topadj)
 
 		painter=qtgui.QPainter()
 		painter.begin(newimage)
-		painter.drawImage(targetRect,self.image,srcRect)
+		#painter.drawImage(targetRect,self.image,srcRect)
+		painter.drawImage(qtcore.QPoint(leftadj,topadj),self.image)
 		painter.end()
 
 		self.image=newimage
 
-		self.update()
+	# shift image by specified x and y
+	#def shiftImage(self,x,y):
 
-class BeeLayer(BeeLayerState,qtgui.QGraphicsItem):
+class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
 	def __init__(self,windowid,type,key,image=None,opacity=None,visible=None,compmode=None,owner=0):
-		self.pixmapinit=False
-		win=BeeApp().master.getWindowById(windowid)
-
 		BeeLayerState.__init__(self,windowid,type,key,image,opacity,visible,compmode,owner)
-		qtgui.QGraphicsItem.__init__(self,None,win.view.scene())
-
-		#self.setFlag(qtgui.QGraphicsItem.ItemDoesntPropagateOpacityToChildren)
+		qtgui.QGraphicsItem.__init__(self)
 		self.setFlag(qtgui.QGraphicsItem.ItemUsesExtendedStyleOption)
 
 	def boundingRect(self):
 		return qtcore.QRectF(self.image.rect())
 
-	def paint(self,painter,options,widget):
-		print_debug("painting on layer")
-		print_debug("options exposedRect: %s" % str(rectToTuple(options.exposedRect)))
-		lock=qtcore.QReadLocker(self.imagelock)
-		painter.setCompositionMode(self.compmode)
-		painter.drawImage(options.exposedRect,self.image)
-		#print_debug("done painting on layer")
+	def paint(self,painter,options,widget=None):
+		drawrect=options.exposedRect
+		self.scene().tmppainter.drawImage(drawrect,self.image,drawrect)
 
-	def getConfigWidget(self):
-		# can't do this in the constructor because that may occur in a thread other than the main thread, this function however should only occur in the main thread
-		if not self.configwidget:
-			self.configwidget=LayerConfigWidget(self.windowid,self.key)
-			self.configwidget.setSizePolicy(qtgui.QSizePolicy.MinimumExpanding,qtgui.QSizePolicy.Fixed)
-			self.configwidget.ui.background_frame.setSizePolicy(qtgui.QSizePolicy.MinimumExpanding,qtgui.QSizePolicy.MinimumExpanding)
-		else:
-			self.configwidget.updateValuesFromLayer()
-		return self.configwidget
+class SelectedAreaAnimation(qtgui.QGraphicsItemAnimation):
+	def __init__(self,item,parent=None):
+		qtgui.QGraphicsItemAnimation.__init__(self,parent)
+		self.timer=qtcore.QTimeLine(10,self)
+		self.timer.setUpdateInterval(100)
+		self.timer.setLoopCount(0)
+		self.setTimeLine(self.timer)
+		self.setItem(item)
+		self.timer.start()
 
-	# get color of pixel at specified point, or average color in range
-	def getPixelColor(self,x,y,size):
-		lock=qtcore.QReadLocker(self.imagelock)
-		return self.image.pixel(x,y)
+	def beforeAnimationStep(self,time):
+		self.item().incrementDashOffset()
 
-class FloatingPixmapSelection(BeeLayer):
-	def __init__(self,windowid,image,parentlayer):
-		key=BeeApp().master.getNextLayerKey()
-		BeeLayer.__init__(self,windowid,LayerTypes.floating,key)
+	def afterAnimationStep(self,time):
+		self.item().update()
+
+class SelectedAreaDisplay(qtgui.QGraphicsItem):
+	def __init__(self,path,scene):
+		qtgui.QGraphicsItem.__init__(self,None,scene)
+		self.rect=scene.sceneRect()
+		self.path=path
+		self.dashoffset=0
+		self.dashpatternlength=8
+
+	def incrementDashOffset(self):
+		self.dashoffset+=1
+		self.dashoffset%=self.dashpatternlength
+
+	def boundingRect(self):
+		return self.rect
+
+	def updatePath(self,path):
+		self.path=path
+
+	def paint(self,painter,options,widget=None):
+		self.scene().stopTmpPainter(painter,options.exposedRect)
+
+		painter.setPen(qtgui.QColor(255,255,255,255))
+		painter.drawPath(self.path)
+
+		pen=qtgui.QPen()
+		pen.setDashPattern([4,4])
+		pen.setDashOffset(self.dashoffset)
+		painter.setPen(pen)
+		painter.drawPath(self.path)
+
+class FloatingSelection(BeeGuiLayer):
+	def __init__(self,image,parentlayer):
+		self.key=BeeApp().master.getNextLayerKey()
 		self.image=image
 
 	# paste the selection on it's layer
@@ -583,38 +590,6 @@ class BeeLayersWindow(qtgui.QMainWindow):
 		return qtgui.QWidget.hideEvent(self,event)
 
 # custom widget for the thumbnail view of a layer
-class SingleLayerView(qtgui.QGraphicsView):
-	def __init__(self,oldwidget,windowid,layerkey):
-		self.windowid=windowid
-		self.layerkey=layerkey
-
-		win=BeeApp().master.getWindowById(self.windowid)
-		qtgui.QGraphicsView(self,win.view.scene(),replacingwidget.parentWidget())
-
-		layer=BeeApp().master.getLayerById(self.windowid,self.layerkey)
-
-		replaceWidget(oldwidget,self)
-
-		self.setHorizontalScrollBarPolicy(qtcore.Qt.ScrollBarAlwaysOff)
-		self.setVerticalScrollBarPolicy(qtcore.Qt.ScrollBarAlwaysOff)
-
-		self.refit()
-
-	# draw only the item that corresponds to the layer matching this layer key
-	def drawItems(self,painter,items,options):
-		for i in range(len(items)):
-			if items[i].key==self.layerkey:
-				painter.save()
-				painter.setMatrix(items[i].sceneMatrix(),True);
-				items[i].paint(painter,options[i])
-				painter.restore()
-
-	def refit(self):
-		layer=BeeApp().master.getLayerById(self.windowid,self.layerkey)
-		rect=layer.getImageRect()
-		self.fitInView(rect,qtcore.Qt.KeepAspectRatio)
-
-# custom widget for the thumbnail view of a layer
 class LayerPreviewWidget(qtgui.QWidget):
 	def __init__(self,replacingwidget,windowid,layerkey):
 		qtgui.QWidget.__init__(self,replacingwidget.parentWidget())
@@ -638,7 +613,10 @@ class LayerPreviewWidget(qtgui.QWidget):
 		window=BeeApp().master.getWindowById(self.windowid)
 		lock=qtcore.QMutexLocker(self.mutex)
 		# get how much we need to scale down both dimensions
-		scalefactor=self.width()/float(max(layer.image.width(),layer.image.height()))
+		maximagedimension=max(layer.image.width(),layer.image.height())
+		if maximagedimension==0:
+			return
+		scalefactor=self.width()/float(maximagedimension)
 
 		# get dimensions of the image if we keep the aspect ratio and put it in the preview widget
 		scalewidth=layer.image.width()*scalefactor

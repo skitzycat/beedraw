@@ -302,12 +302,11 @@ def PILtoQImage(im):
 	return ImageQt.ImageQt(im)
 
 def printPILImage(im):
-	printImage(PILtoQImage(im))
-	#pix=im.load()
-	#for i in range(im.size[0]):
-	#	for j in range(im.size[1]):
-	#		print pix[i,j],
-	#	print
+	pix=im.load()
+	for i in range(im.size[0]):
+		for j in range(im.size[1]):
+			print pix[i,j],
+		print
 
 # scale a PIL image, the dx and dy values should only be between 0 and 1
 # xscale and yscale should be between 1 and .5, because that is the only range in which billenar interpolation looks good
@@ -320,7 +319,7 @@ def scaleShiftPIL(im,dx,dy,newsizex,newsizey,xscale,yscale,resample=Image.AFFINE
 	imb_height=im.size[1]+2
 
 	# add in clear border around image so sampling for interpolation works right
-	bordered_image=im.transform((imb_width,imb_height),Image.AFFINE,(1,0,-1,0,1,-1))
+	bordered_image=im.transform((imb_width,imb_height),Image.NEAREST,(1,0,-1,0,1,-1))
 	#print "bordered image:"
 	#printPILImage(bordered_image)
 
@@ -352,7 +351,7 @@ def scaleShiftPIL(im,dx,dy,newsizex,newsizey,xscale,yscale,resample=Image.AFFINE
 
 	#print "transform:", trans
 
-	newim=bordered_image.transform((newsizex,newsizey),Image.AFFINE,trans,resample)
+	newim=bordered_image.transform((newsizex,newsizey),resample,trans,Image.BILINEAR)
 
 	#print "producing image:"
 	#printPILImage(newim)
@@ -398,12 +397,8 @@ def replaceWidget(oldwidget,newwidget):
 	index=parent.layout().indexOf(oldwidget)
 	parent.layout().removeWidget(oldwidget)
 	oldwidget.hide()
-	newwidget.show()
 	parent.layout().insertWidget(index,newwidget)
-
-	newwidget.setMinimumSize(oldwidget.minimumSize())
-	newwidget.setSizePolicy(oldwidget.sizePolicy())
-	newwidget.setObjectName(oldwidget.objectName())
+	newwidget.show()
 
 def PILcomposite(baseim,newim,pos,comptype,mask=None):
 	if newim.size==baseim.size and pos==(0,0):
@@ -426,3 +421,11 @@ def PILcomposite(baseim,newim,pos,comptype,mask=None):
 		newswatch=ImageChops.darker(baseswatch,topim)
 
 	baseim.paste(newswatch,box=pos,mask=mask)
+
+def requestDisplayMessage(type,title,message,destination=None):
+	if not destination:
+		destination=BeeApp().master
+
+	event=DisplayMessageEvent(type,title,message)
+	BeeApp().app.postEvent(destination,event)
+	print "requesting to display message"

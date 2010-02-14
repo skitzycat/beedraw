@@ -114,6 +114,10 @@ class AbstractToolDesc:
  
 	def getTool(self,window):
 		return None
+
+	# what to do when this tool is no longer active
+	def deactivate(self):
+		pass
  
 # base class for all drawing tools
 class AbstractTool:
@@ -352,8 +356,8 @@ class DrawingTool(AbstractTool):
 
 	def getColorRGBA(self):
 		return self.fgcolor.rgba()
-
-	def getColorTuple(self):
+ 
+	def makeFullSizedBrush(self):
 		fgr=self.fgcolor.red()
 		fgg=self.fgcolor.green()
 		fgb=self.fgcolor.blue()
@@ -361,10 +365,6 @@ class DrawingTool(AbstractTool):
 		opacity=int(self.options["opacity"]*255./100.)
 
 		colortuple=(fgr,fgg,fgb,opacity)
-		return colortuple
- 
-	def makeFullSizedBrush(self):
-		colortuple=self.getColorTuple()
 
 		self.diameter=self.options["maxdiameter"]
 		width=self.diameter
@@ -386,48 +386,14 @@ class DrawingTool(AbstractTool):
 				if distance <= radius:
 					pix[i,j]=colortuple
 
-	def updateBrushOpacityForPressure(self):
+		self.fullsizedbrush=PILtoQImage(self.fullsizedbrush)
+
+	def updateBrushForOpacity(self):
 		if self.opacity==100:
 			return
 		return
 
-	def updateBrushSizeForPressure(self,pressure,subpixelx=0,subpixely=0):
-		# see if we need to update at all
-		if self.lastpressure==pressure:
-			return
-
-		self.lastpressure=pressure
-
-		# if we can use the full sized brush do it
-		if self.options["pressuresize"]==0 or pressure==1:
-			self.brushimage=PILtoQImage(self.fullsizedbrush)
-			self.lastpressure=1
-			return
-
-		# scaled size for brush
-		bdiameter=self.options["maxdiameter"]*pressure
-		self.diameter=int(math.ceil(bdiameter))+1
-
-		# make target size an odd number
-		if self.diameter%2==0:
-			self.diameter+=1
-
-		# calculate offset into target
-		targetoffsetx=((self.diameter-bdiameter)/2.)-.5+subpixelx
-		targetoffsety=((self.diameter-bdiameter)/2.)-.5+subpixely
- 
-		# bounding radius for pixels to update
-		side=self.diameter
-
-		self.brushimage=scaleShiftPIL(self.fullsizedbrush,0,0,side,side,pressure,pressure,Image.NEAREST)
-
-		# make sure brush isn't blank by pasting the brush color onto the center pixel
-		center=int(self.diameter/2)
-		self.brushimage.putpixel((center,center),self.getColorTuple())
-
-		self.brushimage=PILtoQImage(self.brushimage)
-
-	def old_updateBrushForPressure(self,pressure,subpixelx=0,subpixely=0):
+	def updateBrushForPressure(self,pressure,subpixelx=0,subpixely=0):
 		# see if we need to update at all
 		if self.lastpressure==pressure:
 			return
@@ -475,13 +441,13 @@ class DrawingTool(AbstractTool):
 		if self.logtype==ToolLogTypes.unlogable:
 			return
 
-		#print "Got penDown",x,y
+		print "Got penDown",x,y
 		self.returning=False
 		self.inside=True
 		self.pendown=True
 
-		#print "pen down point:", x, y
-		#print "pen pressure:", pressure
+		print "pen down point:", x, y
+		print "pen pressure:", pressure
 		self.layer=self.window.getLayerForKey(self.layerkey)
 		self.oldlayerimage=self.layer.getImageCopy()
 
@@ -497,7 +463,7 @@ class DrawingTool(AbstractTool):
 		return pressure
 
 	def getFullSizedBrushWidth(self):
-		return self.fullsizedbrush.size[0]
+		return self.fullsizedbrush.width()
 
 	# since windows apparently won't catch return and leave events when the button is pressed down I'm forced to do this
 	def checkForPenBounds(self,x,y):
@@ -602,7 +568,7 @@ class DrawingTool(AbstractTool):
 		#painter.setRenderHint(qtgui.QPainter.HighQualityAntialiasing)
  
 		for point in path:
-			self.updateBrushSizeForPressure(point[2],point[0]%1,point[1]%1)
+			self.updateBrushForPressure(point[2],point[0]%1,point[1]%1)
 
 			xradius=self.brushimage.width()/2
 			yradius=self.brushimage.height()/2
@@ -649,7 +615,7 @@ class DrawingTool(AbstractTool):
 		self.pointshistory=[(x,y,pressure)]
 		self.lastpoint=(x,y)
 		self.makeFullSizedBrush()
-		self.updateBrushSizeForPressure(pressure,x%1,y%1)
+		self.updateBrushForPressure(pressure,x%1,y%1)
 
 		targetx=int(x)-int(self.brushimage.width()/2)
 		targety=int(y)-int(self.brushimage.height()/2)
@@ -812,6 +778,7 @@ class EraserToolDesc(AbstractToolDesc):
 		self.options["pressuresize"]=1
 		self.options["pressurebalance"]=100
 		self.options["blur"]=100
+		self.options["opacity"]=100
  
 	def getTool(self,window):
 		tool=self.Tool(self.options,window)
@@ -823,6 +790,8 @@ class EraserToolDesc(AbstractToolDesc):
 		tool=self.getTool(window)
 		tool.clippath=window.getClipPathCopy()
 		tool.layerkey=window.curlayerkey
+		# foreground color doesn't matter, but it needs to be there
+		tool.fgcolor=qtgui.QColor(0,0,0)
 		return tool
 
 	def getOptionsWidget(self,parent):
@@ -849,19 +818,30 @@ class EraserOptionsWidget(qtgui.QWidget):
 
 	def on_stepsize_sliderMoved(self,value):
 		self.tooldesc.options["step"]=value
- 
-# selection overlay information
-class SelectionOverlay:
-	def __init__(self,path,pen=None,brush=None):
-		if not pen:
+
+class RectangleSelectionPickOverlay(qtgui.QGraphicsItem):
+	def __init__(self,width,height):
+		qtgui.QGraphicsItem.__init__(self)
+		self.boundingrect=qtcore.QRect(0,0,width,height)
+		self.rect=qtcore.QRect()
+
+	def updateArea(self,newrect):
+		self.rect=newrect
+
+	def boundingRect(self):
+		return qtcore.QRectF(self.boundingrect)
+
+	def paint(self,painter,options,widget=None):
+		self.scene().stopTmpPainter(painter,options.exposedRect)
+		if not self.rect.isNull():
+			#painter.setCompositionMode(qtgui.QPainter.CompositionMode_Difference)
+			painter.setPen(qtgui.QColor(255,255,255))
+			painter.drawRect(self.rect)
+
 			pen=qtgui.QPen()
-		self.pen=pen
- 
-		if not brush:
-			brush=qtgui.QBrush()
-		self.brush=brush
- 
-		self.path=path
+			pen.setDashPattern([4,4])
+			painter.setPen(pen)
+			painter.drawRect(self.rect)
  
 # basic rectangle selection tool
 class SelectionTool(AbstractTool):
@@ -869,33 +849,26 @@ class SelectionTool(AbstractTool):
 		AbstractTool.__init__(self,options,window)
  
 	def updateOverlay(self,x,y):
-		oldrect=None
 		# calculate rectangle defined by the start and current
 		left=min(x,self.startpoint[0])
 		top=min(y,self.startpoint[1])
 		width=max(x,self.startpoint[0])-left
 		height=max(y,self.startpoint[1])-top
  
-		if self.window.cursoroverlay:
-			oldrect=self.window.cursoroverlay.path.boundingRect().toAlignedRect()
- 
-		overlay=qtgui.QPainterPath()
-		overlay.addRect(left,top,width,height)
- 
+		oldrect=self.window.tooloverlay.rect
+		newrect=qtcore.QRect(left,top,width,height)
+		self.window.tooloverlay.updateArea(newrect)
+
 		# calculate area we need to refresh, it should be the union of rect to draw
 		# next and the last one that was drawn
-		self.window.cursoroverlay=SelectionOverlay(overlay)
-		newrect=self.window.cursoroverlay.path.boundingRect().toAlignedRect()
-		newrect.adjust(-1,-1,2,2)
-		refreshregion=qtgui.QRegion(newrect)
+		dirtyrect=newrect.united(oldrect)
+		dirtyrect.adjust(-1,-1,2,2)
  
-		if oldrect:
-			oldrect.adjust(-1,-1,2,2)
-			refreshregion=refreshregion.unite(qtgui.QRegion(oldrect))
- 
-		self.window.view.updateView(refreshregion.boundingRect())
+		self.window.view.updateView(dirtyrect)
  
 	def guiLevelPenDown(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
+		self.overlay=RectangleSelectionPickOverlay(self.window.docwidth,self.window.docheight)
+		self.window.changeToolOverlay(self.overlay)
 		self.pendown=True
 		x=int(x)
 		y=int(y)
@@ -904,25 +877,29 @@ class SelectionTool(AbstractTool):
  
 	def guiLevelPenUp(self,x,y,source=0):
 		self.pendown=False
-		x,y=self.window.view.snapPointToView(x,y)
-		x=int(x)
-		y=int(y)
+		#x,y=self.window.view.snapPointToView(x,y)
+		#x=int(x)
+		#y=int(y)
  
 		# see how the user wants the selection altered
 		modkeys=BeeApp().app.keyboardModifiers()
 		selectionmod=getCurSelectionModType()
 
-		if self.window.cursoroverlay:
-			newpath=qtgui.QPainterPath(self.window.cursoroverlay.path)
-			self.window.cursoroverlay=None
+		if self.overlay:
+			newpath=qtgui.QPainterPath()
+			newpath.addRect(qtcore.QRectF(self.overlay.rect))
+			self.window.changeToolOverlay()
 			self.window.changeSelection(selectionmod,newpath)
+
+		self.overlay=None
  
 	# set overlay to display area that would be selected if user lifted up button
 	def guiLevelPenMotion(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
 		if not self.pendown:
 			return
 
-		x,y=self.window.view.snapPointToView(x,y)
+		#x,y=self.window.view.snapPointToView(x,y)
+		x,y=self.window.view.snapPointToScene(x,y)
 
 		x=int(x)
 		y=int(y)
@@ -980,10 +957,11 @@ class FeatherSelectTool(AbstractTool):
 
 	def guiLevelPenDown(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
 		self.selectionmod=getCurSelectionModType()
-		self.newpath=getSimilarColorPath(self.window.image,x,y,self.options['similarity'])
-
-	def penDown(self,x,y,pressure=None):
-		self.window.changeSelection(self.selectionmod,self.newpath)
+		image=self.window.scene.getImageCopy()
+		self.newpath=getSimilarColorPath(image,x,y,self.options['similarity'])
+		if not self.newpath.isEmpty():
+			self.window.changeToolOverlay()
+			self.window.changeSelection(self.selectionmod,self.newpath)
 
 # paint bucket tool description
 class PaintBucketToolDesc(AbstractToolDesc):
@@ -1057,7 +1035,8 @@ class PaintBucketTool(AbstractTool):
 
 	def guiLevelPenDown(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
 		if self.options['wholeselection']==0:
-			self.newpath=getSimilarColorPath(self.window.image,x,y,self.options['similarity'])
+			image=self.window.scene.getImageCopy()
+			self.newpath=getSimilarColorPath(image,x,y,self.options['similarity'])
 
 	def penDown(self,x,y,pressure=None):
 		self.pointshistory=[(x,y,pressure)]
@@ -1184,7 +1163,7 @@ class SketchTool(DrawingTool):
 
 		return scale
 
-	def updateBrushSizeForPressure(self,pressure,subpixelx=0,subpixely=0):
+	def updateBrushForPressure(self,pressure,subpixelx=0,subpixely=0):
 		self.lastpressure=pressure
 		#print "updating brush for pressure/subpixels:", pressure, subpixelx, subpixely
 		scale=self.scaleForPressure(pressure)

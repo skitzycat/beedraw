@@ -17,7 +17,6 @@
 
 from beesessionstate import BeeSessionState
 from hivedrawingthread import ServerDrawingThread
-from beelayer import BeeLayerState
 from beetypes import *
 
 class HiveSessionState(BeeSessionState):
@@ -28,19 +27,8 @@ class HiveSessionState(BeeSessionState):
 		self.historysize=maxundo
 		self.master=master
 
-	# insert a layer at a given point in the list of layers
-	def insertLayer(self,key,index,type=LayerTypes.user,image=None,opacity=None,visible=None,compmode=None,owner=0,history=0):
-		layer=BeeLayerState(self.id,type,key,image,opacity=opacity,visible=visible,compmode=compmode,owner=owner)
-		lock=qtcore.QMutexLocker(self.layersmutex)
-
-		self.layers.insert(index,layer)
-
-		# only add command to history if we are in a local session
-		if self.type==WindowTypes.singleuser and history!=-1:
-			self.addCommandToHistory(AddLayerCommand(layer.key))
-
-		self.requestLayerListRefresh()
-		self.reCompositeImage()
+	def localLayer(self,key):
+		return False
 
 	def startRemoteDrawingThreads(self):
 		# start remote command thread
@@ -50,7 +38,7 @@ class HiveSessionState(BeeSessionState):
 	# send full resync to client with given ID
 	def sendLayersToClient(self,id):
 		# get a read lock on all layers and the list of layers
-		listlock=qtcore.QMutexLocker(self.layersmutex)
+		lock=qtcore.QReadLocker(self.layerslistlock)
 		locklist=[]
 		for layer in self.layers:
 			locklist.append(qtcore.QReadLocker(layer.imagelock))
@@ -78,11 +66,8 @@ class HiveSessionState(BeeSessionState):
 		modecommand=(DrawingCommandTypes.layer,LayerCommandTypes.mode,key,compmode)
 		self.master.routinginput.put((modecommand,id*-1))
 
-	def xmlError(self,client,message):
-		self.sendMessageToClient(client,message)
-
-	def sendMessageToClient(self,client,message):
-		self.master.routinginput.put(((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.clientmessage,message),client*-1))
+	def addFatalErrorNotificationToQueue(self,owner,errormessage,source=ThreadTypes.network):
+		self.queueCommand((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.fatalerror,owner,errormessage),source)
 
 	def addLayerRequestToQueue(self,layerkey,owner=0,source=ThreadTypes.network):
 		self.queueCommand((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.requestlayer,owner,layerkey),source)
@@ -91,6 +76,7 @@ class HiveSessionState(BeeSessionState):
 		self.queueCommand((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.resyncrequest,owner),source)
 
 	def queueCommand(self,command,source=ThreadTypes.server,owner=0):
+		#print "putting command in remote queue:", command
 		self.remotecommandqueue.put(command)
 
 	# the history is taken care of elsewhere

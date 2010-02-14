@@ -41,6 +41,7 @@ class SketchLogWriter:
 		self.log.writeStartElement('sketchlog')
 
 	def logCommand(self,command,owner=0):
+		lock=qtcore.QMutexLocker(self.mutex)
 		self.startEvent(owner)
 		type=command[0]
 
@@ -123,8 +124,9 @@ class SketchLogWriter:
 		elif subtype==NetworkControlCommandTypes.requestlayer:
 			self.logLayerRequest(command[3])
 
-		elif subtype==NetworkControlCommandTypes.clientmessage:
-			self.logClientMessage(command[2])
+		elif subtype==NetworkControlCommandTypes.fatalerror:
+			self.logFatalError(command[3])
+
 
 	def startEvent(self,owner):
 		self.log.writeStartElement('event')
@@ -132,9 +134,12 @@ class SketchLogWriter:
 	def endEvent(self):
 		self.log.writeEndElement()
 
+	def logFatalError(self,errormessage):
+		self.log.writeStartElement('fatalerror')
+		self.log.writeAttribute('errormessage',str(errormessage))
+		self.log.writeEndElement()
+		
 	def logLayerAdd(self, position, key, image=None, owner=0):
-		lock=qtcore.QMutexLocker(self.mutex)
-
 		# if there is an image then log it as
 		if image:
 			self.log.writeStartElement('image')
@@ -165,8 +170,6 @@ class SketchLogWriter:
 		self.log.writeEndElement()
 
 	def logLayerSub(self, index):
-		lock=qtcore.QMutexLocker(self.mutex)
-
 		# start sublayer event
 		self.log.writeStartElement('sublayer')
 		self.log.writeAttribute('index',str(index))
@@ -175,8 +178,6 @@ class SketchLogWriter:
 		self.log.writeEndElement()
 
 	def logLayerModeChange(self, index, mode):
-		lock=qtcore.QMutexLocker(self.mutex)
-
 		self.log.writeStartElement('layermode')
 		self.log.writeAttribute('index',str(index))
 		self.log.writeAttribute('mode',str(mode))
@@ -185,8 +186,6 @@ class SketchLogWriter:
 		self.log.writeEndElement()
 
 	def logLayerAlphaChange(self, key, alpha):
-		lock=qtcore.QMutexLocker(self.mutex)
-
 		self.log.writeStartElement('layeralpha')
 		self.log.writeAttribute('key',str(key))
 		self.log.writeAttribute('alpha',str(alpha))
@@ -196,8 +195,6 @@ class SketchLogWriter:
 
 	# log a move with index and number indicating change (ie -1 for 1 down)
 	def logLayerMove(self, index, change):
-		lock=qtcore.QMutexLocker(self.mutex)
-
 		# start sublayer event
 		self.log.writeStartElement('movelayer')
 		self.log.writeAttribute('index',str(index))
@@ -207,8 +204,6 @@ class SketchLogWriter:
 		self.log.writeEndElement()
 
 	def logToolEvent(self,layerkey,tool):
-		lock=qtcore.QMutexLocker(self.mutex)
-
 		prevpoints=tool.prevpointshistory
 		points=tool.pointshistory
 
@@ -276,8 +271,6 @@ class SketchLogWriter:
 		self.log.writeEndElement()
 
 	def logCreateDocument(self,width,height):
-		lock=qtcore.QMutexLocker(self.mutex)
-
 		self.log.writeStartElement('createdoc')
 		self.log.writeAttribute('width',str(width))
 		self.log.writeAttribute('height',str(height))
@@ -286,8 +279,6 @@ class SketchLogWriter:
 		self.log.writeEndElement()
 
 	def logRawEvent(self,x,y,layerkey,image,path=None):
-		lock=qtcore.QMutexLocker(self.mutex)
-
 		# write out the image data
 		self.log.writeStartElement('image')
 		bytearray=qtcore.QByteArray()
@@ -333,14 +324,11 @@ class SketchLogWriter:
 
 	def logResyncRequest(self):
 		print_debug("DEBUG: logging resync")
-		lock=qtcore.QMutexLocker(self.mutex)
 
 		self.log.writeStartElement('resyncrequest')
 		self.log.writeEndElement()
 
 	def logResyncStart(self,width,height,remoteid):
-		lock=qtcore.QMutexLocker(self.mutex)
-
 		self.log.writeStartElement('resyncstart')
 		self.log.writeAttribute('width',str(width))
 		self.log.writeAttribute('height',str(height))
@@ -363,13 +351,7 @@ class SketchLogWriter:
 		self.log.writeAttribute('key',str(key))
 		self.log.writeEndElement()
 
-	def logClientMessage(self,message):
-		self.log.writeStartElement('clientmessage')
-		self.log.writeCharacters(message)
-		self.log.writeEndElement()
-
 	def endLog(self):
-		lock=qtcore.QMutexLocker(self.mutex)
 		self.log.writeEndElement()
 		self.output.flush()
 		self.output.close()

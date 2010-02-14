@@ -155,26 +155,3 @@ class LayerDownCommand(AbstractCommand):
 	def redo(self,windowid):
 		window=BeeApp().master.getWindowById(windowid)
 		window.layerDown(self.layerkey)
-
-class ResizeCanvasCommand(AbstractCommand):
-	def __init__(self,layers,windowid,adjustments):
-		AbstractCommand.__init__(self)
-		self.windowid=windowid
-
-		self.adjustments=adjustments
-		self.reverseadjustments=(0-adjustments[0],0-adjustments[1],0-adjustments[2],0-adjustments[3])
-
-		self.oldlayerimages={}
-		for layer in layers:
-			self.oldlayerimages[layer.key]=layer.getImageCopy()
-	def undo(self,windowid):
-		window=BeeApp().master.getWindowById(windowid)
-		self.newwidth=window.docwidth
-		self.newheight=window.docheight
-		window.adjustCanvasSize(self.reverseadjustments,history=False)
-		for key in self.oldlayerimages:
-			layer=window.getLayerForKey(key)
-			layer.setImage(self.oldlayerimages[key])
-	def redo(self,windowid):
-		window=BeeApp().master.getWindowById(windowid)
-		window.adjustCanvasSize(self.adjustments,history=False)

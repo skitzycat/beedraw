@@ -25,6 +25,9 @@ import PyQt4.QtCore as qtcore
 
 import cPickle as pickle
 
+from socket import socket as pysocket
+
+from beenetwork import BeeSocket
 from beeglobals import *
 from beetypes import *
 from BeeMasterUI import Ui_BeeMasterSpec
@@ -431,21 +434,22 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 	# connect to host and authticate
 	def getServerConnection(self,username,password,host,port):
-		socket=qtnet.QTcpSocket()
+		#socket=BeeSocket(BeeSocketTypes.python,pysocket())
+		socket=BeeSocket(BeeSocketTypes.qt,qtnet.QTcpSocket())
 
-		socket.connectToHost(host,port)
 		print_debug("waiting for socket connection:")
-		connected=socket.waitForConnected()
+		connected=socket.connect(host,port)
 		print_debug("finished waiting for socket connection")
 
 		# return error if we couldn't get a connection after 30 seconds
 		if not connected:
+			#qtgui.QMessageBox.warning(None,"Failed to connect to server",socket.errorString())
 			qtgui.QMessageBox.warning(None,"Failed to connect to server",socket.errorString())
-			#qtgui.QMessageBox(qtgui.QMessageBox.Information,"Connection Error","Failed to connect to server",qtgui.QMessageBox.Ok).exec_()
 			return None
 
-		authrequest=qtcore.QByteArray()
-		authrequest=authrequest.append("%s\n%s\n%d\n" % (username,password,PROTOCOL_VERSION))
+		#authrequest=qtcore.QByteArray()
+		authrequest="%s\n%s\n%d\n" % (username,password,PROTOCOL_VERSION)
+		
 		# send authtication info
 		socket.write(authrequest)
 
@@ -453,8 +457,8 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 		# wait for response
 		while responsestring.count('\n')<2 and len(responsestring)<500:
-			if socket.waitForReadyRead(-1):
-				data=socket.read(500)
+			data=socket.read(512)
+			if data:
 				print_debug("got authentication answer: %s" % qtcore.QString(data))
 				responsestring.append(data)
 
@@ -570,3 +574,15 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 	def customEvent(self,event):
 		if event.type()==BeeCustomEventTypes.refreshlayerslist:
 			self.refreshLayersList()
+		elif event.type()==BeeCustomEventTypes.displaymessage:
+			print "attempting to display message"
+			self.displayMessage(event.boxtype,event.title,event.message)
+
+	def displayMessage(self,boxtype,title,message):
+		print "displaying message with box type:", boxtype
+		if boxtype==BeeDisplayMessageTypes.warning:
+			qtgui.QMessageBox.warning(self,title,message)
+		elif boxtype==BeeDisplayMessageTypes.error:
+			qtgui.QMessageBox.error(self,title,message)
+		else:
+			print "unknown box type"

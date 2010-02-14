@@ -25,25 +25,25 @@ import os
 import cPickle as pickle
 
 from beetypes import *
-from beeview import BeeGraphicsView
-from beelayer import BeeLayer
+from beeview import BeeCanvasScene
+from beeview import BeeCanvasView
 from beeutil import *
 from beeeventstack import *
 from datetime import datetime
 from beeglobals import *
+from beelayer import BeeGuiLayer,SelectedAreaDisplay,SelectedAreaAnimation
 
 from Queue import Queue
 from drawingthread import DrawingThread
 
 from DrawingWindowUI import Ui_DrawingWindowSpec
-from ImageSizeAdjustDialogUi import Ui_CanvasSizeDialog
 from ImageScaleDialog import Ui_CanvasScaleDialog
 
 from beesessionstate import BeeSessionState
 
 from animation import *
 
-from canvasadjustpreview import CanvasAdjustPreview
+from canvasadjustpreview import CanvasAdjustDialog
 
 class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 	""" Represents a window that the user can draw in
@@ -59,12 +59,16 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		self.ui=Ui_DrawingWindowSpec()
 		self.ui.setupUi(self)
 		self.activated=False
-
-		self.backdropcolor=0xFFFFFFFF
-		self.recreateBackdrop()
+		self.backdrop=None
 
 		self.cursoroverlay=None
 		self.remotedrawingthread=None
+
+		self.selectiondisplay=None
+		self.selectionanimation=None
+		self.selectionanimationtimer=None
+
+		self.tooloverlay=None
 
 		self.selectionoutline=[]
 		self.selection=[]
@@ -73,6 +77,15 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		self.clippathlock=qtcore.QReadWriteLock()
 
 		self.localcommandqueue=Queue(0)
+
+		# replace widget with my custom class widget
+		self.scene=BeeCanvasScene(self)
+		self.ui.PictureViewWidget=BeeCanvasView(self,self.ui.PictureViewWidget,self.scene)
+		self.view=self.ui.PictureViewWidget
+		#self.resizeViewToWindow()
+		self.view.setCursor(master.getCurToolDesc().getCursor())
+
+		self.show()
 
 		# initiate drawing thread
 		if type==WindowTypes.standaloneserver:
@@ -88,14 +101,8 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 
 		self.serverreadingthread=None
 
-		self.image=qtgui.QImage(width,height,qtgui.QImage.Format_ARGB32_Premultiplied)
-
-		# replace widget with my custom class widget
-		self.ui.PictureViewWidget=BeeGraphicsView(self.ui.PictureViewWidget,self)
-		self.view=self.ui.PictureViewWidget
-		self.view.setCursor(master.getCurToolDesc().getCursor())
-
-		self.show()
+		# create a backdrop to be put at the bottom of all the layers
+		self.recreateBackdrop()
 
 		# put in starting blank layer if needed
 		# don't go through the queue for this layer add because we need it to
@@ -110,18 +117,41 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 	#def __del__(self):
 	#	print "DESTRUCTOR: bee drawing window"
 
-	def stackDisplayMessageEvent(self,title,body):
-		event=DisplayMessageEvent(title,body)
-		BeeApp().app.postEvent(self,event)
+	def resetLayerZValues(self):
+		i=0
+		locker=qtcore.QReadLocker(self.layerslistlock)
+		for layer in self.layers:
+			layer.setZValue(i)
+			i+=1
 
-	def recreateBackdrop(self):
-		self.backdrop=qtgui.QImage(self.docwidth,self.docheight,qtgui.QImage.Format_ARGB32_Premultiplied)
-		self.backdrop.fill(self.backdropcolor)
+		if self.selectiondisplay:
+			self.selectiondisplay.setZValue(i)
+			i+=1
+
+		if self.tooloverlay:
+			self.tooloverlay.setZValue(i)
+			i+=1
+
+		self.scene.update()
+
+	def displayMessage(self,boxtype,title,message):
+		if boxtype==BeeDisplayMessageTypes.warning:
+			qtgui.QMessageBox.warning(self,title,message)
+		elif boxtype==BeeDisplayMessageTypes.error:
+			qtgui.QMessageBox.critical(self,title,message)
+
+	def changeToolOverlay(self,overlay=None):
+		if self.tooloverlay:
+			self.scene.removeItem(self.tooloverlay)
+			self.tooloverlay=None
+
+		if overlay:
+			self.scene.addItem(overlay)
+			self.tooloverlay=overlay
 
 	def saveFile(self,filename):
 		""" save current state of session to file
 		"""
-		imagelock=ReadWriteLocker(self.imagelock)
 		# if we are saving my custom format
 		if filename.endsWith(".bee"):
 			# my custom format is a pickled list of tuples containing:
@@ -143,16 +173,26 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		# for all other formats just use the standard qt image writer
 		else:
 			writer=qtgui.QImageWriter(filename)
-			writer.write(self.image)
+			writer.write(self.scene().getImageCopy())
 
-	def xmlError(self,id,errorstring):
-		self.stackDisplayMessageEvent("Connection error","XML Stream error: %s", errorstring)
+	def adjustCanvasSize(self,leftadj,topadj,rightadj,bottomadj):
+		# lock the image so no updates can happen in the middle of this
+		sizelock=ReadWriteLocker(self.docsizelock,True)
 
-	def adjustCanvasSize(self,adjustments,sizelock=None,history=True):
-		BeeSessionState.adjustCanvasSize(self,adjustments,sizelock,history)
+		self.docwidth=self.docwidth+leftadj+rightadj
+		self.docheight=self.docheight+topadj+bottomadj
 
-		# resize the scene
-		self.view.updateCanvasSize(self.docwidth,self.docheight)
+		# adjust size of all the layers
+		for layer in self.layers:
+			layer.adjustCanvasSize(leftadj,topadj,rightadj,bottomadj)
+
+		# finally resize the widget and update image
+		self.scene.adjustCanvasSize(leftadj,topadj,rightadj,bottomadj)
+
+		self.reCompositeImage()
+
+		# update all layer preview thumbnails
+		self.master.refreshLayerThumb(self.id)
 
 	def getClipPathCopy(self):
 		cliplock=qtcore.QReadLocker(self.clippathlock)
@@ -198,6 +238,21 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 	def growSelection(self,size):
 		slock=qtcore.QWriteLocker(self.selectionlock)
 
+	def updateSelectionDisplayPath(self,path=None):
+		if path and not path.isEmpty():
+			if self.selectiondisplay:
+				self.selectiondisplay.updatePath(path)
+			else:
+				self.selectiondisplay=SelectedAreaDisplay(path,self.scene)
+				self.selectionanimation=SelectedAreaAnimation(self.selectiondisplay)
+				self.resetLayerZValues()
+
+		else:
+			self.scene.removeItem(self.selectiondisplay)
+			self.selectiondisplay=None
+			self.selectionanimation=None
+			self.selectionanimationtimer=None
+
 	# change the current selection path, and update to screen to show it
 	def changeSelection(self,type,newarea=None,slock=None):
 		if not slock:
@@ -212,6 +267,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 			self.selection=[]
 			self.selectionoutline=[]
 			self.updateClipPath(slock=slock)
+			self.updateSelectionDisplayPath()
 
 		else:
 			# new area argument can be implied to be the cursor overlay, but we need one or the other
@@ -280,7 +336,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 				print "unrecognized selection modification type:", type
 
 			self.updateClipPath(slock=slock)
-			# TODO: make sure the selection is not the whole image
+			self.updateSelectionDisplayPath(self.clippath)
 
 		# now update screen as needed
 		if not dirtyregion.isEmpty():
@@ -289,7 +345,6 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 			self.view.updateView(dirtyrect)
 
 	def queueCommand(self,command,source=ThreadTypes.user,owner=0):
-		#print "queueing command:", command
 		if source==ThreadTypes.user:
 			#print "putting command in local queue"
 			self.localcommandqueue.put(command)
@@ -298,55 +353,56 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 			#self.master.routinginput.put((command,owner))
 			self.remotecommandqueue.put(command)
 		else:
-			#print "putting command in remote queue"
+			#print "putting command in remote queue:", command, self.remotecommandqueue
 			self.remotecommandqueue.put(command)
 
-	# send event to GUI to update the list of current layers, should be called only when list of layers is already locked
+	# send event to GUI to update the list of current layers
 	def requestLayerListRefresh(self):
+		self.resetLayerZValues()
 		event=qtcore.QEvent(BeeCustomEventTypes.refreshlayerslist)
 		BeeApp().app.postEvent(self.master,event)
 
-		z=1
-		# redo z values for layers
-		for layer in self.layers:
-			layer.setZValue(z)
-			z=z+1
+	def removeLayer(self,layer,history=0,lock=None):
+		(layer,index)=BeeSessionState.removeLayer(self,layer,history,lock)
+		if layer:
+			self.scene.removeItem(layer)
+			self.scene.update()
+		return layer,index
+
+	def insertLayer(self,key,index,type=LayerTypes.user,image=None,opacity=None,visible=None,compmode=None,owner=0,history=0):
+		lock=qtcore.QWriteLocker(self.layerslistlock)
+		# make sure layer doesn't exist already
+		oldlayer=self.getLayerForKey(key,lock=lock)
+		if oldlayer:
+			print "ERROR: tried to create layer with same key as existing layer"
+			return
+
+		layer=BeeGuiLayer(self.id,type,key,image,opacity=opacity,visible=visible,compmode=compmode,owner=owner)
+
+		self.layers.insert(index,layer)
+		lock.unlock()
+		print "added layer to list"
+
+		# only add command to history if we are in a local session
+		if self.type==WindowTypes.singleuser and history!=-1:
+			self.addCommandToHistory(AddLayerCommand(layer.key))
+
+		self.scene.addItem(layer)
+
+		self.requestLayerListRefresh()
+		self.reCompositeImage()
 
 	# recomposite all layers together into the displayed image
 	# when a thread calls this method it shouldn't have a lock on any layers
 	def reCompositeImage(self,dirtyrect=None):
-		# if we get a none for the dirty area do the whole thing
-		if not dirtyrect:
-			drawrect=self.image.rect()
-		else:
-			drawrect=dirtyrect
-
-		# lock the image for writing
-		imagelocker=ReadWriteLocker(self.imagelock,True)
-
-		# first draw in the backdrop
-		painter=qtgui.QPainter()
-		painter.begin(self.image)
-
-		painter.drawImage(drawrect,self.backdrop,drawrect)
-
-		# then over it add all the layers
-		for layer in self.layers:
-			layer.compositeLayerOn(painter,drawrect)
-
-		painter.end()
-
-		# unlock the image
-		imagelocker.unlock()
-
 		if dirtyrect:
 			self.view.updateView(dirtyrect)
 		else:
 			self.view.updateView()
+		return
 
 	def getImagePixelColor(self,x,y,size=1):
-		imagelocker=ReadWriteLocker(self.imagelock,False)
-		return self.image.pixel(x,y)
+		return self.scene.getPixelColor(x,y,size)
 		
 	def getCurLayerPixelColor(self,x,y,size=1):
 		key=self.getCurLayerKey()
@@ -370,14 +426,15 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 
 			self.master.takeFocus(self)
 
+		elif event.type()==BeeCustomEventTypes.displaymessage:
+			print "got request to display message"
+			self.displayMessage(event.boxtype,event.title,event.message)
+
 		# once the window has received a deferred delete it needs to have all it's references removed so memory can be freed up
 		elif event.type()==qtcore.QEvent.DeferredDelete:
 			self.cleanUp()
 
-		elif event.type()==BeeCustomEventTypes.displaymessage:
-			qtgui.QMessageBox.information(None,event.title,event.body)
-
-		return False
+		return qtgui.QMainWindow.event(self,event)
 
 # get the current layer key and make sure it is valid, if it is not valid then set it to something valid if there are any layers
 	def getCurLayerKey(self):
@@ -396,6 +453,18 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 	def penLeave(self):
 		if self.curtool:
 			self.curtool.penLeave()
+
+	def resizeViewToWindow(self):
+		cw=self.ui.centralwidget
+		geo=cw.geometry()
+		mbgeo=self.ui.menubar.geometry()
+
+		x=geo.x()
+		y=geo.y()
+		width=geo.width()
+		height=geo.height()-mbgeo.height()
+
+		self.view.setGeometry(x,y,width,height)
 
 	# respond to menu item events in the drawing window
 	def on_action_Edit_Undo_triggered(self,accept=True):
@@ -442,10 +511,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 
 	def on_action_Image_Canvas_Size_triggered(self,accept=True):
 		if accept:
-			dialog=qtgui.QDialog()
-			dialog.ui=Ui_CanvasSizeDialog()
-			dialog.ui.setupUi(dialog)
-			dialog.ui.image_preview=CanvasAdjustPreview(dialog.ui.image_preview,self)
+			dialog=CanvasAdjustDialog(self)
 
 			# if the canvas is in any way shared don't allow changing the top or left
 			# so no other lines in queue will be messed up
@@ -456,11 +522,16 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 			dialog.exec_()
 
 			if dialog.result():
-				leftadj=dialog.ui.Left_Adjust_Box.value()
-				topadj=dialog.ui.Top_Adjust_Box.value()
-				rightadj=dialog.ui.Right_Adjust_Box.value()
-				bottomadj=dialog.ui.Bottom_Adjust_Box.value()
+				leftadj=dialog.leftadj
+				topadj=dialog.topadj
+				rightadj=dialog.rightadj
+				bottomadj=dialog.bottomadj
 				self.addAdjustCanvasSizeRequestToQueue(leftadj,topadj,rightadj,bottomadj)
+
+	# create backdrop for bottom of all layers, eventually I'd like this to be configurable, but for now it just fills in all white
+	def recreateBackdrop(self):
+		self.backdrop=qtgui.QImage(self.docwidth,self.docheight,qtgui.QImage.Format_ARGB32_Premultiplied)
+		self.backdrop.fill(self.backdropcolor)
 
 	def on_action_File_Log_toggled(self,state):
 		"""If log box is now checked ask user to provide log file name and start a log file for the current session from this point
@@ -517,7 +588,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 	# just in case someone lets up on the cursor when outside the drawing area this will make sure it's caught
 	def tabletEvent(self,event):
 		if event.type()==qtcore.QEvent.TabletRelease:
-			self.view.scene().cursorReleaseEvent(event.x(),event,y(),None)
+			self.view.cursorReleaseEvent(event.x(),event,y())
 
 	def setActiveLayer(self,newkey):
 		oldkey=self.curlayerkey
@@ -533,6 +604,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		self.listenerthread.start()
 
 	def switchAllLayersToLocal(self):
+		lock=qtcore.QReadLocker(self.layerslistlock)
 		for layer in self.layers:
 			layer.type=LayerTypes.user
 			layer.changeName("Layer: %d" % layer.key)
@@ -540,12 +612,14 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 	# delete all layers
 	def clearAllLayers(self):
 		# lock all layers and the layers list
-		listlock=qtcore.QMutexLocker(self.layersmutex)
+		lock=qtcore.QWriteLocker(self.layerslistlock)
 		locklist=[]
-		for layer in self.layers:
-			locklist.append(ReadWriteLocker(layer.imagelock,False))
+		for layer in self.layers[:]:
+			self.removeLayer(layer,history=0,lock=lock)
 
 		self.layers=[]
+		lock.unlock()
+
 		self.requestLayerListRefresh()
 		self.reCompositeImage()
 
@@ -569,6 +643,11 @@ class NetworkClientDrawingWindow(BeeDrawingWindow):
 		print_debug("initializign network window")
 		self.socket=socket
 		BeeDrawingWindow.__init__(self,parent,startlayer=False,type=WindowTypes.networkclient)
+		self.disconnectmessage=None
+
+	def setDisconnectMessage(self,message):
+		if not self.disconnectmessage:
+			self.disconnectmessage=message
 
 	def startRemoteDrawingThreads(self):
 		self.startNetworkThreads(self.socket)
@@ -586,7 +665,10 @@ class NetworkClientDrawingWindow(BeeDrawingWindow):
 					self.localcommandstack.removeLayerRefs(layerkey)
 					layer.owner=newowner
 
-	def disconnected(self,message):
+	def disconnected(self):
+		if not self.disconnectmessage:
+			self.disconnectmessage="For Unknown Reasons"
+
 		print_debug("disconnected from server")
 		self.switchAllLayersToLocal()
-		#qtgui.QMessageBox.warning(None,"Network Session has ended",message)
+		requestDisplayMessage(BeeDisplayMessageTypes.warning,"Network Session has ended","Connection has been broken: " + self.disconnectmessage,self)
