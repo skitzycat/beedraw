@@ -31,7 +31,7 @@ from beeutil import *
 from beeeventstack import *
 from datetime import datetime
 from beeglobals import *
-from beelayer import BeeGuiLayer,SelectedAreaDisplay,SelectedAreaAnimation
+from beelayer import BeeGuiLayer,SelectedAreaDisplay,SelectedAreaAnimation,LayerFinisher
 
 from Queue import Queue
 from drawingthread import DrawingThread
@@ -87,6 +87,10 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 
 		self.show()
 
+		self.layerfinisher=LayerFinisher(qtcore.QRectF(0,0,width,height))
+
+		self.scene.addItem(self.layerfinisher)
+
 		# initiate drawing thread
 		if type==WindowTypes.standaloneserver:
 			self.localdrawingthread=DrawingThread(self.remotecommandqueue,self.id,type=ThreadTypes.server,master=master)
@@ -123,6 +127,9 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		for layer in self.layers:
 			layer.setZValue(i)
 			i+=1
+
+		self.layerfinisher.setZValue(i)
+		i+=1
 
 		if self.selectiondisplay:
 			self.selectiondisplay.setZValue(i)
@@ -185,6 +192,9 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		# adjust size of all the layers
 		for layer in self.layers:
 			layer.adjustCanvasSize(leftadj,topadj,rightadj,bottomadj)
+
+		# adjust size of the layer finisher
+		self.layerfinisher.resize()
 
 		# finally resize the widget and update image
 		self.scene.adjustCanvasSize(leftadj,topadj,rightadj,bottomadj)

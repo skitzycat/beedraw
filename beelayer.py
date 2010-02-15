@@ -233,6 +233,7 @@ class BeeLayerState:
 		painter.end()
 
 		self.image=newimage
+		self.prepareGeometryChange()
 
 	# shift image by specified x and y
 	#def shiftImage(self,x,y):
@@ -249,6 +250,22 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
 	def paint(self,painter,options,widget=None):
 		drawrect=options.exposedRect
 		self.scene().tmppainter.drawImage(drawrect,self.image,drawrect)
+
+class LayerFinisher(qtgui.QGraphicsItem):
+	""" layers need to be drawn to a temporary image this takes that temporary image and draws it to the scene.  This item should be placed above all other layers, but below any overlays. """
+	def __init__(self,rect):
+		qtgui.QGraphicsItem.__init__(self)
+		self.rect=rect
+
+	def resize(self,newrect):
+		self.rect=newrect
+		self.prepareGeometryChange()
+
+	def boundingRect(self):
+		return self.rect
+
+	def paint(self,painter,options,widget=None):
+		self.scene().stopTmpPainter(painter,options.exposedRect)
 
 class SelectedAreaAnimation(qtgui.QGraphicsItemAnimation):
 	def __init__(self,item,parent=None):
@@ -285,7 +302,7 @@ class SelectedAreaDisplay(qtgui.QGraphicsItem):
 		self.path=path
 
 	def paint(self,painter,options,widget=None):
-		self.scene().stopTmpPainter(painter,options.exposedRect)
+		#self.scene().stopTmpPainter(painter,options.exposedRect)
 
 		painter.setPen(qtgui.QColor(255,255,255,255))
 		painter.drawPath(self.path)
