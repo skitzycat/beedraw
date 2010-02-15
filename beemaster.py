@@ -263,7 +263,10 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		filename=str(qtgui.QFileDialog.getOpenFileName(self,"Select log file to play","","Sketch logfiles (*.slg)"))
 
 		if filename:
-			self.curwin=AnimationDrawingWindow(self,filename)
+			self.playFile(filename)
+
+	def playFile(self,filename):
+		self.curwin=AnimationDrawingWindow(self,filename)
 
 	def on_action_File_Open_triggered(self,accept=True):
 		if not accept:
@@ -287,33 +290,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		# create a drawing window to start with
 		# if we are saving my custom format
 		if filename.endsWith(".bee"):
-			f=open(filename,"r")
-			try:
-				l=pickle.load(f)
-			except:
-				qtgui.QMessageBox.warning(self,"ERROR when reading file","File does not seem to be in valid bee format")
-				print_debug("Error, file dosen't seem to be in bee image format")
-				return
-
-			self.curwindow=None
-			# first take version number and document size out of front of list
-			version=l[0][0]
-			width=l[0][1]
-			height=l[0][2]
-
-			if version > BEE_FILE_FORMAT_VERSION:
-				print_debug("Error unsuppored file format version, please upgrade bee draw version")
-
-			self.curwindow=BeeDrawingWindow(self,width,height,False)
-
-			layers=l[1:]
-
-			# for each layer in the file uncompress the image data and set options
-			for layer in layers:
-				bytearray=qtcore.qUncompress(layer[0])
-				image=qtgui.QImage()
-				image.loadFromData(bytearray,"PNG")
-				self.curwindow.loadLayer(image,opacity=layer[1],visible=layer[2],compmode=layer[3])
+			self.playFile(filename)
 
 		else:
 			reader=qtgui.QImageReader(filename)

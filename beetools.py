@@ -833,9 +833,7 @@ class RectangleSelectionPickOverlay(qtgui.QGraphicsItem):
 		return qtcore.QRectF(self.boundingrect)
 
 	def paint(self,painter,options,widget=None):
-		self.scene().stopTmpPainter(painter,options.exposedRect)
 		if not self.rect.isNull():
-			#painter.setCompositionMode(qtgui.QPainter.CompositionMode_Difference)
 			painter.setPen(qtgui.QColor(255,255,255))
 			painter.drawRect(self.rect)
 

@@ -22,7 +22,6 @@ import PyQt4.QtCore as qtcore
 import PyQt4.QtGui as qtgui
 
 import os
-import cPickle as pickle
 
 from beetypes import *
 from beeview import BeeCanvasScene
@@ -161,22 +160,23 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		"""
 		# if we are saving my custom format
 		if filename.endsWith(".bee"):
+			self.startLog(filename,True)
 			# my custom format is a pickled list of tuples containing:
 				# a compressed qbytearray with PNG data, opacity, visibility, blend mode
-			l=[]
+			#l=[]
 			# first item in list is file format version and size of image
-			l.append((BEE_FILE_FORMAT_VERSION,self.docwidth,self.docheight))
-			for layer in self.layers:
-				bytearray=qtcore.QByteArray()
-				buf=qtcore.QBuffer(bytearray)
-				buf.open(qtcore.QIODevice.WriteOnly)
-				layer.image.save(buf,"PNG")
+			#l.append((BEE_FILE_FORMAT_VERSION,self.docwidth,self.docheight))
+			#for layer in self.layers:
+			#	bytearray=qtcore.QByteArray()
+			#	buf=qtcore.QBuffer(bytearray)
+			#	buf.open(qtcore.QIODevice.WriteOnly)
+			#	layer.image.save(buf,"PNG")
 				# add gzip compression to byte array
-				bytearray=qtcore.qCompress(bytearray)
-				l.append((bytearray,layer.opacity,layer.visible,layer.compmode))
+			#	bytearray=qtcore.qCompress(bytearray)
+			#	l.append((bytearray,layer.opacity,layer.visible,layer.compmode))
 
-			f=open(filename,"w")
-			pickle.dump(l,f)
+			#f=open(filename,"w")
+			#pickle.dump(l,f)
 		# for all other formats just use the standard qt image writer
 		else:
 			writer=qtgui.QImageWriter(filename)
@@ -194,7 +194,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 			layer.adjustCanvasSize(leftadj,topadj,rightadj,bottomadj)
 
 		# adjust size of the layer finisher
-		self.layerfinisher.resize()
+		self.layerfinisher.resize(qtcore.QRectF(0,0,self.docwidth,self.docheight))
 
 		# finally resize the widget and update image
 		self.scene.adjustCanvasSize(leftadj,topadj,rightadj,bottomadj)

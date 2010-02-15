@@ -302,7 +302,6 @@ class SelectedAreaDisplay(qtgui.QGraphicsItem):
 		self.path=path
 
 	def paint(self,painter,options,widget=None):
-		#self.scene().stopTmpPainter(painter,options.exposedRect)
 
 		painter.setPen(qtgui.QColor(255,255,255,255))
 		painter.drawPath(self.path)

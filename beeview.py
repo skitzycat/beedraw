@@ -216,8 +216,6 @@ class BeeCanvasScene(qtgui.QGraphicsScene):
 			self.locker=None
 
 	def drawForeground(self,painter,rect):
-		#self.stopTmpPainter(painter,rect)
-
 		rectpath=qtgui.QPainterPath()
 		rectpath.addRect(rect)
 
