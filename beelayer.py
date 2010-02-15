@@ -120,7 +120,6 @@ class BeeLayerState:
 		height=image.size().height()
 		#print "image dimensions:", width, height
 		self.compositeFromCorner(image,x-int((width)/2),y-int((height)/2),compmode,clippath)
-		return
 
 	# composite image onto layer from corner coord
 	def compositeFromCorner(self,image,x,y,compmode,clippath=None,lock=None):

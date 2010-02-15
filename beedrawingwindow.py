@@ -173,7 +173,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		# for all other formats just use the standard qt image writer
 		else:
 			writer=qtgui.QImageWriter(filename)
-			writer.write(self.scene().getImageCopy())
+			writer.write(self.scene.getImageCopy())
 
 	def adjustCanvasSize(self,leftadj,topadj,rightadj,bottomadj):
 		# lock the image so no updates can happen in the middle of this
@@ -587,7 +587,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 	# just in case someone lets up on the cursor when outside the drawing area this will make sure it's caught
 	def tabletEvent(self,event):
 		if event.type()==qtcore.QEvent.TabletRelease:
-			self.view.cursorReleaseEvent(event.x(),event,y())
+			self.view.cursorReleaseEvent(event.x(),event.y(),event.modifiers())
 
 	def setActiveLayer(self,newkey):
 		oldkey=self.curlayerkey

@@ -27,6 +27,7 @@ from PencilOptionsWidgetUi import *
 from BrushOptionsWidgetUi import *
 from EraserOptionsWidgetUi import *
 from PaintBucketOptionsWidgetUi import *
+from FeatherSelectOptionsWidgetUi import *
 
 from beeapp import BeeApp
  
@@ -713,7 +714,7 @@ class PencilToolDesc(AbstractToolDesc):
  
 	def setupTool(self,window,layerkey=None):
 		if not layerkey:
-			layerkey=window.curlayerkey
+			layerkey=window.getCurLayerKey()
 
 		tool=self.getTool(window)
 		# copy the foreground color
@@ -862,6 +863,7 @@ class SelectionTool(AbstractTool):
 		# calculate area we need to refresh, it should be the union of rect to draw
 		# next and the last one that was drawn
 		dirtyrect=newrect.united(oldrect)
+		# increase the size just in case
 		dirtyrect.adjust(-1,-1,2,2)
  
 		self.window.view.updateView(dirtyrect)
@@ -940,6 +942,7 @@ class FeatherSelectToolDesc(AbstractToolDesc):
 
 	def setDefaultOptions(self):
 		self.options["similarity"]=10
+		self.options["currentlayeronly"]=0
 
 	def getTool(self,window):
 		tool=FeatherSelectTool(self.options,window)
@@ -948,7 +951,40 @@ class FeatherSelectToolDesc(AbstractToolDesc):
  
 	def setupTool(self,window,layerkey=None):
 		self.layerkey=layerkey
-		return self.getTool(window)
+		if not layerkey:
+			layerkey=window.getCurLayerKey()
+		tool=self.getTool(window)
+		tool.layerkey=layerkey
+		return tool
+
+	def getOptionsWidget(self,parent):
+		if not self.optionswidget:
+			self.optionswidget=FeatherSelectOptionsWidget(parent,self)
+			self.optionswidget.updateDisplayFromOptions()
+		return self.optionswidget
+
+class FeatherSelectOptionsWidget(qtgui.QWidget):
+	def __init__(self,parent,tooldesc):
+		qtgui.QWidget.__init__(self,parent)
+		self.tooldesc=tooldesc
+
+		self.ui=Ui_FeatherSelectOptions()
+		self.ui.setupUi(self)
+
+	def updateDisplayFromOptions(self):
+		if self.tooldesc.options["currentlayeronly"]==1:
+			self.ui.current_layer_check.setCheckState(qtcore.Qt.Checked)
+		else:
+			self.ui.current_layer_check.setCheckState(qtcore.Qt.Unchecked)
+		self.ui.color_threshold_box.setValue(self.tooldesc.options["similarity"])
+
+	def on_color_threshold_box_valueChanged(self,value):
+		if type(value)==int:
+			self.tooldesc.options["similarity"]=value
+
+	def on_current_layer_check_clicked(self,bool=None):
+		if bool!=None:
+			self.tooldesc.options["currentlayeronly"]=bool
 
 # fuzzy selection tool
 class FeatherSelectTool(AbstractTool):
@@ -957,7 +993,15 @@ class FeatherSelectTool(AbstractTool):
 
 	def guiLevelPenDown(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
 		self.selectionmod=getCurSelectionModType()
-		image=self.window.scene.getImageCopy()
+		if self.options["currentlayeronly"]:
+			layer=self.window.getLayerForKey(self.layerkey)
+			if layer:
+				image=layer.getImageCopy()
+			else:
+				image=self.window.scene.getImageCopy()
+		else:
+			image=self.window.scene.getImageCopy()
+
 		self.newpath=getSimilarColorPath(image,x,y,self.options['similarity'])
 		if not self.newpath.isEmpty():
 			self.window.changeToolOverlay()
