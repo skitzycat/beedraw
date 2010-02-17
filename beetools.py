@@ -837,7 +837,7 @@ class RectangleSelectionPickOverlay(qtgui.QGraphicsItem):
 			painter.setPen(qtgui.QColor(255,255,255))
 			painter.drawRect(self.rect)
 
-			pen=qtgui.QPen()
+			pen=qtgui.QPen(qtgui.QColor(0,0,0))
 			pen.setDashPattern([4,4])
 			painter.setPen(pen)
 			painter.drawRect(self.rect)

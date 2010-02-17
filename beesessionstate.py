@@ -355,6 +355,22 @@ class BeeSessionState:
 			print_debug("WARNING: could not find layer for key %d" % int(key) )
 		return None
 
+	def addScaleCanvasToQueue(self,newwidth,newheight,source=ThreadTypes.user,owner=0):
+		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.scale,newwidth,newheight),source,owner)
+
+	def scaleCanvas(self,newwidth,newheight,sizelock=None):
+		if not sizelock:
+			sizelock=qtcore.QWriteLocker(self.docsizelock)
+
+		self.docwidth=newwidth
+		self.docheight=newheight
+
+		sizelock.unlock()
+
+		layerlistlock=qtcore.QReadLocker(self.layerslistlock)
+		for layer in self.layers:
+			layer.scale(newwidth,newheight)
+
 	def addSetCanvasSizeRequestToQueue(self,width,height,source=ThreadTypes.user,owner=0):
 		# lock for reading the size of the document
 		lock=ReadWriteLocker(self.docsizelock)

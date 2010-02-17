@@ -189,6 +189,12 @@ class BeeCanvasScene(qtgui.QGraphicsScene):
 	def updateView(self,dirtyrect=qtcore.QRectF()):
 		pass
 
+	def setCanvasSize(self,newwidth,newheight):
+		scenelocker=qtcore.QWriteLocker(self.scenerectlock)
+		imagelock=qtcore.QWriteLocker(self.imagelock)
+		self.image=self.image.scaled(newwidth,newheight)
+		self.setSceneRect(qtcore.QRectF(self.image.rect()))
+
 	def adjustCanvasSize(self,leftadj,topadj,rightadj,bottomadj):
 		scenelocker=qtcore.QWriteLocker(self.scenerectlock)
 		imagelock=qtcore.QWriteLocker(self.imagelock)

@@ -120,9 +120,10 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 	#def __del__(self):
 	#	print "DESTRUCTOR: bee drawing window"
 
-	def resetLayerZValues(self):
+	def resetLayerZValues(self,lock=None):
 		i=0
-		locker=qtcore.QReadLocker(self.layerslistlock)
+		if not lock:
+			lock=qtcore.QReadLocker(self.layerslistlock)
 		for layer in self.layers:
 			layer.setZValue(i)
 			i+=1
@@ -147,6 +148,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 			qtgui.QMessageBox.critical(self,title,message)
 
 	def changeToolOverlay(self,overlay=None):
+		lock=qtcore.QWriteLocker(self.layerslistlock)
 		if self.tooloverlay:
 			self.scene.removeItem(self.tooloverlay)
 			self.tooloverlay=None
@@ -154,6 +156,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		if overlay:
 			self.scene.addItem(overlay)
 			self.tooloverlay=overlay
+			self.resetLayerZValues(lock)
 
 	def saveFile(self,filename):
 		""" save current state of session to file
@@ -181,6 +184,13 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		else:
 			writer=qtgui.QImageWriter(filename)
 			writer.write(self.scene.getImageCopy())
+
+	def scaleCanvas(self,newwidth,newheight):
+		sizelock=qtcore.QWriteLocker(self.docsizelock)
+		BeeSessionState.scaleCanvas(self,newwidth,newheight,sizelock)
+
+		self.layerfinisher.resize(qtcore.QRectF(0,0,self.docwidth,self.docheight))
+		self.scene.setCanvasSize(newwidth,newheight)
 
 	def adjustCanvasSize(self,leftadj,topadj,rightadj,bottomadj):
 		# lock the image so no updates can happen in the middle of this
@@ -249,13 +259,14 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		slock=qtcore.QWriteLocker(self.selectionlock)
 
 	def updateSelectionDisplayPath(self,path=None):
+		lock=qtcore.QWriteLocker(self.layerslistlock)
 		if path and not path.isEmpty():
 			if self.selectiondisplay:
 				self.selectiondisplay.updatePath(path)
 			else:
 				self.selectiondisplay=SelectedAreaDisplay(path,self.scene)
 				self.selectionanimation=SelectedAreaAnimation(self.selectiondisplay)
-				self.resetLayerZValues()
+				self.resetLayerZValues(lock)
 
 		else:
 			self.scene.removeItem(self.selectiondisplay)
@@ -517,6 +528,8 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 			if dialog.result():
 				newwidth=dialog.ui.width_spin_box.value()
 				newheight=dialog.ui.height_spin_box.value()
+
+				self.addScaleCanvasToQueue(newwidth,newheight)
 
 	def on_action_Image_Canvas_Size_triggered(self,accept=True):
 		if accept:

@@ -70,6 +70,10 @@ class BeeLayerState:
 		# set default name for layer
 		self.changeName("Layer %d" % key)
 
+	def scale(self,newwidth,newheight):
+		lock=qtcore.QWriteLocker(self.imagelock)
+		self.image=self.image.scaled(newwidth,newheight,qtcore.Qt.IgnoreAspectRatio,qtcore.Qt.SmoothTransformation)
+
 	def getImageRect(self):
 		lock=qtcore.QReadLocker(self.imagelock)
 		return self.image.rect()
@@ -245,7 +249,11 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
 		self.setFlag(qtgui.QGraphicsItem.ItemUsesExtendedStyleOption)
 
 	def boundingRect(self):
-		return qtcore.QRectF(self.image.rect())
+		return qtcore.QRectF(self.getImageRect())
+
+	def scale(self,newwidth,newheight):
+		BeeLayerState.scale(self,newwidth,newheight)
+		self.prepareGeometryChange()
 
 	def paint(self,painter,options,widget=None):
 		drawrect=options.exposedRect
@@ -290,16 +298,20 @@ class SelectedAreaDisplay(qtgui.QGraphicsItem):
 		self.path=path
 		self.dashoffset=0
 		self.dashpatternlength=8
+		self.pathlock=qtcore.QReadWriteLock()
 
 	def incrementDashOffset(self):
 		self.dashoffset+=1
 		self.dashoffset%=self.dashpatternlength
 
 	def boundingRect(self):
-		return self.rect
+		#lock=qtcore.QReadLocker(self.pathlock)
+		return qtcore.QRectF(self.path.boundingRect())
 
 	def updatePath(self,path):
+		#lock=qtcore.QWriteLocker(self.pathlock)
 		self.path=path
+		self.prepareGeometryChange()
 
 	def paint(self,painter,options,widget=None):
 
