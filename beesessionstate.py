@@ -61,7 +61,7 @@ class BeeSessionState:
 
 		self.docsizelock=qtcore.QReadWriteLock()
 
-		self.nextlayerkey=0
+		self.nextlayerkey=1
 		self.nextlayerkeymutex=qtcore.QMutex()
 
 		self.remotecommandqueue=Queue(0)

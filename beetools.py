@@ -713,7 +713,7 @@ class PencilToolDesc(AbstractToolDesc):
 		return tool
  
 	def setupTool(self,window,layerkey=None):
-		if not layerkey:
+		if layerkey==None:
 			layerkey=window.getCurLayerKey()
 
 		tool=self.getTool(window)

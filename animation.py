@@ -163,7 +163,6 @@ class XmlToQueueEventsConverter:
 			self.image=None
 
 		elif name == 'toolevent':
-			self.clippath=None
 			self.image=None
 			self.strokestart=False
 			toolname="%s" % attrs.value('name').toString()
@@ -290,6 +289,7 @@ class XmlToQueueEventsConverter:
 
 	def processCharacterData(self):
 		if self.imagestarted:
+			print_debug("processing image data")
 			self.imagestarted=False
 			rawstring=self.xml.text().toString()
 			data=qtcore.QByteArray()
