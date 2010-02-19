@@ -61,7 +61,7 @@ class BeeLayerState:
 		if compmode==None:
 			compmode=qtgui.QPainter.CompositionMode_SourceOver
 
-		self.opacity=opacity
+		self.setOpacity(opacity)
 		self.visible=visible
 		self.compmode=compmode
 
@@ -69,6 +69,12 @@ class BeeLayerState:
 
 		# set default name for layer
 		self.changeName("Layer %d" % key)
+
+	def changeOpacity(self,opacity):
+		self.opacity_setting=opacity
+
+	def getOpacity(self):
+		return self.opacity_setting
 
 	def scale(self,newwidth,newheight):
 		lock=qtcore.QWriteLocker(self.imagelock)
@@ -190,7 +196,7 @@ class BeeLayerState:
 
 		proplock=qtcore.QReadLocker(self.propertieslock)
 
-		painter.setOpacity(self.opacity)
+		painter.setOpacity(self.opacity())
 		painter.setCompositionMode(self.compmode)
 
 		lock=ReadWriteLocker(self.imagelock,True)
@@ -202,7 +208,7 @@ class BeeLayerState:
 		proplock=qtcore.QWriteLocker(self.propertieslock)
 
 		if opacity!=None:
-			self.opacity=opacity
+			self.changeOpacity(opacity)
 
 		if visibility!=None:
 			self.visibility=visibility
@@ -244,12 +250,19 @@ class BeeLayerState:
 
 class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
 	def __init__(self,windowid,type,key,image=None,opacity=None,visible=None,compmode=None,owner=0):
-		BeeLayerState.__init__(self,windowid,type,key,image,opacity,visible,compmode,owner)
 		qtgui.QGraphicsItem.__init__(self)
+		BeeLayerState.__init__(self,windowid,type,key,image,opacity,visible,compmode,owner)
 		self.setFlag(qtgui.QGraphicsItem.ItemUsesExtendedStyleOption)
 
 	def boundingRect(self):
 		return qtcore.QRectF(self.getImageRect())
+
+	def getOpacity(self):
+		return self.opacity()
+
+	def changeOpacity(self,opacity):
+		BeeLayerState.changeOpacity(self,opacity)
+		self.setOpacity(opacity)
 
 	def scale(self,newwidth,newheight):
 		BeeLayerState.scale(self,newwidth,newheight)
@@ -257,6 +270,8 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
 
 	def paint(self,painter,options,widget=None):
 		drawrect=options.exposedRect
+		self.scene().tmppainter.setCompositionMode(self.compmode)
+		self.scene().tmppainter.setOpacity(painter.opacity())
 		self.scene().tmppainter.drawImage(drawrect,self.image,drawrect)
 
 class LayerFinisher(qtgui.QGraphicsItem):
@@ -388,8 +403,9 @@ class LayerConfigWidget(qtgui.QWidget):
 		# update visibility box
 		self.ui.visibility_box.setChecked(layer.visible)
 
-		# update opacity value
-		self.ui.opacity_box.setValue(layer.opacity)
+		# update opacity slider
+		#self.ui.opacity_box.setValue(layer.opacity())
+		self.ui.opacity_slider.setValue(int(layer.opacity()*100))
 
 		# update name
 		displayname=layer.name
@@ -438,11 +454,10 @@ class LayerConfigWidget(qtgui.QWidget):
 		# recomposite whole image
 		window.reCompositeImage()
 
-	def on_opacity_box_valueChanged(self,value):
-		# there are two events, one with a flota and one with a string, we only need one
-		if type(value) is float:
-			layer=BeeApp().master.getLayerById(self.windowid,self.layerkey)
-			layer.window.addOpacityChangeToQueue(layer.key,value)
+	def on_opacity_slider_sliderMoved(self,value):
+		# there are two events, one with a float and one with a string, we only need one
+		win=BeeApp().master.getWindowById(self.windowid)
+		win.addOpacityChangeToQueue(self.layerkey,value/100.)
 
 	def on_blend_mode_box_activated(self,value):
 		# we only want the event with the string
@@ -658,5 +673,7 @@ class LayerPreviewWidget(qtgui.QWidget):
 		painter=qtgui.QPainter()
 		painter.begin(self)
 		painter.drawImage(scaledimage,backdrop)
+		# have preview reflect the opacity of the layer
+		painter.setOpacity(layer.getOpacity())
 		painter.drawImage(scaledimage,layer.image,qtcore.QRectF(layer.image.rect()))
 		painter.end()

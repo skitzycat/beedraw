@@ -666,6 +666,12 @@ class NetworkClientDrawingWindow(BeeDrawingWindow):
 		self.socket=socket
 		BeeDrawingWindow.__init__(self,parent,startlayer=False,type=WindowTypes.networkclient)
 		self.disconnectmessage=None
+		# disable options that can't be used in network sessions
+		#self.ui.action_Image_Scale_Image.setDisabled(True)
+
+		# enable/disable menu options for network window
+		self.ui.menuImage.setDisabled(True)
+		self.ui.menuNetwork.setEnabled(True)
 
 	def setDisconnectMessage(self,message):
 		if not self.disconnectmessage:

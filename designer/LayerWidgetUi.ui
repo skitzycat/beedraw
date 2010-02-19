@@ -5,7 +5,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>377</width>
+    <width>426</width>
     <height>137</height>
    </rect>
   </property>
@@ -22,16 +22,7 @@
    <property name="spacing" >
     <number>0</number>
    </property>
-   <property name="leftMargin" >
-    <number>0</number>
-   </property>
-   <property name="topMargin" >
-    <number>0</number>
-   </property>
-   <property name="rightMargin" >
-    <number>0</number>
-   </property>
-   <property name="bottomMargin" >
+   <property name="margin" >
     <number>0</number>
    </property>
    <item>
@@ -55,16 +46,7 @@
       <property name="spacing" >
        <number>0</number>
       </property>
-      <property name="leftMargin" >
-       <number>0</number>
-      </property>
-      <property name="topMargin" >
-       <number>0</number>
-      </property>
-      <property name="rightMargin" >
-       <number>0</number>
-      </property>
-      <property name="bottomMargin" >
+      <property name="margin" >
        <number>0</number>
       </property>
       <item>
@@ -157,24 +139,18 @@
            </widget>
           </item>
           <item>
-           <widget class="QDoubleSpinBox" name="opacity_box" >
-            <property name="sizePolicy" >
-             <sizepolicy vsizetype="Fixed" hsizetype="Minimum" >
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimum" >
-             <double>0.010000000000000</double>
-            </property>
+           <widget class="QSlider" name="opacity_slider" >
             <property name="maximum" >
-             <double>1.000000000000000</double>
-            </property>
-            <property name="singleStep" >
-             <double>0.010000000000000</double>
+             <number>100</number>
             </property>
             <property name="value" >
-             <double>1.000000000000000</double>
+             <number>100</number>
+            </property>
+            <property name="orientation" >
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="tickPosition" >
+             <enum>QSlider::TicksAbove</enum>
             </property>
            </widget>
           </item>

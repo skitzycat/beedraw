@@ -47,7 +47,7 @@
      <x>0</x>
      <y>0</y>
      <width>619</width>
-     <height>38</height>
+     <height>35</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile" >
@@ -74,6 +74,10 @@
     </property>
     <addaction name="action_Edit_Undo" />
     <addaction name="action_Edit_Redo" />
+    <addaction name="separator" />
+    <addaction name="actionCut" />
+    <addaction name="actionCopy" />
+    <addaction name="actionPaste" />
    </widget>
    <widget class="QMenu" name="menuImage" >
     <property name="title" >
@@ -100,12 +104,24 @@
      <string>Select</string>
     </property>
     <addaction name="action_Select_None" />
+    <addaction name="action_Select_Invert_Selection" />
+   </widget>
+   <widget class="QMenu" name="menuNetwork" >
+    <property name="enabled" >
+     <bool>false</bool>
+    </property>
+    <property name="title" >
+     <string>Network</string>
+    </property>
+    <addaction name="action_Network_Disconnect" />
+    <addaction name="action_Network_Resync" />
    </widget>
    <addaction name="menuFile" />
    <addaction name="menuEdit" />
    <addaction name="menuView" />
    <addaction name="menuImage" />
    <addaction name="menuSelect" />
+   <addaction name="menuNetwork" />
   </widget>
   <action name="action_File_Save_As" >
    <property name="text" >
@@ -221,6 +237,36 @@
     <string>Select None</string>
    </property>
   </action>
+  <action name="action_Network_Disconnect" >
+   <property name="text" >
+    <string>Disconnect</string>
+   </property>
+  </action>
+  <action name="action_Select_Invert_Selection" >
+   <property name="text" >
+    <string>Invert Selection</string>
+   </property>
+  </action>
+  <action name="actionCut" >
+   <property name="text" >
+    <string>Cut</string>
+   </property>
+  </action>
+  <action name="actionCopy" >
+   <property name="text" >
+    <string>Copy</string>
+   </property>
+  </action>
+  <action name="actionPaste" >
+   <property name="text" >
+    <string>Paste</string>
+   </property>
+  </action>
+  <action name="action_Network_Resync" >
+   <property name="text" >
+    <string>Resync</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections>
@@ -231,8 +277,8 @@
    <slot>close()</slot>
    <hints>
     <hint type="sourcelabel" >
-     <x>82</x>
-     <y>113</y>
+     <x>-1</x>
+     <y>-1</y>
     </hint>
     <hint type="destinationlabel" >
      <x>309</x>

@@ -68,6 +68,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 		# list to hold drawing windows created
 		self.drawingwindows=[]
+		self.drawingwindowslock=qtcore.QReadWriteLock()
 
 		self.curwindow=None
 
@@ -128,9 +129,11 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		return self.bgcolor
 
 	def registerWindow(self,window):
+		lock=qtcore.QWriteLocker(self.drawingwindowslock)
 		self.drawingwindows.append(window)
 
 	def unregisterWindow(self,window):
+		lock=qtcore.QWriteLocker(self.drawingwindowslock)
 		self.drawingwindows.remove(window)
 		# if the window we're deleting was the active window
 		if self.curwindow==window:
@@ -147,6 +150,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		return self.nextwindowid
 
 	def getWindowById(self,id):
+		lock=qtcore.QReadLocker(self.drawingwindowslock)
 		for win in self.drawingwindows:
 			if win.id==id:
 				return win
@@ -163,6 +167,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 	def removeWindow(self,window):
 		"""remove a drawing window from the list of current windows"""
+		lock=qtcore.QWriteLocker(self.drawingwindowslock)
 		try:
 			self.drawingwindows.remove(window)
 		except:
@@ -230,6 +235,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 	def on_tool_changed(self,index):
 		self.toolbox.setCurToolIndex(index)
+		lock=qtcore.QReadLocker(self.drawingwindowslock)
 		for win in self.drawingwindows:
 			win.view.setCursor(self.toolbox.getCurToolDesc().getCursor())
 
@@ -504,6 +510,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 	# destroy all subwindows
 	def cleanUp(self):
 		# copy list of windows otherwise destroying the windows as we iterate through will skip some
+		lock=qtcore.QWriteLocker(self.drawingwindowslock)
 		tmplist=self.drawingwindows[:]
 
 		# sending close will cause the windows to remove themselves from the window list
