@@ -70,6 +70,10 @@ class BeeLayerState:
 		# set default name for layer
 		self.changeName("Layer %d" % key)
 
+	def scale(self,newwidth,newheight):
+		lock=qtcore.QWriteLocker(self.imagelock)
+		self.image=self.image.scaled(newwidth,newheight,qtcore.Qt.IgnoreAspectRatio,qtcore.Qt.SmoothTransformation)
+
 	def getImageRect(self):
 		lock=qtcore.QReadLocker(self.imagelock)
 		return self.image.rect()
@@ -120,7 +124,6 @@ class BeeLayerState:
 		height=image.size().height()
 		#print "image dimensions:", width, height
 		self.compositeFromCorner(image,x-int((width)/2),y-int((height)/2),compmode,clippath)
-		return
 
 	# composite image onto layer from corner coord
 	def compositeFromCorner(self,image,x,y,compmode,clippath=None,lock=None):
@@ -234,6 +237,7 @@ class BeeLayerState:
 		painter.end()
 
 		self.image=newimage
+		self.prepareGeometryChange()
 
 	# shift image by specified x and y
 	#def shiftImage(self,x,y):
@@ -245,11 +249,31 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
 		self.setFlag(qtgui.QGraphicsItem.ItemUsesExtendedStyleOption)
 
 	def boundingRect(self):
-		return qtcore.QRectF(self.image.rect())
+		return qtcore.QRectF(self.getImageRect())
+
+	def scale(self,newwidth,newheight):
+		BeeLayerState.scale(self,newwidth,newheight)
+		self.prepareGeometryChange()
 
 	def paint(self,painter,options,widget=None):
 		drawrect=options.exposedRect
 		self.scene().tmppainter.drawImage(drawrect,self.image,drawrect)
+
+class LayerFinisher(qtgui.QGraphicsItem):
+	""" layers need to be drawn to a temporary image this takes that temporary image and draws it to the scene.  This item should be placed above all other layers, but below any overlays. """
+	def __init__(self,rect):
+		qtgui.QGraphicsItem.__init__(self)
+		self.rect=rect
+
+	def resize(self,newrect):
+		self.rect=newrect
+		self.prepareGeometryChange()
+
+	def boundingRect(self):
+		return self.rect
+
+	def paint(self,painter,options,widget=None):
+		self.scene().stopTmpPainter(painter,options.exposedRect)
 
 class SelectedAreaAnimation(qtgui.QGraphicsItemAnimation):
 	def __init__(self,item,parent=None):
@@ -274,19 +298,22 @@ class SelectedAreaDisplay(qtgui.QGraphicsItem):
 		self.path=path
 		self.dashoffset=0
 		self.dashpatternlength=8
+		self.pathlock=qtcore.QReadWriteLock()
 
 	def incrementDashOffset(self):
 		self.dashoffset+=1
 		self.dashoffset%=self.dashpatternlength
 
 	def boundingRect(self):
-		return self.rect
+		#lock=qtcore.QReadLocker(self.pathlock)
+		return qtcore.QRectF(self.path.boundingRect())
 
 	def updatePath(self,path):
+		#lock=qtcore.QWriteLocker(self.pathlock)
 		self.path=path
+		self.prepareGeometryChange()
 
 	def paint(self,painter,options,widget=None):
-		self.scene().stopTmpPainter(painter,options.exposedRect)
 
 		painter.setPen(qtgui.QColor(255,255,255,255))
 		painter.drawPath(self.path)

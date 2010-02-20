@@ -2,7 +2,8 @@ Bee Draw pre-alpha development version
 
 Dependencies:
 python 2.4 or higher
-pyqt (version 4.4.4 or higher)
+Qt (version 4.6 or higner)
+pyqt (version 4.7 or higher)
 numpy
 python imaging library
 make

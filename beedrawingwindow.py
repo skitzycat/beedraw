@@ -22,7 +22,6 @@ import PyQt4.QtCore as qtcore
 import PyQt4.QtGui as qtgui
 
 import os
-import cPickle as pickle
 
 from beetypes import *
 from beeview import BeeCanvasScene
@@ -31,7 +30,7 @@ from beeutil import *
 from beeeventstack import *
 from datetime import datetime
 from beeglobals import *
-from beelayer import BeeGuiLayer,SelectedAreaDisplay,SelectedAreaAnimation
+from beelayer import BeeGuiLayer,SelectedAreaDisplay,SelectedAreaAnimation,LayerFinisher
 
 from Queue import Queue
 from drawingthread import DrawingThread
@@ -87,6 +86,10 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 
 		self.show()
 
+		self.layerfinisher=LayerFinisher(qtcore.QRectF(0,0,width,height))
+
+		self.scene.addItem(self.layerfinisher)
+
 		# initiate drawing thread
 		if type==WindowTypes.standaloneserver:
 			self.localdrawingthread=DrawingThread(self.remotecommandqueue,self.id,type=ThreadTypes.server,master=master)
@@ -117,12 +120,16 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 	#def __del__(self):
 	#	print "DESTRUCTOR: bee drawing window"
 
-	def resetLayerZValues(self):
+	def resetLayerZValues(self,lock=None):
 		i=0
-		locker=qtcore.QReadLocker(self.layerslistlock)
+		if not lock:
+			lock=qtcore.QReadLocker(self.layerslistlock)
 		for layer in self.layers:
 			layer.setZValue(i)
 			i+=1
+
+		self.layerfinisher.setZValue(i)
+		i+=1
 
 		if self.selectiondisplay:
 			self.selectiondisplay.setZValue(i)
@@ -141,6 +148,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 			qtgui.QMessageBox.critical(self,title,message)
 
 	def changeToolOverlay(self,overlay=None):
+		lock=qtcore.QWriteLocker(self.layerslistlock)
 		if self.tooloverlay:
 			self.scene.removeItem(self.tooloverlay)
 			self.tooloverlay=None
@@ -148,32 +156,41 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		if overlay:
 			self.scene.addItem(overlay)
 			self.tooloverlay=overlay
+			self.resetLayerZValues(lock)
 
 	def saveFile(self,filename):
 		""" save current state of session to file
 		"""
 		# if we are saving my custom format
 		if filename.endsWith(".bee"):
+			self.startLog(filename,True)
 			# my custom format is a pickled list of tuples containing:
 				# a compressed qbytearray with PNG data, opacity, visibility, blend mode
-			l=[]
+			#l=[]
 			# first item in list is file format version and size of image
-			l.append((BEE_FILE_FORMAT_VERSION,self.docwidth,self.docheight))
-			for layer in self.layers:
-				bytearray=qtcore.QByteArray()
-				buf=qtcore.QBuffer(bytearray)
-				buf.open(qtcore.QIODevice.WriteOnly)
-				layer.image.save(buf,"PNG")
+			#l.append((BEE_FILE_FORMAT_VERSION,self.docwidth,self.docheight))
+			#for layer in self.layers:
+			#	bytearray=qtcore.QByteArray()
+			#	buf=qtcore.QBuffer(bytearray)
+			#	buf.open(qtcore.QIODevice.WriteOnly)
+			#	layer.image.save(buf,"PNG")
 				# add gzip compression to byte array
-				bytearray=qtcore.qCompress(bytearray)
-				l.append((bytearray,layer.opacity,layer.visible,layer.compmode))
+			#	bytearray=qtcore.qCompress(bytearray)
+			#	l.append((bytearray,layer.opacity,layer.visible,layer.compmode))
 
-			f=open(filename,"w")
-			pickle.dump(l,f)
+			#f=open(filename,"w")
+			#pickle.dump(l,f)
 		# for all other formats just use the standard qt image writer
 		else:
 			writer=qtgui.QImageWriter(filename)
-			writer.write(self.scene().getImageCopy())
+			writer.write(self.scene.getImageCopy())
+
+	def scaleCanvas(self,newwidth,newheight):
+		sizelock=qtcore.QWriteLocker(self.docsizelock)
+		BeeSessionState.scaleCanvas(self,newwidth,newheight,sizelock)
+
+		self.layerfinisher.resize(qtcore.QRectF(0,0,self.docwidth,self.docheight))
+		self.scene.setCanvasSize(newwidth,newheight)
 
 	def adjustCanvasSize(self,leftadj,topadj,rightadj,bottomadj):
 		# lock the image so no updates can happen in the middle of this
@@ -185,6 +202,9 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		# adjust size of all the layers
 		for layer in self.layers:
 			layer.adjustCanvasSize(leftadj,topadj,rightadj,bottomadj)
+
+		# adjust size of the layer finisher
+		self.layerfinisher.resize(qtcore.QRectF(0,0,self.docwidth,self.docheight))
 
 		# finally resize the widget and update image
 		self.scene.adjustCanvasSize(leftadj,topadj,rightadj,bottomadj)
@@ -239,13 +259,14 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		slock=qtcore.QWriteLocker(self.selectionlock)
 
 	def updateSelectionDisplayPath(self,path=None):
+		lock=qtcore.QWriteLocker(self.layerslistlock)
 		if path and not path.isEmpty():
 			if self.selectiondisplay:
 				self.selectiondisplay.updatePath(path)
 			else:
 				self.selectiondisplay=SelectedAreaDisplay(path,self.scene)
 				self.selectionanimation=SelectedAreaAnimation(self.selectiondisplay)
-				self.resetLayerZValues()
+				self.resetLayerZValues(lock)
 
 		else:
 			self.scene.removeItem(self.selectiondisplay)
@@ -508,6 +529,8 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 				newwidth=dialog.ui.width_spin_box.value()
 				newheight=dialog.ui.height_spin_box.value()
 
+				self.addScaleCanvasToQueue(newwidth,newheight)
+
 	def on_action_Image_Canvas_Size_triggered(self,accept=True):
 		if accept:
 			dialog=CanvasAdjustDialog(self)
@@ -587,7 +610,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 	# just in case someone lets up on the cursor when outside the drawing area this will make sure it's caught
 	def tabletEvent(self,event):
 		if event.type()==qtcore.QEvent.TabletRelease:
-			self.view.cursorReleaseEvent(event.x(),event,y())
+			self.view.cursorReleaseEvent(event.x(),event.y(),event.modifiers())
 
 	def setActiveLayer(self,newkey):
 		oldkey=self.curlayerkey

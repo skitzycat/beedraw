@@ -75,6 +75,12 @@ class BeeCanvasView(qtgui.QGraphicsView):
 		return self.scene().getSceneRect()
 
 	def updateView(self,dirtyrect=qtcore.QRectF()):
+		dirtyrect=qtcore.QRectF(dirtyrect)
+		if not dirtyrect.isEmpty():
+			dirtyrect=dirtyrect.toAlignedRect()
+			dirtyrect=dirtyrect.adjusted(-1,-1,2,2)
+
+		#print "updating view with rect:", rectToTuple(dirtyrect)
 		self.updateScene([qtcore.QRectF(dirtyrect)])
 
 	def tabletEvent(self,event):
@@ -183,6 +189,12 @@ class BeeCanvasScene(qtgui.QGraphicsScene):
 	def updateView(self,dirtyrect=qtcore.QRectF()):
 		pass
 
+	def setCanvasSize(self,newwidth,newheight):
+		scenelocker=qtcore.QWriteLocker(self.scenerectlock)
+		imagelock=qtcore.QWriteLocker(self.imagelock)
+		self.image=self.image.scaled(newwidth,newheight)
+		self.setSceneRect(qtcore.QRectF(self.image.rect()))
+
 	def adjustCanvasSize(self,leftadj,topadj,rightadj,bottomadj):
 		scenelocker=qtcore.QWriteLocker(self.scenerectlock)
 		imagelock=qtcore.QWriteLocker(self.imagelock)
@@ -201,14 +213,15 @@ class BeeCanvasScene(qtgui.QGraphicsScene):
 			self.tmppainter.end()
 			self.tmppainter=None
 
+			#print "stopping tmp painter with float rectangle:", rectToTuple(rect)
+			rect=rect.toAlignedRect()
+			#print "stopping tmp painter with rectangle:", rectToTuple(rect)
 			painter.setCompositionMode(qtgui.QPainter.CompositionMode_Source)
 			painter.drawImage(rect,self.image,rect)
 			self.locker.unlock()
 			self.locker=None
 
 	def drawForeground(self,painter,rect):
-		self.stopTmpPainter(painter,rect)
-
 		rectpath=qtgui.QPainterPath()
 		rectpath.addRect(rect)
 

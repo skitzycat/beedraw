@@ -203,23 +203,7 @@ class XmlToQueueEventsConverter:
 			(value,ok)=attrs.value('value').toString().toInt()
 			self.curtool.setOption("%s" % attrs.value('name').toString(),value)
 		elif name == 'image':
-			print "DEBUG: starting image read"
 			self.imagestarted=True
-			#rawstring=self.xml.readElementText()
-
-			#encstr=str(rawstring)
-
-			#decstr=b64decode(encstr)
-
-
-			#iostr=StringIO(str(data))
-
-			#pilimage=Image.open(iostr)
-			#pilimage.load()
-
-			#image=ImageQt(pilimage)
-
-			#self.image=image
 
 		elif name == 'rawevent':
 			self.raweventargs=[]

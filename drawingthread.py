@@ -188,7 +188,7 @@ class DrawingThread(qtcore.QThread):
 			window.adjustCanvasSize(command[2],command[3],command[4],command[5])
 
 		elif subtype==AllLayerCommandTypes.scale:
-			pass
+			window.scaleCanvas(command[2],command[3])
 
 		elif subtype==AllLayerCommandTypes.layerup:
 			window.layerUp(command[2])

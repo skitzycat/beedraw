@@ -235,7 +235,7 @@ class BeeSessionState:
 		"""only needs to be imlemented in subclasses that need to display the session"""
 		pass
 
-	def startLog(self,filename=None):
+	def startLog(self,filename=None,endlog=False):
 		""" start logging the session, starting with a base image of it in it's current state, if no file name is provided use make a name up based on current time
 		"""
 		if not filename:
@@ -244,9 +244,9 @@ class BeeSessionState:
 		locks=[]
 		self.filename=filename
 
-		self.logfile=qtcore.QFile(self.filename)
-		self.logfile.open(qtcore.QIODevice.WriteOnly)
-		log=SketchLogWriter(self.logfile)
+		logfile=qtcore.QFile(self.filename)
+		logfile.open(qtcore.QIODevice.WriteOnly)
+		log=SketchLogWriter(logfile)
 
 		# lock for reading the size of the document
 		sizelocker=ReadWriteLocker(self.docsizelock)
@@ -259,11 +259,16 @@ class BeeSessionState:
 			#log.logRawEvent(0,0,layer.key,layer.image)
 			pos+=1
 
-		self.log=log
+		if endlog:
+			self.endLog(log)
+		else:
+			self.log=log
 
-	def endLog(self):
+	def endLog(self,log=None):
 		""" if there is a log started end it """
-		if self.log:
+		if log:
+			log.endLog()
+		elif self.log:
 			self.log.endLog()
 			self.log=None
 
@@ -350,6 +355,22 @@ class BeeSessionState:
 			print_debug("WARNING: could not find layer for key %d" % int(key) )
 		return None
 
+	def addScaleCanvasToQueue(self,newwidth,newheight,source=ThreadTypes.user,owner=0):
+		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.scale,newwidth,newheight),source,owner)
+
+	def scaleCanvas(self,newwidth,newheight,sizelock=None):
+		if not sizelock:
+			sizelock=qtcore.QWriteLocker(self.docsizelock)
+
+		self.docwidth=newwidth
+		self.docheight=newheight
+
+		sizelock.unlock()
+
+		layerlistlock=qtcore.QReadLocker(self.layerslistlock)
+		for layer in self.layers:
+			layer.scale(newwidth,newheight)
+
 	def addSetCanvasSizeRequestToQueue(self,width,height,source=ThreadTypes.user,owner=0):
 		# lock for reading the size of the document
 		lock=ReadWriteLocker(self.docsizelock)
@@ -361,7 +382,7 @@ class BeeSessionState:
 		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.resize,leftadj,topadj,rightadj,bottomadj),source,owner)
 
 	def setCanvasSize(self,width,height):
-		print "DEBUG: setting canvas size to:", width, height
+		#print "DEBUG: setting canvas size to:", width, height
 		lock=ReadWriteLocker(self.docsizelock,False)
 		rightadj=width-self.docwidth
 		bottomadj=height-self.docheight

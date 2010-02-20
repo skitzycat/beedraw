@@ -242,7 +242,9 @@ def getSimilarColorPath(image,x,y,similarity):
 	pointsqueue=[]
 
 	# get starting color to compare everything to
-	basecolor=qtgui.QColor(image.pixel(x,y))
+	basecolor=qtgui.QColor()
+	basecolor.setRgba(image.pixel(x,y))
+	#print "base color:", basecolor.alpha(), basecolor.red(), basecolor.green(), basecolor.blue()
 
 	# set up starting conditions
 	inpath[(x,y)]=1
@@ -258,7 +260,9 @@ def getSimilarColorPath(image,x,y,similarity):
 			continue
 
 		# if point needs to be added to path add surrounding points to queue to check
-		curcolor=qtgui.QColor(image.pixel(curpoint[0],curpoint[1]))
+		curcolor=qtgui.QColor()
+		curcolor.setRgba(image.pixel(curpoint[0],curpoint[1]))
+
 		if compareColors(basecolor,curcolor,similarity):
 			inpath[curpoint]=1
 			#print "adding point to path:", curpoint

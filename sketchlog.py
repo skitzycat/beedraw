@@ -127,7 +127,6 @@ class SketchLogWriter:
 		elif subtype==NetworkControlCommandTypes.fatalerror:
 			self.logFatalError(command[3])
 
-
 	def startEvent(self,owner):
 		self.log.writeStartElement('event')
 
