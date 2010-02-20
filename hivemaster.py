@@ -61,6 +61,7 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 		self.nextclientidmutex=qtcore.QMutex()
 
 		self.password=""
+		self.passwordlock=qtcore.QReadWriteLock()
 
 		# setup interface
 		self.ui=Ui_HiveMasterSpec()
@@ -75,6 +76,9 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 		# this will be keyed on the client ids and values will be queue objects
 		self.clientwriterqueues={}
 		self.socketsmap={}
+
+		self.readerthreads={}
+		self.writerthreads={}
 
 		# this dictionary will be keyed on id and map to the username
 		self.clientnames={}
@@ -99,6 +103,14 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 
 	def getToolClassByName(self,name):
 		return self.toolbox.getToolDescByName(name)
+
+	def registerReaderThread(self,id,thread):
+		lock=qtcore.QWriteLocker(self.clientslistmutex)
+		self.readerthreads[id]=thread
+
+	def registerWriterThread(self,id,thread):
+		lock=qtcore.QWriteLocker(self.clientslistmutex)
+		self.writerthreads[id]=thread
 
 	def registerClient(self,username,id,socket):
 		lock=qtcore.QWriteLocker(self.clientslistmutex)
@@ -127,6 +139,12 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 		username=self.clientnames[id]
 		del self.clientnames[id]
 
+		if id in self.writerthreads:
+			del self.writerthreads[id]
+
+		if id in self.readerthreads:
+			del self.readerthreads[id]
+
 		# remove from list of outgoing queues
 		del self.clientwriterqueues[id]
 
@@ -142,6 +160,8 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 			if layer.owner==id:
 				print_debug("setting layer %d to unowned" % layer.key)
 				self.curwindow.addGiveUpLayerToQueue(layer.key,id)
+
+		del self.socketsmap[id]
 
 	def closeEvent(self,event):
 		qtgui.QMainWindow.closeEvent(self,event)
@@ -202,9 +222,10 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 	def kickClient(self,name):
 		for i in self.clientnames.keys():
 			if self.clientnames[i]==name:
-				# todo: figure out what goes here to kick off client
-				#self.socketsmap[i].close()
-				break
+				self.socketsmap[i].abort()
+				self.socketsmap[i].close()
+				self.socketsmap[i].socket.disconnectFromHost()
+				self.routinginput.put(((DrawingCommandTypes.quit,),0-i))
 
 	def on_actionStart_triggered(self,accept=True):
 		if accept:
@@ -213,6 +234,14 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 	def on_actionStop_triggered(self,accept=True):
 		if accept:
 			self.stopServer()
+
+	def getPassword(self):
+		lock=qtcore.QReadLocker(self.passwordlock)
+		return self.password
+
+	def setPassword(self,newpass):
+		lock=qtcore.QWriteLocker(self.passwordlock)
+		self.password=newpass
 
 	def on_actionOptions_triggered(self,accept=True):
 		if accept:

@@ -389,11 +389,6 @@ class DrawingTool(AbstractTool):
 
 		self.fullsizedbrush=PILtoQImage(self.fullsizedbrush)
 
-	def updateBrushForOpacity(self):
-		if self.opacity==100:
-			return
-		return
-
 	def updateBrushForPressure(self,pressure,subpixelx=0,subpixely=0):
 		# see if we need to update at all
 		if self.lastpressure==pressure:

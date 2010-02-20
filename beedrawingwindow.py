@@ -491,13 +491,13 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		if accept:
 			self.addUndoToQueue()
 
-	def on_action_Select_None_triggered(self,accept=True):
-		if accept:
-			self.changeSelection(SelectionModTypes.clear)
-
 	def on_action_Edit_Redo_triggered(self,accept=True):
 		if accept:
 			self.addRedoToQueue()
+
+	def on_action_Select_None_triggered(self,accept=True):
+		if accept:
+			self.changeSelection(SelectionModTypes.clear)
 
 	def on_action_Zoom_In_triggered(self,accept=True):
 		if accept:
@@ -671,7 +671,7 @@ class NetworkClientDrawingWindow(BeeDrawingWindow):
 
 		# enable/disable menu options for network window
 		self.ui.menuImage.setDisabled(True)
-		self.ui.menuNetwork.setEnabled(True)
+		#self.ui.menuNetwork.setEnabled(True)
 
 	def setDisconnectMessage(self,message):
 		if not self.disconnectmessage:

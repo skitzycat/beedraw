@@ -5,7 +5,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>592</width>
+    <width>666</width>
     <height>586</height>
    </rect>
   </property>
@@ -55,6 +55,9 @@
       </item>
       <item>
        <widget class="QPushButton" name="kick_button" >
+        <property name="enabled" >
+         <bool>false</bool>
+        </property>
         <property name="text" >
          <string>Kick</string>
         </property>
@@ -77,6 +80,9 @@
        <layout class="QHBoxLayout" >
         <item>
          <widget class="QPushButton" name="accept_request_button" >
+          <property name="enabled" >
+           <bool>false</bool>
+          </property>
           <property name="text" >
            <string>Accept</string>
           </property>
@@ -84,6 +90,9 @@
         </item>
         <item>
          <widget class="QPushButton" name="reject_request_button" >
+          <property name="enabled" >
+           <bool>false</bool>
+          </property>
           <property name="text" >
            <string>Reject</string>
           </property>
@@ -125,6 +134,9 @@
        <layout class="QHBoxLayout" >
         <item>
          <widget class="QPushButton" name="new_layer_button" >
+          <property name="enabled" >
+           <bool>false</bool>
+          </property>
           <property name="text" >
            <string>New Layer</string>
           </property>
@@ -132,6 +144,9 @@
         </item>
         <item>
          <widget class="QPushButton" name="delete_layer_button" >
+          <property name="enabled" >
+           <bool>false</bool>
+          </property>
           <property name="text" >
            <string>Delete Layer</string>
           </property>
@@ -139,6 +154,9 @@
         </item>
         <item>
          <widget class="QPushButton" name="layer_up_button" >
+          <property name="enabled" >
+           <bool>false</bool>
+          </property>
           <property name="text" >
            <string>Move Up</string>
           </property>
@@ -146,6 +164,9 @@
         </item>
         <item>
          <widget class="QPushButton" name="layer_down_button" >
+          <property name="enabled" >
+           <bool>false</bool>
+          </property>
           <property name="text" >
            <string>Move Down</string>
           </property>
@@ -162,8 +183,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>592</width>
-     <height>26</height>
+     <width>666</width>
+     <height>35</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile" >
@@ -173,8 +194,8 @@
     <addaction name="separator" />
     <addaction name="actionStart" />
     <addaction name="actionStop" />
-    <addaction name="actionClose" />
     <addaction name="actionOptions" />
+    <addaction name="actionClose" />
    </widget>
    <addaction name="menuFile" />
   </widget>
@@ -201,5 +222,22 @@
   </action>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>actionClose</sender>
+   <signal>triggered()</signal>
+   <receiver>HiveMasterSpec</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel" >
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel" >
+     <x>332</x>
+     <y>292</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

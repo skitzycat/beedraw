@@ -75,6 +75,9 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		self.curpointertype=-1
 		self.curtoolname=self.toolbox.getCurToolDesc().name
 
+		self.clipboardimage=None
+		self.clipboardlock=qtcore.QReadWriteLock()
+
 		self.pointertoolmap={}
 		# set some initial default values for tool pointers
 		self.pointertoolmap[1]="brush"
@@ -112,6 +115,14 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			colors=reader.getColors()
 		else:
 			colors=[]
+
+	def setClipBoardImage(self,image):
+		lock=qtcore.QWriteLocker(self.clipboardlock)
+		self.clipboardimage=image.copy()
+
+	def getClipBoardImage(self,image):
+		lock=qtcore.QReadLocker(self.clipboardlock)
+		return self.clipboardimage.copy()
 
 	# I don't think these currently need to have mutexes, but if they ever do it can be done here
 	def setFGColor(self,color):

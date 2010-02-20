@@ -19,6 +19,8 @@ import PyQt4.QtGui as qtgui
 import PyQt4.QtCore as qtcore
 import PyQt4.QtNetwork as qtnet
 
+from Queue import Queue
+
 from beeapp import BeeApp
 from beetypes import *
 
@@ -433,3 +435,20 @@ def requestDisplayMessage(type,title,message,destination=None):
 	event=DisplayMessageEvent(type,title,message)
 	BeeApp().app.postEvent(destination,event)
 	print "requesting to display message"
+
+class ThreadNotifierQueue(Queue,qtcore.QObject):
+	__pyqtSignals__ = ("datainqueue()")
+	def __init__(self,parent=None,maxsize=0):
+		qtcore.QObject.__init__(self,parent)
+		Queue.__init__(self,parent)
+	def _put(self,item):
+		Queue._put(self,item)
+		print "emmiting signal"
+		self.emit(qtcore.SIGNAL("datainqueue()"))
+	def _get(self):
+		Queue._get(self)
+		if self._qsize():
+			self.emit(qtcore.SIGNAL("datainqueue()"))
+
+	def connectNotify(self,signal):
+		print "signal connected to Queue:", signal

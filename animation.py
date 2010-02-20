@@ -52,7 +52,7 @@ class XmlToQueueEventsConverter:
 		self.type=type
 		self.stepdelay=stepdelay
 		self.keymap={}
-		self.imagestarted=True
+		self.imagestarted=False
 		self.imagedata=None
 
 		if type==ThreadTypes.animation:

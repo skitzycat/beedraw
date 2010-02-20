@@ -75,15 +75,18 @@
     <addaction name="action_Edit_Undo" />
     <addaction name="action_Edit_Redo" />
     <addaction name="separator" />
-    <addaction name="actionCut" />
-    <addaction name="actionCopy" />
-    <addaction name="actionPaste" />
+    <addaction name="action_Edit_Cut" />
+    <addaction name="action_Edit_Copy" />
+    <addaction name="action_Edit_Paste" />
    </widget>
    <widget class="QMenu" name="menuImage" >
     <property name="title" >
      <string>Image</string>
     </property>
     <widget class="QMenu" name="menuTransform" >
+     <property name="enabled" >
+      <bool>false</bool>
+     </property>
      <property name="title" >
       <string>Transform</string>
      </property>
@@ -238,26 +241,41 @@
    </property>
   </action>
   <action name="action_Network_Disconnect" >
+   <property name="enabled" >
+    <bool>false</bool>
+   </property>
    <property name="text" >
     <string>Disconnect</string>
    </property>
   </action>
   <action name="action_Select_Invert_Selection" >
+   <property name="enabled" >
+    <bool>false</bool>
+   </property>
    <property name="text" >
     <string>Invert Selection</string>
    </property>
   </action>
-  <action name="actionCut" >
+  <action name="action_Edit_Cut" >
+   <property name="enabled" >
+    <bool>false</bool>
+   </property>
    <property name="text" >
     <string>Cut</string>
    </property>
   </action>
-  <action name="actionCopy" >
+  <action name="action_Edit_Copy" >
+   <property name="enabled" >
+    <bool>false</bool>
+   </property>
    <property name="text" >
     <string>Copy</string>
    </property>
   </action>
-  <action name="actionPaste" >
+  <action name="action_Edit_Paste" >
+   <property name="enabled" >
+    <bool>false</bool>
+   </property>
    <property name="text" >
     <string>Paste</string>
    </property>

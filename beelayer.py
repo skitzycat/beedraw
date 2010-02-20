@@ -61,7 +61,7 @@ class BeeLayerState:
 		if compmode==None:
 			compmode=qtgui.QPainter.CompositionMode_SourceOver
 
-		self.setOpacity(opacity)
+		self.changeOpacity(opacity)
 		self.visible=visible
 		self.compmode=compmode
 

@@ -55,7 +55,7 @@ class HistoryCommandTypes:
 
 # events that effect only one layer
 class LayerCommandTypes:
-	alpha, mode, pendown, penmotion, penup, penleave, penenter, rawevent, tool = range(9)
+	alpha, mode, pendown, penmotion, penup, penleave, penenter, rawevent, tool, cut, copy, paste = range(12)
 
 # events that effect the list of layers, all layers or layer ownership
 class AllLayerCommandTypes:

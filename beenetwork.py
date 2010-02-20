@@ -146,6 +146,10 @@ class BeeSocket:
 			return self.socket.errorString()
 		return ""
 
+	def abort(self):
+		if self.type==BeeSocketTypes.qt:
+			self.socket.abort()
+
 	def connect(self,host,port):
 		if self.type==BeeSocketTypes.qt:
 			self.socket.connectToHost(host,port)
@@ -250,12 +254,14 @@ class HiveClientListener(qtcore.QThread):
 			self.authenticationerror="Protocol version mismatch, please change to server version: %d" % PROTOCOL_VERSION
 			return False
 
+		masterpass=self.master.getPassword()
+
 		# if password is blank, let authentication pass
-		if self.master.password=="":
+		if masterpass=="":
 			return True
 
 		# otherwise trim off whitespace and compare to password string
-		if password.trimmed().toAscii()==self.master.password:
+		if password.trimmed().toAscii()==masterpass:
 			return True
 
 		self.authenticationerror="Incorrect Password"
@@ -263,6 +269,7 @@ class HiveClientListener(qtcore.QThread):
 
 	def register(self):
 		# register this new connection
+		self.master.registerReaderThread(self.id,self)
 		return self.master.registerClient(self.username,self.id,self.socket)
 
 	def disconnected(self):
@@ -312,7 +319,6 @@ class HiveClientListener(qtcore.QThread):
 
 		# wait for client to respond so it doesn't get confused and mangle the setup data with the start of the XML file
 		data=self.socket.read(1024)
-		#self.socket.waitForReadyRead(-1)
 		print_debug("got client response")
 
 		#qtcore.QObject.connect(self.socket, qtcore.SIGNAL("readyRead()"), self.readyRead)
@@ -327,7 +333,7 @@ class HiveClientListener(qtcore.QThread):
 				print_debug("remote socket closed")
 				break
 
-			#print_debug("got animation data from socket: %s" % qtcore.QString(data))
+			print_debug("got animation data from socket: %s" % qtcore.QString(data))
 			self.parser.xml.addData(data)
 			error=self.parser.read()
 
@@ -352,6 +358,8 @@ class HiveClientWriter(qtcore.QThread):
 		self.master=master
 		self.id=id
 
+		self.master.registerWriterThread(id,self)
+
 		self.buffer=qtcore.QBuffer()
 		self.buffer.open(qtcore.QIODevice.ReadWrite)
 
@@ -364,9 +372,14 @@ class HiveClientWriter(qtcore.QThread):
 
 		self.xmlgenerator=SketchLogWriter(self.buffer)
 
+		#print "attempting to connect signal"
+		#self.connect(self.queue,qtcore.SIGNAL("datainqueue()"),self,qtcore.SIGNAL("datainqueue()"))
+		#print "attempted to connect signal"
+
+	def datainqueue(self):
+		print "data in queue ready to be read"
 
 	def run(self):
-
 		while 1:
 			if not self.socket.isConnected():
 				self.master.unregisterClient(self.id)
@@ -375,6 +388,9 @@ class HiveClientWriter(qtcore.QThread):
 			#print "Hive Client Writer is ready to read from queue:", self.queue
 			# block until item is available from thread safe queue
 			data=self.queue.get()
+			if data[0]==DrawingCommandTypes.quit:
+				self.master.unregisterClient(self.id)
+				return
 			#print "Hive Client Writer got command from Queue:", data
 			# write xml data to socket
 			self.xmlgenerator.logCommand(data)
