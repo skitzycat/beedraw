@@ -45,14 +45,3 @@ Section "Create desktop shortcuts" SEC_DESK
     createShortCut "$DESKTOP\beedraw.lnk" "$INSTDIR\beedraw\beedraw.exe"
     createShortCut "$DESKTOP\hive.lnk" "$INSTDIR\beedraw\hive.exe"
 SectionEnd
-
-Function .onInit
-  StrCpy $1 ${SEC_DESK}
-Functionend
-
-;Function .onSelChange
-;  !insertmacro StartRadioButtons $1
-;    !insertmacro RadioButton ${SEC_START}
-;    !insertmacro RadioButton ${SEC_DESK}
-;  !insertMacro EndRadioButtons
-;Functionend
