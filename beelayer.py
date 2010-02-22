@@ -204,14 +204,11 @@ class BeeLayerState:
 		painter.drawImage(dirtyrect,self.image,dirtyrect)
 
 	# set any passed layer options
-	def setOptions(self,opacity=None,visibility=None,compmode=None):
+	def setOptions(self,opacity=None,compmode=None):
 		proplock=qtcore.QWriteLocker(self.propertieslock)
 
 		if opacity!=None:
 			self.changeOpacity(opacity)
-
-		if visibility!=None:
-			self.visibility=visibility
 
 		if compmode!=None:
 			self.compmode=compmode
@@ -406,7 +403,7 @@ class LayerConfigWidget(qtgui.QWidget):
 		proplock=qtcore.QReadLocker(layer.propertieslock)
 
 		# update visibility box
-		self.ui.visibility_box.setChecked(layer.visible)
+		self.ui.visibility_box.setChecked(layer.isVisible())
 
 		# update opacity slider
 		#self.ui.opacity_box.setValue(layer.opacity())
@@ -455,7 +452,7 @@ class LayerConfigWidget(qtgui.QWidget):
 		layer=BeeApp().master.getLayerById(self.windowid,self.layerkey)
 		window=layer.getWindow()
 		# change visibility
-		layer.visible=state
+		layer.setVisible(state)
 		# recomposite whole image
 		window.reCompositeImage()
 
