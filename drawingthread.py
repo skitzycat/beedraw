@@ -101,7 +101,7 @@ class DrawingThread(qtcore.QThread):
 			return
 
 		if subtype==LayerCommandTypes.alpha:
-			layer.setOpacity(command[3])
+			layer.changeOpacity(command[3])
 			layer.update()
 			window.logCommand(command,self.type)
 
