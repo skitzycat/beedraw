@@ -26,6 +26,8 @@ DirText "Select the directory to install Bee Draw in:"
 
 Section "Base Files"
     SectionIn RO
+    CreateDirectory "$INSTDIR\beedraw"
+    CreateDirectory "$INSTDIR\beedraw\logs"
     writeRegStr HKLM "SOFTWARE\Bee Draw" "" "$INSTDIR"
     SetOutPath '$INSTDIR\beedraw\config'
     File 'config\default.pal'
