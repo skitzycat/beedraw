@@ -52,7 +52,7 @@ class HiveSessionState(BeeSessionState):
 	def sendLayerImageToClient(self,layer,index,id):
 		key=layer.key
 		image=layer.getImageCopy()
-		opacity=layer.opacity
+		opacity=layer.getOpacity()
 		compmode=layer.compmode
 		owner=layer.owner
 
