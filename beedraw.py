@@ -22,7 +22,6 @@ from beemaster import BeeMasterWindow
 from beeapp import BeeApp
 import sys
 import PyQt4.QtGui as qtgui
-import pdb
 
 if __name__ == "__main__":
 	beeapp = BeeApp(sys.argv)
