@@ -116,11 +116,13 @@ class ServerDrawingThread(DrawingThread):
 			return
 
 		if subtype==LayerCommandTypes.alpha:
-			cachedcommand=CachedAlphaEvent(layer,command[3])
+			#cachedcommand=CachedAlphaEvent(layer,command[3])
+			layer.setOpacity(command[3])
 			self.master.routinginput.put((command,layer.owner))
 
 		elif subtype==LayerCommandTypes.mode:
-			cachedcommand=CachedModeEvent(layer,command[3])
+			#cachedcommand=CachedModeEvent(layer,command[3])
+			layer.setOptions(compmode=command[3])
 			self.master.routinginput.put((command,layer.owner))
 
 		elif subtype==LayerCommandTypes.pendown:

@@ -29,17 +29,16 @@ class CachedLayerEvent:
 		""" Must be implemented in subclass """
 		pass
 
-
 class CachedAlphaEvent(CachedLayerEvent):
 	def __init__(self,layer,newalpha):
 		CachedLayerEvent.__init__(self,layer)
 		self.newalpha=newalpha
 
 	def process(self):
-		layer.setOptions(opacity=self.newalpha)
+		self.layer.setOptions(opacity=self.newalpha)
 
 	def send(self,id,queue):
-		queue.put((DrawingCommandTypes.layer,LayerCommandTypes.alpha,layer.key,self.newalpha),id)
+		queue.put((DrawingCommandTypes.layer,LayerCommandTypes.alpha,self.layer.key,self.newalpha),id)
 
 class CachedModeEvent(CachedLayerEvent):
 	def __init__(self,layer,newmode):
