@@ -268,6 +268,11 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
 		BeeLayerState.scale(self,newwidth,newheight)
 		self.prepareGeometryChange()
 
+	def cut(self,path):
+		pathrect=path.boundingRect()
+		image=qtgui.QImage(pathrect.width(),pathrect.height(),qtgui.QImage.Format_ARGB32_Premultiplied)
+		image.fill(0)
+
 	def paint(self,painter,options,widget=None):
 		drawrect=options.exposedRect
 		self.scene().tmppainter.setCompositionMode(self.compmode)

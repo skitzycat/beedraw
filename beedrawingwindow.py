@@ -487,6 +487,10 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		self.view.setGeometry(x,y,width,height)
 
 	# respond to menu item events in the drawing window
+	def on_action_Edit_Cut_triggered(self,accept=True):
+		if accept:
+			self.addCutToQueue()
+
 	def on_action_Edit_Undo_triggered(self,accept=True):
 		if accept:
 			self.addUndoToQueue()
@@ -549,6 +553,14 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 				rightadj=dialog.rightadj
 				bottomadj=dialog.bottomadj
 				self.addAdjustCanvasSizeRequestToQueue(leftadj,topadj,rightadj,bottomadj)
+
+	def addCutToQueue(self):
+		# It is only possible for this to originate from a local source so it's defined here instead of in the base state class.
+		layerkey=self.getCurLayerKey()
+		# don't do anything if there is no current layer
+		if layerkey:
+			path=self.getClipPathCopy()
+			self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.cut,layerkey),ThreadTypes.user)
 
 	# create backdrop for bottom of all layers, eventually I'd like this to be configurable, but for now it just fills in all white
 	def recreateBackdrop(self):

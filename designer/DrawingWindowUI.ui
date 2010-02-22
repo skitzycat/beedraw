@@ -172,6 +172,9 @@
    </property>
   </action>
   <action name="action_Edit_Undo" >
+   <property name="enabled" >
+    <bool>false</bool>
+   </property>
    <property name="text" >
     <string>Undo</string>
    </property>

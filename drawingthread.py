@@ -109,6 +109,10 @@ class DrawingThread(qtcore.QThread):
 			layer.setOptions(compmode=command[3])
 			window.logCommand(command,self.type)
 
+		elif subtype==LayerCommandTypes.cut:
+			selection=command[3]
+			layer.cut(selection)
+
 		elif subtype==LayerCommandTypes.pendown:
 			x=command[3]
 			y=command[4]

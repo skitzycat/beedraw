@@ -11,8 +11,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>324</width>
-    <height>273</height>
+    <width>326</width>
+    <height>252</height>
    </rect>
   </property>
   <property name="sizePolicy" >
@@ -150,22 +150,6 @@
         </property>
        </widget>
       </item>
-      <item row="3" column="0" >
-       <widget class="QPushButton" name="move_selection_button" >
-        <property name="enabled" >
-         <bool>false</bool>
-        </property>
-        <property name="text" >
-         <string>Move Selection</string>
-        </property>
-        <property name="checkable" >
-         <bool>true</bool>
-        </property>
-        <property name="autoExclusive" >
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
      </layout>
     </item>
    </layout>
@@ -175,7 +159,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>324</width>
+     <width>326</width>
      <height>35</height>
     </rect>
    </property>
