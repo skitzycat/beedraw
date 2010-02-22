@@ -146,6 +146,11 @@ class BeeSocket:
 			return self.socket.errorString()
 		return ""
 
+	def disconnect(self):
+		if self.type==BeeSocketTypes.qt:
+			self.socket.disconnectFromHost()
+			self.socket.waitForDisconnected(1000)
+
 	def abort(self):
 		if self.type==BeeSocketTypes.qt:
 			self.socket.abort()
@@ -295,9 +300,7 @@ class HiveClientListener(qtcore.QThread):
 			# if authentication fails send close socket and exit
 			print_debug("authentication failed")
 			self.socket.write(qtcore.QByteArray("Authtication failed\n%s\n" % self.authenticationerror))
-			self.socket.waitForBytesWritten()
-			self.socket.disconnectFromHost()
-			self.socket.waitForDisconnected(1000)
+			self.socket.disconnectt()
 			return
 
 		print_debug("authentication succeded")
@@ -306,8 +309,7 @@ class HiveClientListener(qtcore.QThread):
 			print_debug("register failed, probably due to duplicate username")
 			self.socket.write(qtcore.QByteArray("Regististration failed\nRegistration with server failed, the username you chose is probably in use already, try a different one\n"))
 			self.socket.waitForBytesWritten()
-			self.socket.disconnectFromHost()
-			self.socket.waitForDisconnected(1000)
+			self.socket.disconnect()
 			return
 
 		print_debug("registered")
