@@ -416,9 +416,9 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 	# when a thread calls this method it shouldn't have a lock on any layers
 	def reCompositeImage(self,dirtyrect=None):
 		if dirtyrect:
-			self.view.updateView(dirtyrect)
+			self.scene.update(qtcore.QRectF(dirtyrect))
 		else:
-			self.view.updateView()
+			self.scene.update()
 		return
 
 	def getImagePixelColor(self,x,y,size=1):
