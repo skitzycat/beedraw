@@ -434,6 +434,15 @@ class LayerConfigWidget(qtgui.QWidget):
 				netbuttontext="Give Up Ownership"
 				netbuttonstate=True
 
+		# disable controls if client shouldn't be able to control them
+		if win.type==WindowTypes.networkclient:
+			if win.ownedByMe(layer.owner):
+				self.ui.opacity_slider.setEnabled(True)
+				self.ui.blend_mode_box.setEnabled(True)
+			else:
+				self.ui.opacity_slider.setDisabled(True)
+				self.ui.blend_mode_box.setDisabled(True)
+
 		self.ui.network_control_button.setText(netbuttontext)
 		self.ui.network_control_button.setEnabled(netbuttonstate)
 
