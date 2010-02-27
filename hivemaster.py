@@ -44,6 +44,8 @@ from hivestate import HiveSessionState
 from Queue import Queue
 import time
 
+import os
+
 class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 	# this constructor should never be called directly, use an alternate
 	def __init__(self):
@@ -273,6 +275,10 @@ class HiveServerThread(qtcore.QThread):
 		qtcore.QObject.connect(self, qtcore.SIGNAL("started()"), self.started)
 
 	def started(self):
+		# under linux Qt sockets aren't working correctly for me
+		if os.name=="posix":
+			return
+
 		# needs to be done here because this is running in the proper thread
 		self.server=BeeTCPServer(BeeSocketTypes.qt,8333,self,self.master)
 		self.server.start()
@@ -281,7 +287,12 @@ class HiveServerThread(qtcore.QThread):
 		print_debug("server thread has finished")
 
 	def run(self):
-		self.exec_()
+		if os.name=="posix":
+			# under linux Qt sockets aren't working correctly for me
+			self.server=BeeTCPServer(BeeSocketTypes.python,8333,self,self.master)
+			self.server.start()
+		else:
+			self.exec_()
 
 	# signal for the server getting a new connection
 #	def newConnection(self):

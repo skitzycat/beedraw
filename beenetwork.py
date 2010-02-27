@@ -35,18 +35,26 @@ from beeutil import *
  
 class PyServerEventHandler(SocketServer.BaseRequestHandler):
 	def __init__(self,request,client_address,server,master,parentthread,id):
+		print "EVENT HANDLER created"
 		self.master=master
 		self.parentthread=parentthread
 		self.clientid=id
+		self.server=server
 		SocketServer.BaseRequestHandler.__init__(self,request,client_address,server)
+
 	def handle(self):
-		newsock=BeeSocket(BeeSocketTypes.python,self.request)
+		newsock=BeeSocket(BeeSocketTypes.python,self.request,True)
 		# start the listener, that will authenticate client and finish setup
-		newlistener=HiveClientListener(self.parentthread,newsock,self.master,self.clientid)
+
+		curthread=qtcore.QThread.currentThread()
+		threadparent=curthread.parent()
+
+		newlistener=HiveClientListener(self.server,newsock,self.master,self.clientid)
 		newlistener.start()
 
-class customPyServer(SocketServer.TCPServer):
+class customPyServer(SocketServer.TCPServer,qtcore.QObject):
 	def __init__(self,hostport,master,parentthread):
+		qtcore.QObject.__init__(self)
 		SocketServer.TCPServer.__init__(self,hostport,PyServerEventHandler)
 		self.master=master
 		self.parentthread=parentthread
@@ -61,10 +69,15 @@ class customPyServer(SocketServer.TCPServer):
 	def finish_request(self,request,client_address):
 		PyServerEventHandler(request,client_address,self,self.master,self.parentthread,self.getNextId())
 
+	# dont' close the request after we're done in here
+	def close_request(self,request):
+		pass
+
 class BeeTCPServer(qtcore.QObject):
 	""" Socket interface to allow changing between different tcp server implementations to see if Qt sockets or standard python sockets are better on each platform."""
 	def __init__(self,type,port,parentthread,master):
-		qtcore.QObject.__init__(self,parentthread)
+		if type==BeeSocketTypes.qt:
+			qtcore.QObject.__init__(self,parentthread)
 		self.type=type
 		self.parentthread=parentthread
 		self.master=master
@@ -124,11 +137,11 @@ class BeeTCPServer(qtcore.QObject):
 
 class BeeSocket:
 	""" Socket interface to allow changing between different socket implementations to see if Qt socket or standard python sockets are better.  Also helps provide blocking interface to Qt sockets which are normally non-blocking. """
-	def __init__(self,type,socket):
+	def __init__(self,type,socket,connected=False):
 		self.type=type
 		self.socket=socket
 		self.errorStr=""
-		self.connected=False
+		self.connected=connected
 
 		# set blocking to never time out
 		if self.type==BeeSocketTypes.python:
@@ -144,12 +157,15 @@ class BeeSocket:
 	def errorString(self):
 		if self.type==BeeSocketTypes.qt:
 			return self.socket.errorString()
-		return ""
+		elif self.type==BeeSocketTypes.python:
+			return self.errorStr
 
 	def disconnect(self):
 		if self.type==BeeSocketTypes.qt:
 			self.socket.disconnectFromHost()
 			self.socket.waitForDisconnected(1000)
+		elif self.type==BeeSocketTypes.python:
+			self.socket.close()
 
 	def abort(self):
 		if self.type==BeeSocketTypes.qt:
@@ -164,7 +180,9 @@ class BeeSocket:
 				self.socket.connect((host,port))
 				self.connected=True
 			except:
-				print "error connecting"
+				self.errorStr="error connecting"
+				print "error while connecting"
+				print "set connected to:", self.connected
 				self.connected=False
 			return self.connected
 
@@ -180,7 +198,14 @@ class BeeSocket:
 		elif self.type==BeeSocketTypes.python:
 			try:
 				retstring=self.socket.recv(size)
+
+			except socket.error, errmsg:
+				print "exception while trying to read data:", errmsg
+				self.connected=False
+				
 			except:
+				print "unknown error while trying to read data"
+				self.connected=False
 				retstring=""
 
 		return retstring
@@ -210,8 +235,12 @@ class BeeSocket:
 				self.socket.sendall(data)
 			#	self.socket.sendall(data,socket.MSG_WAITALL)
 			#print "bytes sent by socket:", bytessent
+			except socket.error, errmsg:
+				print "exception while trying to send data:", errmsg
+				self.connected=False
+				
 			except:
-				print "exception while trying to send data"
+				print "unknown exception while trying to send data"
 				self.connected=False
 
 # thread to setup connection, authenticate and then
@@ -300,7 +329,7 @@ class HiveClientListener(qtcore.QThread):
 			# if authentication fails send close socket and exit
 			print_debug("authentication failed")
 			self.socket.write(qtcore.QByteArray("Authtication failed\n%s\n" % self.authenticationerror))
-			self.socket.disconnectt()
+			self.socket.disconnect()
 			return
 
 		print_debug("authentication succeded")
@@ -344,6 +373,7 @@ class HiveClientListener(qtcore.QThread):
 				break
 
 			if not self.socket.isConnected():
+				print "found that socket isn't connected"
 				break
 
 			data=self.socket.read(1024)

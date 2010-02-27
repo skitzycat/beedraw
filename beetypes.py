@@ -22,6 +22,7 @@ class BeeCustomEventTypes:
 	refreshlayerslist = qtcore.QEvent.User
 	displaymessage = qtcore.QEvent.User+1
 	hiveserverstatus = qtcore.QEvent.User+2
+	starthiveserver = qtcore.QEvent.User+3
 
 class HiveServerStatusEvent(qtcore.QEvent):
 	def __init__(self,status,errorstring=None):
