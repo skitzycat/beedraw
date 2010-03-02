@@ -388,6 +388,8 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		if layer:
 			self.scene.removeItem(layer)
 			self.scene.update()
+			self.setValidActiveLayer(True,True)
+
 		return layer,index
 
 	def insertLayer(self,key,index,type=LayerTypes.user,image=None,opacity=None,visible=None,compmode=None,owner=0,history=0):
@@ -409,6 +411,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 
 		self.scene.addItem(layer)
 
+		self.setValidActiveLayer(None,True)
 		self.requestLayerListRefresh()
 		self.reCompositeImage()
 
@@ -447,7 +450,6 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 			self.master.takeFocus(self)
 
 		elif event.type()==BeeCustomEventTypes.displaymessage:
-			print "got request to display message"
 			self.displayMessage(event.boxtype,event.title,event.message)
 
 		# once the window has received a deferred delete it needs to have all it's references removed so memory can be freed up
@@ -624,7 +626,31 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		if event.type()==qtcore.QEvent.TabletRelease:
 			self.view.cursorReleaseEvent(event.x(),event.y(),event.modifiers())
 
-	def setActiveLayer(self,newkey):
+	def setValidActiveLayer(self,curlayerkeylock=None,listlock=None):
+		needchange=False
+		if not curlayerkeylock:
+			curlayerkeylock=qtcore.QMutexLocker(self.curlayerkeymutex)
+		curlayer=self.getLayerForKey(self.curlayerkey)
+		if not curlayer:
+			needchange=True
+		elif self.type==WindowTypes.networkclient:
+			if not self.ownedByMe(curlayer.getOwner()):
+				needchange=True
+
+		if needchange:
+			if not listlock:
+				listlock=qtcore.QReadLocker(self.layerslistlock)
+			for layer in self.layers:
+				if self.ownedByMe(layer.getOwner()):
+					self.setActiveLayer(layer.key,curlayerkeylock)
+					return
+
+			self.setActiveLayer(None,curlayerkeylock)
+
+	def setActiveLayer(self,newkey,lock=None):
+		if not lock:
+			curlayerkeylock=qtcore.QMutexLocker(self.curlayerkeymutex)
+
 		oldkey=self.curlayerkey
 		self.curlayerkey=newkey
 		self.master.updateLayerHighlight(newkey)

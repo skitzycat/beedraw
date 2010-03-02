@@ -179,6 +179,7 @@ class BlendTranslations:
 			if BlendTranslations.map[key]==i:
 				return BlendTranslations.map[key]
 
+		print "warning, couldn't translate int to mode string:", i
 		return None
 
 	intToMode=staticmethod(intToMode)

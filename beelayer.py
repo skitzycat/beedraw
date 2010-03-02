@@ -97,6 +97,12 @@ class BeeLayerState:
 		if self.configwidget:
 			self.configwidget.updateValuesFromLayer()
 
+	def getOwner(self,lock=None):
+		if not lock:
+			lock=qtcore.QReadLocker(self.propertieslock)
+
+		return self.owner
+
 	# change the ownership of a layer and remove all undo/redo history for that layer
 	def changeOwner(self,owner):
 		win=self.getWindow()
@@ -120,6 +126,8 @@ class BeeLayerState:
 
 		if self.configwidget:
 			self.configwidget.updateValuesFromLayer()
+
+		win.setValidActiveLayer()
 
 	# composite image onto layer from center coord
 	def compositeFromCenter(self,image,x,y,compmode,clippath=None):
@@ -499,9 +507,13 @@ class LayerConfigWidget(qtgui.QWidget):
 
 	def mousePressEvent(self,event):
 		layer=BeeApp().master.getLayerById(self.windowid,self.layerkey)
+		win=BeeApp().master.getWindowById(self.windowid)
 		if layer:
-			window=layer.getWindow()
-			window.setActiveLayer(layer.key)
+			if win.type==WindowTypes.networkclient:
+				if win.ownedByMe(layer.owner):
+					win.setActiveLayer(layer.key)
+			else:
+				win.setActiveLayer(layer.key)
 
 class BeeLayersWindow(qtgui.QMainWindow):
 	def __init__(self,master):

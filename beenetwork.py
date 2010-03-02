@@ -35,7 +35,6 @@ from beeutil import *
  
 class PyServerEventHandler(SocketServer.BaseRequestHandler):
 	def __init__(self,request,client_address,server,master,parentthread,id):
-		print "EVENT HANDLER created"
 		self.master=master
 		self.parentthread=parentthread
 		self.clientid=id
@@ -108,7 +107,7 @@ class BeeTCPServer(qtcore.QObject):
 				self.server=None
 				event=HiveServerStatusEvent(HiveServerStatusTypes.starterror)
 				BeeApp().app.postEvent(self.master,event)
-				print "WARNING: failed to create server"
+				print_debug("WARNING: failed to create server")
 
 			if self.server:
 				event=HiveServerStatusEvent(HiveServerStatusTypes.running)
@@ -179,11 +178,13 @@ class BeeSocket:
 			try:
 				self.socket.connect((host,port))
 				self.connected=True
-			except:
-				self.errorStr="error connecting"
-				print "error while connecting"
-				print "set connected to:", self.connected
+			except socket.error, errmsg:
+				print_debug("error while connecting: %s" % errmsg)
 				self.connected=False
+			except:
+				self.errorStr="unknown connection error"
+				self.connected=False
+
 			return self.connected
 
 	def read(self,size):
@@ -233,8 +234,7 @@ class BeeSocket:
 		elif self.type==BeeSocketTypes.python:
 			try:
 				self.socket.sendall(data)
-			#	self.socket.sendall(data,socket.MSG_WAITALL)
-			#print "bytes sent by socket:", bytessent
+
 			except socket.error, errmsg:
 				print "exception while trying to send data:", errmsg
 				self.connected=False
@@ -373,7 +373,7 @@ class HiveClientListener(qtcore.QThread):
 				break
 
 			if not self.socket.isConnected():
-				print "found that socket isn't connected"
+				print_debug("found that socket isn't connected")
 				break
 
 			data=self.socket.read(1024)
@@ -407,9 +407,6 @@ class HiveClientWriter(qtcore.QThread):
 		#print "attempting to connect signal"
 		#self.connect(self.queue,qtcore.SIGNAL("datainqueue()"),self,qtcore.SIGNAL("datainqueue()"))
 		#print "attempted to connect signal"
-
-	def datainqueue(self):
-		print "data in queue ready to be read"
 
 	def run(self):
 		while 1:

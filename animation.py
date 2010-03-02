@@ -146,9 +146,9 @@ class XmlToQueueEventsConverter:
 
 		elif name == 'layermode':
 			time.sleep(self.stepdelay)
-			(index,ok)=attrs.value('index').toString().toInt()
-			mode=BlendTranslations.intToMode(attrs.value('mode').toString().toInt())
-			self.window.addBlendModeChangeToQueue(self.translateKey(index),mode,type)
+			(key,ok)=attrs.value('key').toString().toInt()
+			mode=BlendTranslations.nameToMode(attrs.value('mode').toString())
+			self.window.addBlendModeChangeToQueue(self.translateKey(key),mode,type)
 
 		elif name == 'undo':
 			(owner,ok)=attrs.value('owner').toString().toInt()
@@ -278,7 +278,7 @@ class XmlToQueueEventsConverter:
 	def processEndElement(self):
 		name=self.xml.name()
 		if name == 'toolevent':
-			print_debug("Adding end tool event to queue on layer %d" % self.curlayer)
+			#print_debug("Adding end tool event to queue on layer %d" % self.curlayer)
 			self.window.addPenUpToQueue(self.lastx,self.lasty,self.curlayer,type)
 			self.curtool=None
 
@@ -289,7 +289,7 @@ class XmlToQueueEventsConverter:
 
 	def processCharacterData(self):
 		if self.imagestarted:
-			print_debug("processing image data")
+			#print_debug("processing image data")
 			self.imagestarted=False
 			rawstring=self.xml.text().toString()
 			data=qtcore.QByteArray()
@@ -354,7 +354,7 @@ class NetworkListenerThread (qtcore.QThread):
 
 		# enter read loop, read till socket closes
 		while 1:
-			print_debug("Ready to read from server")
+			#print_debug("Ready to read from server")
 			data=self.socket.read(1024)
 
 			if not data:
@@ -403,9 +403,9 @@ class NetworkWriterThread (qtcore.QThread):
 			if not self.socket.isConnected():
 				break
 
-			print_debug("attempting to get item from queue")
+			#print_debug("attempting to get item from queue")
 			command=self.queue.get()
-			print_debug("Network Writer Thread got command from queue: %s" % str(command))
+			#print_debug("Network Writer Thread got command from queue: %s" % str(command))
 			if command[0]==DrawingCommandTypes.quit:
 				return
 

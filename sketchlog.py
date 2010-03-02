@@ -168,18 +168,23 @@ class SketchLogWriter:
 		# end addlayer event
 		self.log.writeEndElement()
 
-	def logLayerSub(self, index):
+	def logLayerSub(self, key):
 		# start sublayer event
 		self.log.writeStartElement('sublayer')
-		self.log.writeAttribute('index',str(index))
+		self.log.writeAttribute('index',str(key))
 
 		# end sublayer event
 		self.log.writeEndElement()
 
-	def logLayerModeChange(self, index, mode):
+	def logLayerModeChange(self, key, mode):
+		modestr=str(BlendTranslations.modeToName(mode))
+		if not modestr:
+			print_debug("can't log mode change")
+			return
+
 		self.log.writeStartElement('layermode')
-		self.log.writeAttribute('index',str(index))
-		self.log.writeAttribute('mode',str(mode))
+		self.log.writeAttribute('key',str(key))
+		self.log.writeAttribute('mode',modestr)
 
 		# end sublayer event
 		self.log.writeEndElement()

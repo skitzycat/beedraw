@@ -165,7 +165,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		for win in self.drawingwindows:
 			if win.id==id:
 				return win
-		print "WARNING: Couldn't find window with ID:", id
+		print_debug("WARNING: Couldn't find window with ID: %d" % id)
 		return None
 
 	def getLayerById(self,win_id,layer_id):
@@ -173,7 +173,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		if win:
 			return win.getLayerForKey(layer_id)
 		else:
-			print "WARNING: can't find layer with id:", layer_id, "in window:", win_id
+			print_debug("WARNING: can't find layer with id: %d in window: %d" % (layer_id,win_id))
 		return None
 
 	def removeWindow(self,window):
@@ -561,7 +561,8 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 	def updateLayerHighlight(self,key):
 		if self.layerswindow:
-			self.layerswindow.refreshLayerHighlight(key)
+			if key:
+				self.layerswindow.refreshLayerHighlight(key)
 
 	# refresh thumbnail of layer with inidcated key
 	def refreshLayerThumb(self,windowid,key=None):
@@ -573,14 +574,12 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		if event.type()==BeeCustomEventTypes.refreshlayerslist:
 			self.refreshLayersList()
 		elif event.type()==BeeCustomEventTypes.displaymessage:
-			print "attempting to display message"
 			self.displayMessage(event.boxtype,event.title,event.message)
 
 	def displayMessage(self,boxtype,title,message):
-		print "displaying message with box type:", boxtype
 		if boxtype==BeeDisplayMessageTypes.warning:
 			qtgui.QMessageBox.warning(self,title,message)
 		elif boxtype==BeeDisplayMessageTypes.error:
 			qtgui.QMessageBox.error(self,title,message)
 		else:
-			print "unknown box type"
+			print "ERROR unknown box type in displayMessage"
