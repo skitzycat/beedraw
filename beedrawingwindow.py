@@ -49,7 +49,8 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 	"""
 	def __init__(self,master,width=600,height=400,startlayer=True,type=WindowTypes.singleuser,maxundo=20):
 		BeeSessionState.__init__(self,master,width,height,type)
-		qtgui.QMainWindow.__init__(self,master)
+		#qtgui.QMainWindow.__init__(self,master)
+		qtgui.QMainWindow.__init__(self)
 
 		self.localcommandstack=CommandStack(self.id,maxundo)
 
