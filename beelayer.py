@@ -30,6 +30,7 @@ from LayerWidgetUi import Ui_LayerConfigWidget
 from LayersWindowUi import Ui_LayersWindow
 
 from beeapp import BeeApp
+from beeeventstack import *
 
 class BeeLayerState:
 	def __init__(self,windowid,type,key,image=None,opacity=None,visible=None,compmode=None,owner=0):
@@ -188,8 +189,9 @@ class BeeLayerState:
 		return self.image.pixel(x,y)
 
 	# return copy of image
-	def getImageCopy(self):
-		lock=qtcore.QReadLocker(self.imagelock)
+	def getImageCopy(self,lock=None):
+		if not lock:
+			lock=qtcore.QReadLocker(self.imagelock)
 		retimage=self.image.copy()
 		return retimage
 
@@ -274,9 +276,40 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
 		self.prepareGeometryChange()
 
 	def cut(self,path):
-		pathrect=path.boundingRect()
-		image=qtgui.QImage(pathrect.width(),pathrect.height(),qtgui.QImage.Format_ARGB32_Premultiplied)
-		image.fill(0)
+		pathrectf=path.boundingRect()
+		pathrect=pathrectf.toAlignedRect()
+		
+		oldareaimage=self.image.copy(pathrect)
+		imagelock=qtcore.QWriteLocker(self.imagelock)
+		tmpimage=qtgui.QImage(self.image.width(),self.image.height(),qtgui.QImage.Format_ARGB32_Premultiplied)
+		tmpimage.fill(0)
+
+		# copy onto new image
+		painter=qtgui.QPainter()
+		painter.begin(tmpimage)
+		painter.setClipPath(path)
+		painter.drawImage(self.image.rect(),self.image)
+		painter.end()
+
+		# clip image down to minimum size
+		tmpimage=tmpimage.copy(pathrect)
+
+		# erase from image
+		painter=qtgui.QPainter()
+		painter.begin(self.image)
+		painter.setClipPath(path)
+		painter.setCompositionMode(qtgui.QPainter.CompositionMode_Clear)
+		painter.drawImage(self.image.rect(),self.image)
+		painter.end()
+
+		imagelock.unlock()
+
+		self.update(pathrectf)
+		BeeApp().master.refreshLayerThumb(self.windowid,self.key)
+
+		command=DrawingCommand(self.key,oldareaimage,pathrect)
+		win=BeeApp().master.getWindowById(self.windowid)
+		win.addCommandToHistory(command,self.owner)
 
 	def paint(self,painter,options,widget=None):
 		drawrect=options.exposedRect

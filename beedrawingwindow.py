@@ -563,7 +563,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		# don't do anything if there is no current layer
 		if layerkey:
 			path=self.getClipPathCopy()
-			self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.cut,layerkey),ThreadTypes.user)
+			self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.cut,layerkey,self.getClipPathCopy()),ThreadTypes.user)
 
 	# create backdrop for bottom of all layers, eventually I'd like this to be configurable, but for now it just fills in all white
 	def recreateBackdrop(self):

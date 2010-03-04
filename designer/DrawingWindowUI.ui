@@ -261,7 +261,7 @@
   </action>
   <action name="action_Edit_Cut" >
    <property name="enabled" >
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="text" >
     <string>Cut</string>
@@ -269,7 +269,7 @@
   </action>
   <action name="action_Edit_Copy" >
    <property name="enabled" >
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="text" >
     <string>Copy</string>
@@ -277,7 +277,7 @@
   </action>
   <action name="action_Edit_Paste" >
    <property name="enabled" >
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="text" >
     <string>Paste</string>
