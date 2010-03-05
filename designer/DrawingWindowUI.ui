@@ -242,6 +242,9 @@
    <property name="text" >
     <string>Select None</string>
    </property>
+   <property name="shortcut" >
+    <string>Ctrl+D</string>
+   </property>
   </action>
   <action name="action_Network_Disconnect" >
    <property name="enabled" >
