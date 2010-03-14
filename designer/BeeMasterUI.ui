@@ -167,7 +167,7 @@
     <property name="title" >
      <string>File</string>
     </property>
-    <addaction name="actionFileMenuNew" />
+    <addaction name="action_File_New" />
     <addaction name="action_File_Open" />
     <addaction name="action_File_Play" />
     <addaction name="action_File_Connect" />
@@ -249,7 +249,7 @@
     <string>Ctrl+Q</string>
    </property>
   </action>
-  <action name="actionFileMenuNew" >
+  <action name="action_File_New" >
    <property name="text" >
     <string>New</string>
    </property>

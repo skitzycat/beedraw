@@ -54,6 +54,9 @@
     <property name="title" >
      <string>File</string>
     </property>
+    <addaction name="action_File_New" />
+    <addaction name="action_File_Open" />
+    <addaction name="separator" />
     <addaction name="action_File_Save" />
     <addaction name="action_File_Save_As" />
     <addaction name="action_File_Log" />
@@ -289,6 +292,22 @@
   <action name="action_Network_Resync" >
    <property name="text" >
     <string>Resync</string>
+   </property>
+  </action>
+  <action name="action_File_New" >
+   <property name="text" >
+    <string>New</string>
+   </property>
+   <property name="shortcut" >
+    <string>Ctrl+N</string>
+   </property>
+  </action>
+  <action name="action_File_Open" >
+   <property name="text" >
+    <string>Open</string>
+   </property>
+   <property name="shortcut" >
+    <string>Ctrl+O</string>
    </property>
   </action>
  </widget>

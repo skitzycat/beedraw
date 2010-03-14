@@ -112,7 +112,19 @@ class DrawingThread(qtcore.QThread):
 
 		elif subtype==LayerCommandTypes.cut:
 			selection=command[3]
-			layer.cut(selection)
+
+			rect=selection.boundingRect().toAlignedRect()
+
+			imagelock=qtcore.QWriteLocker(layer.imagelock)
+			layer.cut(selection,imagelock=imagelock)
+			newimage=layer.getImageCopy(lock=imagelock,subregion=rect)
+
+			rawcommand=(DrawingCommandTypes.layer,LayerCommandTypes.rawevent,layerkey,rect.x(),rect.y(),newimage,None,qtgui.QPainter.CompositionMode_Source)
+			window.logCommand(rawcommand,self.type)
+
+		elif subtype==LayerCommandTypes.copy:
+			selection=command[3]
+			layer.copy(selection)
 
 		elif subtype==LayerCommandTypes.pendown:
 			x=command[3]

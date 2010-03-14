@@ -189,10 +189,10 @@ class BeeLayerState:
 		return self.image.pixel(x,y)
 
 	# return copy of image
-	def getImageCopy(self,lock=None):
+	def getImageCopy(self,lock=None,subregion=qtcore.QRect()):
 		if not lock:
 			lock=qtcore.QReadLocker(self.imagelock)
-		retimage=self.image.copy()
+		retimage=self.image.copy(subregion)
 		return retimage
 
 	#def cutImage(self):
@@ -252,8 +252,55 @@ class BeeLayerState:
 		self.image=newimage
 		self.prepareGeometryChange()
 
-	# shift image by specified x and y
-	#def shiftImage(self,x,y):
+	def copy(self,path,imagelock=None):
+		pathrectf=path.boundingRect()
+		pathrect=pathrectf.toAlignedRect()
+
+		if not imagelock:
+			imagelock=qtcore.QWriteLocker(self.imagelock)
+
+		tmpimage=qtgui.QImage(self.image.width(),self.image.height(),qtgui.QImage.Format_ARGB32_Premultiplied)
+		tmpimage.fill(0)
+
+		# copy onto new image
+		painter=qtgui.QPainter()
+		painter.begin(tmpimage)
+		painter.setClipPath(path)
+		painter.drawImage(self.image.rect(),self.image)
+		painter.end()
+
+		# clip image down to minimum size
+		tmpimage=tmpimage.copy(pathrect)
+
+		BeeApp().master.setClipBoardImage(tmpimage)
+
+	def cut(self,path,imagelock=None):
+		pathrectf=path.boundingRect()
+		pathrect=pathrectf.toAlignedRect()
+
+		if not imagelock:
+			imagelock=qtcore.QWriteLocker(self.imagelock)
+
+		oldareaimage=self.getImageCopy(imagelock,pathrect)
+
+		self.copy(path,imagelock)
+
+		# erase from image
+		painter=qtgui.QPainter()
+		painter.begin(self.image)
+		painter.setClipPath(path)
+		painter.setCompositionMode(qtgui.QPainter.CompositionMode_Clear)
+		painter.drawImage(self.image.rect(),self.image)
+		painter.end()
+
+		imagelock.unlock()
+
+		self.update(pathrectf)
+		BeeApp().master.refreshLayerThumb(self.windowid,self.key)
+
+		command=DrawingCommand(self.key,oldareaimage,pathrect)
+		win=BeeApp().master.getWindowById(self.windowid)
+		win.addCommandToHistory(command,self.owner)
 
 class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
 	def __init__(self,windowid,type,key,image=None,opacity=None,visible=None,compmode=None,owner=0):
@@ -274,42 +321,6 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
 	def scale(self,newwidth,newheight):
 		BeeLayerState.scale(self,newwidth,newheight)
 		self.prepareGeometryChange()
-
-	def cut(self,path):
-		pathrectf=path.boundingRect()
-		pathrect=pathrectf.toAlignedRect()
-		
-		oldareaimage=self.image.copy(pathrect)
-		imagelock=qtcore.QWriteLocker(self.imagelock)
-		tmpimage=qtgui.QImage(self.image.width(),self.image.height(),qtgui.QImage.Format_ARGB32_Premultiplied)
-		tmpimage.fill(0)
-
-		# copy onto new image
-		painter=qtgui.QPainter()
-		painter.begin(tmpimage)
-		painter.setClipPath(path)
-		painter.drawImage(self.image.rect(),self.image)
-		painter.end()
-
-		# clip image down to minimum size
-		tmpimage=tmpimage.copy(pathrect)
-
-		# erase from image
-		painter=qtgui.QPainter()
-		painter.begin(self.image)
-		painter.setClipPath(path)
-		painter.setCompositionMode(qtgui.QPainter.CompositionMode_Clear)
-		painter.drawImage(self.image.rect(),self.image)
-		painter.end()
-
-		imagelock.unlock()
-
-		self.update(pathrectf)
-		BeeApp().master.refreshLayerThumb(self.windowid,self.key)
-
-		command=DrawingCommand(self.key,oldareaimage,pathrect)
-		win=BeeApp().master.getWindowById(self.windowid)
-		win.addCommandToHistory(command,self.owner)
 
 	def paint(self,painter,options,widget=None):
 		drawrect=options.exposedRect
@@ -382,13 +393,21 @@ class SelectedAreaDisplay(qtgui.QGraphicsItem):
 		painter.setPen(pen)
 		painter.drawPath(self.path)
 
-class FloatingSelection(BeeGuiLayer):
+class FloatingSelection(qtgui.QGraphicsItem):
 	def __init__(self,image,parentlayer):
-		self.key=BeeApp().master.getNextLayerKey()
+		qtgui.QGraphicsItem.__init__(self,parentlayer)
 		self.image=image
+		self.setFlag(qtgui.QGraphicsItem.ItemIsMovable)
+
+	def paint(self,painter,options,widget=None):
+		drawrect=options.exposedRect
+		self.scene().tmppainter.setCompositionMode(self.compmode)
+		self.scene().tmppainter.setOpacity(painter.opacity())
+		self.scene().tmppainter.drawImage(drawrect,self.image,drawrect)
 
 	# paste the selection on it's layer
 	#def anchor(self,layer):
+		
 
 # widget that we can use to set the options of each layer
 class LayerConfigWidget(qtgui.QWidget):
@@ -631,8 +650,6 @@ class BeeLayersWindow(qtgui.QMainWindow):
 			frame.setGeometry(qtcore.QRect(0,0,newwidget.width,newwidget.height*vbox.count()))
 		else:
 			frame.setGeometry(qtcore.QRect(0,0,0,0))
-
-		return
 
 	# set proper highlight for layer with passed key
 	def refreshLayerHighlight(self,key):

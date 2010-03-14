@@ -453,7 +453,7 @@ class BeeSessionState:
 			if tool.changedarea:
 				imlock=qtcore.QReadLocker(layer.imagelock)
 				stamp=layer.image.copy(tool.changedarea)
-				command=(DrawingCommandTypes.layer,LayerCommandTypes.rawevent,tool.layerkey,tool.changedarea.x(),tool.changedarea.y(),stamp,None)
+				command=(DrawingCommandTypes.layer,LayerCommandTypes.rawevent,tool.layerkey,tool.changedarea.x(),tool.changedarea.y(),stamp,None,qtgui.QPainter.CompositionMode_Source)
 			else:
 				print_debug("Warning: could not log tool as raw event, proper tool variables not set")
 				return

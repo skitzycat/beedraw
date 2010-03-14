@@ -494,6 +494,10 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		if accept:
 			self.addCutToQueue()
 
+	def on_action_Edit_Copy_triggered(self,accept=True):
+		if accept:
+			self.addCopyToQueue()
+
 	def on_action_Edit_Undo_triggered(self,accept=True):
 		if accept:
 			self.addUndoToQueue()
@@ -558,7 +562,15 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 				self.addAdjustCanvasSizeRequestToQueue(leftadj,topadj,rightadj,bottomadj)
 
 	def addCutToQueue(self):
-		# It is only possible for this to originate from a local source so it's defined here instead of in the base state class.
+		# It is only possible for this to happen from a local source so it's defined here instead of in the base state class.
+		layerkey=self.getCurLayerKey()
+		# don't do anything if there is no current layer
+		if layerkey:
+			path=self.getClipPathCopy()
+			self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.copy,layerkey,self.getClipPathCopy()),ThreadTypes.user)
+
+	def addCutToQueue(self):
+		# It is only possible for this to happen from a local source so it's defined here instead of in the base state class.
 		layerkey=self.getCurLayerKey()
 		# don't do anything if there is no current layer
 		if layerkey:
@@ -582,7 +594,18 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		else:
 			self.endLog()
 
-	# start a log file
+	def on_action_File_New_triggered(self,accept=True):
+		if not accept:
+			return
+
+		self.master.on_action_File_New_triggered()
+
+	def on_action_File_Open_triggered(self,accept=True):
+		if not accept:
+			return
+
+		self.master.on_action_File_Open_triggered()
+
 	def on_action_File_Save_triggered(self,accept=True):
 		if not accept:
 			return

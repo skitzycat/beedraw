@@ -118,13 +118,13 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 	def setClipBoardImage(self,image):
 		lock=qtcore.QWriteLocker(self.clipboardlock)
-		self.clipboardimage=image.copy()
+		self.clipboardimage=image
 
 	def getClipBoardImage(self,image):
 		lock=qtcore.QReadLocker(self.clipboardlock)
 		return self.clipboardimage.copy()
 
-	# I don't think these currently need to have mutexes, but if they ever do it can be done here
+	# I don't think these currently need to have mutexes since they are only manipulated in the gui thread, but if they ever do it can be done here
 	def setFGColor(self,color):
 		self.fgcolor=color
 		self.palettewindow.ui.FGSwatch.updateColor(color)
@@ -154,7 +154,12 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			else:
 				self.curwindow=None
 
-			self.refreshLayersList()
+			#self.refreshLayersList()
+			self.requestLayerListRefresh()
+
+	def requestLayerListRefresh(self):
+		event=qtcore.QEvent(BeeCustomEventTypes.refreshlayerslist)
+		BeeApp().app.postEvent(self,event)
 
 	def getNextWindowId(self):
 		self.nextwindowid+=1
@@ -318,7 +323,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 			self.refreshLayersList()
 
-	def on_actionFileMenuNew_triggered(self,accept=True):
+	def on_action_File_New_triggered(self,accept=True):
 		if not accept:
 			return
 		dialog=qtgui.QDialog(self)
