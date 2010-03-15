@@ -66,7 +66,10 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		self.ui.setupUi(self)
 		self.show()
 
-		# list to hold drawing windows created
+		# set height to always be the minimum possible
+		self.setMaximumHeight(0)
+
+		# list to hold drawing windows and lock for it
 		self.drawingwindows=[]
 		self.drawingwindowslock=qtcore.QReadWriteLock()
 
