@@ -123,9 +123,11 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		lock=qtcore.QWriteLocker(self.clipboardlock)
 		self.clipboardimage=image
 
-	def getClipBoardImage(self,image):
+	def getClipBoardImage(self):
 		lock=qtcore.QReadLocker(self.clipboardlock)
-		return self.clipboardimage.copy()
+		if self.clipboardimage:
+			return self.clipboardimage.copy()
+		return None
 
 	# I don't think these currently need to have mutexes since they are only manipulated in the gui thread, but if they ever do it can be done here
 	def setFGColor(self,color):
@@ -243,6 +245,10 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 	def on_eye_dropper_button_clicked(self,accept=False):
 		if accept:
 			self.changeCurToolByName("eyedropper")
+
+	def on_move_selection_button_clicked(self,accept=False):
+		if accept:
+			self.changeCurToolByName("move selection")
 
 	def on_rectangle_select_button_clicked(self,accept=False):
 		if accept:

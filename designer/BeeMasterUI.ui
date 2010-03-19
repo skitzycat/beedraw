@@ -111,19 +111,6 @@
         </property>
        </widget>
       </item>
-      <item row="2" column="0" >
-       <widget class="QPushButton" name="eraser_button" >
-        <property name="text" >
-         <string>Eraser</string>
-        </property>
-        <property name="checkable" >
-         <bool>true</bool>
-        </property>
-        <property name="autoExclusive" >
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
       <item row="2" column="1" >
        <widget class="QPushButton" name="rectangle_select_button" >
         <property name="text" >
@@ -141,6 +128,32 @@
        <widget class="QPushButton" name="feather_select_button" >
         <property name="text" >
          <string>Feather Select</string>
+        </property>
+        <property name="checkable" >
+         <bool>true</bool>
+        </property>
+        <property name="autoExclusive" >
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0" >
+       <widget class="QPushButton" name="eraser_button" >
+        <property name="text" >
+         <string>Eraser</string>
+        </property>
+        <property name="checkable" >
+         <bool>true</bool>
+        </property>
+        <property name="autoExclusive" >
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0" >
+       <widget class="QPushButton" name="move_selection_button" >
+        <property name="text" >
+         <string>Move Selection</string>
         </property>
         <property name="checkable" >
          <bool>true</bool>

@@ -237,23 +237,42 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		for select in self.selection:
 			self.clippath.addPath(select)
 
-	def penDown(self,x,y,pressure,modkeys,layerkey=None,tool=None,source=ThreadTypes.user):
+	def penDown(self,x,y,pressure,modkeys,tool=None,source=ThreadTypes.user):
 		if not tool:
 			tool=self.master.getCurToolInst(self)
 			self.curtool=tool
 
 		self.curtool.guiLevelPenDown(x,y,pressure,modkeys)
-		self.addPenDownToQueue(x,y,pressure,layerkey,tool,source,modkeys=modkeys)
 
-	def penMotion(self,x,y,pressure,modkeys,layerkey=None,source=ThreadTypes.user):
+		if not self.curtool.layerkey:
+			return
+
+		layer=self.getLayerForKey(self.curtool.layerkey)
+		if not layer:
+			return
+
+		if layer.type==LayerTypes.user:
+			self.addPenDownToQueue(x,y,pressure,tool.layerkey,tool,source,modkeys=modkeys)
+
+	def penMotion(self,x,y,pressure,modkeys,source=ThreadTypes.user):
 		if self.curtool:
 			self.curtool.guiLevelPenMotion(x,y,pressure,modkeys)
-			self.addPenMotionToQueue(x,y,pressure,layerkey,source,modkeys=modkeys)
 
-	def penUp(self,x,y,modkeys,layerkey=None,source=ThreadTypes.user):
+			layer=self.getLayerForKey(self.curtool.layerkey)
+			if not layer:
+				return
+
+			if layer.type==LayerTypes.user:
+				self.addPenMotionToQueue(x,y,pressure,self.curtool.layerkey,source,modkeys=modkeys)
+
+	def penUp(self,x,y,modkeys,source=ThreadTypes.user):
 		if self.curtool:
 			self.curtool.guiLevelPenUp(x,y,modkeys)
-			self.addPenUpToQueue(x,y,layerkey,source,modkeys=modkeys)
+			layer=self.getLayerForKey(self.curtool.layerkey)
+			if layer:
+				if layer.type==LayerTypes.user:
+					self.addPenUpToQueue(x,y,self.curtool.layerkey,source,modkeys=modkeys)
+
 			self.curtool=None
 
 	def growSelection(self,size):
@@ -498,6 +517,10 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		if accept:
 			self.addCopyToQueue()
 
+	def on_action_Edit_Paste_triggered(self,accept=True):
+		if accept:
+			self.addPasteToQueue()
+
 	def on_action_Edit_Undo_triggered(self,accept=True):
 		if accept:
 			self.addUndoToQueue()
@@ -561,7 +584,14 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 				bottomadj=dialog.bottomadj
 				self.addAdjustCanvasSizeRequestToQueue(leftadj,topadj,rightadj,bottomadj)
 
-	def addCutToQueue(self):
+	def addPasteToQueue(self):
+		# It is only possible for this to happen from a local source so it's defined here instead of in the base state class.
+		layerkey=self.getCurLayerKey()
+		# don't do anything if there is no current layer
+		if layerkey:
+			self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.paste,layerkey),ThreadTypes.user)
+
+	def addCopyToQueue(self):
 		# It is only possible for this to happen from a local source so it's defined here instead of in the base state class.
 		layerkey=self.getCurLayerKey()
 		# don't do anything if there is no current layer
@@ -649,6 +679,22 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 	def tabletEvent(self,event):
 		if event.type()==qtcore.QEvent.TabletRelease:
 			self.view.cursorReleaseEvent(event.x(),event.y(),event.modifiers())
+
+	def getLayerForKey(self,key,lock=None):
+		if key==None:
+			return None
+
+		if not lock:
+			lock=qtcore.QReadLocker(self.layerslistlock)
+		for layer in self.layers:
+			if layer.key==key:
+				return layer
+			for child in layer.childItems():
+				if child.key==key:
+					return child
+
+		print_debug("WARNING: could not find layer for key %d" % key )
+		return None
 
 	def setValidActiveLayer(self,curlayerkeylock=None,listlock=None):
 		needchange=False

@@ -54,10 +54,7 @@ class BeeToolBox:
 		self.toolslist.append(EyeDropperToolDesc())
 		self.toolslist.append(FeatherSelectToolDesc())
 		self.toolslist.append(PaintBucketToolDesc())
- 
-	def toolNameGenerator(self):
-		for tool in self.toolslist:
-			yield tool.name
+		self.toolslist.append(MoveSelectionToolDesc())
  
 	def getCurToolDesc(self):
 		return self.toolslist[self.curtoolindex]
@@ -109,7 +106,7 @@ class AbstractToolDesc:
  
 	# setup needed parts of tool using knowledge of current window
 	# this should be implemented in subclass if needed
-	def setupTool(self,window,layerkey=None):
+	def setupTool(self,window,layerkey):
 		self.layerkey=layerkey
 		return self.getTool(window)
  
@@ -130,6 +127,7 @@ class AbstractTool:
 		self.options=options
 		self.window=window
 		self.layer=None
+		self.layerkey=None
 
 		self.prevpointshistory=[]
 		self.pointshistory=[]
@@ -192,7 +190,7 @@ class EyeDropperToolDesc(AbstractToolDesc):
 	def pressToolButton(self):
 		BeeApp().master.ui.eye_dropper_button.setChecked(True)
  
-	def setupTool(self,window,layerkey=None):
+	def setupTool(self,window,layerkey):
 		self.layerkey=layerkey
 		return self.getTool(window)
 
@@ -707,14 +705,11 @@ class PencilToolDesc(AbstractToolDesc):
 		tool.name=self.name
 		return tool
  
-	def setupTool(self,window,layerkey=None):
-		if layerkey==None:
-			layerkey=window.getCurLayerKey()
-
+	def setupTool(self,window,layerkey):
 		tool=self.getTool(window)
 		# copy the foreground color
 		tool.fgcolor=qtgui.QColor(window.master.fgcolor)
-		tool.layerkey=window.curlayerkey
+		tool.layerkey=layerkey
  
 		# if there is a selection get a copy of it
 		tool.clippath=window.getClipPathCopy()
@@ -781,7 +776,7 @@ class EraserToolDesc(AbstractToolDesc):
 		tool.name=self.name
 		return tool
  
-	def setupTool(self,window,layerkey=None):
+	def setupTool(self,window,layerkey):
 		self.layerkey=layerkey
 		tool=self.getTool(window)
 		tool.clippath=window.getClipPathCopy()
@@ -911,7 +906,7 @@ class RectSelectionToolDesc(AbstractToolDesc):
 		AbstractToolDesc.__init__(self,"rectselect")
 		self.displayname="Rectangle Selection"
 
-	def setupTool(self,window,layerkey=None):
+	def setupTool(self,window,layerkey):
 		self.layerkey=layerkey
 		tool=self.getTool(window)
 		return tool
@@ -942,7 +937,7 @@ class FeatherSelectToolDesc(AbstractToolDesc):
 		tool.name=self.name
 		return tool
  
-	def setupTool(self,window,layerkey=None):
+	def setupTool(self,window,layerkey):
 		self.layerkey=layerkey
 		if not layerkey:
 			layerkey=window.getCurLayerKey()
@@ -1018,7 +1013,7 @@ class PaintBucketToolDesc(AbstractToolDesc):
 		tool.name=self.name
 		return tool
  
-	def setupTool(self,window,layerkey=None):
+	def setupTool(self,window,layerkey):
 		if not layerkey:
 			layerkey=window.curlayerkey
 
@@ -1115,7 +1110,7 @@ class EllipseSelectionToolDesc(AbstractToolDesc):
 		AbstractToolDesc.__init__(self,"ellipse select")
 		self.displayname="Ellipse Selection"
 
-	def setupTool(self,window,layerkey=None):
+	def setupTool(self,window,layerkey):
 		self.layerkey=layerkey
 		tool=self.getTool(window)
 		return tool
@@ -1451,32 +1446,55 @@ class SketchTool(DrawingTool):
 	def getFullSizedBrushWidth(self):
 		return self.fullsizedbrush.size[0]
 
-class SelectionMoveToolDesc(AbstractToolDesc):
+class MoveSelectionToolDesc(AbstractToolDesc):
 	def __init__(self):
-		AbstractToolDesc.__init__(self,"selection move")
-		self.displayname="Eye Dropper"
+		AbstractToolDesc.__init__(self,"move selection")
+		self.displayname="Move Selection"
 
-	#def setDefaultOptions(self):
+	def pressToolButton(self):
+		BeeApp().master.ui.move_selection_button.setChecked(True)
 
 	def getTool(self,window):
-		tool=SelectionMoveTool(self.options,window)
+		tool=MoveSelectionTool(self.options,window)
 		tool.name=self.name
 		return tool
 
-	#def pressToolButton(self):
-		#BeeApp().master.ui.eye_dropper_button.setChecked(True)
- 
-	def setupTool(self,window,layerkey=None):
-		self.layerkey=layerkey
-		return self.getTool(window)
+	def setupTool(self,window,layerkey):
+		if not layerkey:
+			layerkey=window.getCurLayerKey()
+		tool=self.getTool(window)
+		tool.layerkey=layerkey
+		return tool
 
 # selection move tool
-class SelectionMoveTool(AbstractTool):
+class MoveSelectionTool(AbstractTool):
 	def __init__(self,options,window):
 		AbstractTool.__init__(self,options,window)
+		self.pendown=False
 
 	# figure out if pen is over selection or not, if it is over selection then do a move, if not do an anchor if current layer is a floating selection
 	# command does not change any layers or even go through the drawing thread until the cursor is let up, at that point it puts an event through the drawing thread that moves it all at once
-	#def guiLevelPenDown(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
-	#def guiLevelPenMotion(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
-	#def PenUp(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
+	def guiLevelPenDown(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
+		self.layer=self.window.getLayerForKey(self.layerkey)
+		if self.layer:
+			if self.layer.type==LayerTypes.floating:
+				self.pendown=True
+				self.lastx=x
+				self.lasty=y
+	def guiLevelPenMotion(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
+		if self.pendown:
+			oldrect=qtcore.QRectF(self.layer.boundingRect())
+			oldrect.moveTo(self.layer.pos())
+			oldrect.adjust(0,0,1,1)
+
+			self.layer.moveBy(x-self.lastx,y-self.lasty)
+			#self.layer.scene().update(oldrect)
+			# update whole scene because for some reason I can't figure out how to just update the needed areas
+			self.layer.scene().update()
+
+			self.lastx=x
+			self.lasty=y
+
+	def guiLevelPenUp(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
+		self.layer=None
+		self.pendown=False

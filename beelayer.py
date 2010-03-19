@@ -46,6 +46,8 @@ class BeeLayerState:
 		self.imagelock=qtcore.QReadWriteLock()
 		self.propertieslock=qtcore.QReadWriteLock()
 
+		self.configwidget=None
+
 		self.type=type
 
 		if image:
@@ -65,8 +67,6 @@ class BeeLayerState:
 		self.changeOpacity(opacity)
 		self.visible=visible
 		self.compmode=compmode
-
-		self.configwidget=None
 
 		# set default name for layer
 		self.changeName("Layer %d" % key)
@@ -173,16 +173,6 @@ class BeeLayerState:
 		lock.unlock()
 		win.reCompositeImage(dirtyregion.boundingRect())
 
-	def getConfigWidget(self):
-		# can't do this in the constructor because that may occur in a thread other than the main thread, this function however should only occur in the main thread
-		if not self.configwidget:
-			self.configwidget=LayerConfigWidget(self.windowid,self.key)
-			self.configwidget.setSizePolicy(qtgui.QSizePolicy.MinimumExpanding,qtgui.QSizePolicy.Fixed)
-			self.configwidget.ui.background_frame.setSizePolicy(qtgui.QSizePolicy.MinimumExpanding,qtgui.QSizePolicy.MinimumExpanding)
-		else:
-			self.configwidget.updateValuesFromLayer()
-		return self.configwidget
-
 	# get color of pixel at specified point, or average color in range
 	def getPixelColor(self,x,y,size):
 		lock=qtcore.QReadLocker(self.imagelock)
@@ -194,9 +184,6 @@ class BeeLayerState:
 			lock=qtcore.QReadLocker(self.imagelock)
 		retimage=self.image.copy(subregion)
 		return retimage
-
-	#def cutImage(self):
-	#	selection=win.getClipPathCopy()
 
 	# composite section of layer onto paint object passed
 	def compositeLayerOn(self,painter,dirtyrect):
@@ -252,6 +239,12 @@ class BeeLayerState:
 		self.image=newimage
 		self.prepareGeometryChange()
 
+	def paste(self,image,x=0,y=0):
+		win=BeeApp().master.getWindowById(self.windowid)
+		newkey=win.nextLayerKey()
+		newlayer=FloatingSelection(image,newkey,self)
+		BeeApp().master.requestLayerListRefresh()
+
 	def copy(self,path,imagelock=None):
 		pathrectf=path.boundingRect()
 		pathrect=pathrectf.toAlignedRect()
@@ -303,8 +296,8 @@ class BeeLayerState:
 		win.addCommandToHistory(command,self.owner)
 
 class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
-	def __init__(self,windowid,type,key,image=None,opacity=None,visible=None,compmode=None,owner=0):
-		qtgui.QGraphicsItem.__init__(self)
+	def __init__(self,windowid,type,key,image=None,opacity=None,visible=None,compmode=None,owner=0,parent=None):
+		qtgui.QGraphicsItem.__init__(self,parent)
 		BeeLayerState.__init__(self,windowid,type,key,image,opacity,visible,compmode,owner)
 		self.setFlag(qtgui.QGraphicsItem.ItemUsesExtendedStyleOption)
 
@@ -327,6 +320,16 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
 		self.scene().tmppainter.setCompositionMode(self.compmode)
 		self.scene().tmppainter.setOpacity(painter.opacity())
 		self.scene().tmppainter.drawImage(drawrect,self.image,drawrect)
+
+	def getConfigWidget(self):
+		# can't do this in the constructor because that may occur in a thread other than the main thread, this function however should only occur in the main thread
+		if not self.configwidget:
+			self.configwidget=LayerConfigWidget(self.windowid,self.key)
+			self.configwidget.setSizePolicy(qtgui.QSizePolicy.MinimumExpanding,qtgui.QSizePolicy.Fixed)
+			self.configwidget.ui.background_frame.setSizePolicy(qtgui.QSizePolicy.MinimumExpanding,qtgui.QSizePolicy.MinimumExpanding)
+		else:
+			self.configwidget.updateValuesFromLayer()
+		return self.configwidget
 
 class LayerFinisher(qtgui.QGraphicsItem):
 	""" layers need to be drawn to a temporary image this takes that temporary image and draws it to the scene.  This item should be placed above all other layers, but below any overlays. """
@@ -393,21 +396,32 @@ class SelectedAreaDisplay(qtgui.QGraphicsItem):
 		painter.setPen(pen)
 		painter.drawPath(self.path)
 
-class FloatingSelection(qtgui.QGraphicsItem):
-	def __init__(self,image,parentlayer):
-		qtgui.QGraphicsItem.__init__(self,parentlayer)
-		self.image=image
+#class FloatingSelection(qtgui.QGraphicsItem):
+class FloatingSelection(BeeGuiLayer):
+	def __init__(self,image,key,parentlayer):
+		BeeGuiLayer.__init__(self,parentlayer.windowid,LayerTypes.floating,key,image,parent=parentlayer)
 		self.setFlag(qtgui.QGraphicsItem.ItemIsMovable)
+		self.name="Floating selection (%d x %d)" % ( self.image.rect().width(), self.image.rect().height() )
 
 	def paint(self,painter,options,widget=None):
 		drawrect=options.exposedRect
+		self.scene().tmppainter.save()
+		self.scene().tmppainter.setMatrix(painter.matrix())
 		self.scene().tmppainter.setCompositionMode(self.compmode)
 		self.scene().tmppainter.setOpacity(painter.opacity())
 		self.scene().tmppainter.drawImage(drawrect,self.image,drawrect)
+		self.scene().tmppainter.restore()
 
-	# paste the selection on it's layer
-	#def anchor(self,layer):
-		
+	# don't allow pasting on other floating selections, go to parent layer instead
+	def paste(self,image,x=0,y=0):
+		self.parent().paste(image,x,y)
+
+	def mousePressEvent(self,event):
+		pass
+	def mouseMoveEvent(self,event):
+		pass
+	def mouseReleaseEvent(self,event):
+		pass
 
 # widget that we can use to set the options of each layer
 class LayerConfigWidget(qtgui.QWidget):
@@ -638,6 +652,11 @@ class BeeLayersWindow(qtgui.QMainWindow):
 
 		# ask each layer for it's widget and add it
 		for layer in reversed(layers):
+			for floating in layer.childItems():
+				newwidget=floating.getConfigWidget()
+				vbox.addWidget(newwidget)
+				newwidget.show()
+
 			newwidget=layer.getConfigWidget()
 			if layer.key==curlayerkey:
 				newwidget.highlight()

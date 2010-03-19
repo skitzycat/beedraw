@@ -35,7 +35,7 @@ class BeeCanvasView(qtgui.QGraphicsView):
 		self.setAttribute(qtcore.Qt.WA_PaintOnScreen)
 
 		# set scene view optimizations
-		self.setOptimizationFlag(qtgui.QGraphicsView.DontAdjustForAntialiasing)
+		#self.setOptimizationFlag(qtgui.QGraphicsView.DontAdjustForAntialiasing)
 
 		self.show()
 
@@ -84,7 +84,6 @@ class BeeCanvasView(qtgui.QGraphicsView):
 		self.updateScene([qtcore.QRectF(dirtyrect)])
 
 	def tabletEvent(self,event):
-	#def event(self,event):
 		if event.type()==qtcore.QEvent.TabletMove:
 			event.accept()
 			if event.pressure()>0:
@@ -98,7 +97,7 @@ class BeeCanvasView(qtgui.QGraphicsView):
 			event.accept()
 			self.cursorReleaseEvent(event.x(),event.y(),event.modifiers())
 
-		#return qtgui.QGraphicsView.event(self,event)
+		return qtgui.QGraphicsView.tabletEvent(self,event)
 
 	def mousePressEvent(self,event):
 		self.cursorPressEvent(event.x(),event.y(),event.modifiers())
@@ -123,7 +122,7 @@ class BeeCanvasView(qtgui.QGraphicsView):
 		x=x+subx
 		y=y+suby
 		x,y=self.viewCoordsToImage(x,y)
-		window.penDown(x,y,pressure,modkeys,layerkey=window.getCurLayerKey())
+		window.penDown(x,y,pressure,modkeys)
 
 	def cursorMoveEvent(self,x,y,modkeys,pointertype=4,pressure=1,subx=0,suby=0):
 		window=BeeApp().master.getWindowById(self.windowid)
@@ -133,14 +132,14 @@ class BeeCanvasView(qtgui.QGraphicsView):
 		x,y=self.viewCoordsToImage(x,y)
 		#print "translates to image coords:",x,y
 
-		window.penMotion(x,y,pressure,modkeys,layerkey=window.getCurLayerKey())
+		window.penMotion(x,y,pressure,modkeys)
 
 	def cursorReleaseEvent(self,x,y,modkeys,pressure=1,subx=0,suby=0):
 		#print "cursorReleaseEvent:",x,y
 		window=BeeApp().master.getWindowById(self.windowid)
 		self.setCursor(window.master.getCurToolDesc().getCursor())
 		x,y=self.viewCoordsToImage(x,y)
-		window.penUp(x,y,modkeys,layerkey=window.getCurLayerKey())
+		window.penUp(x,y,modkeys)
 
 	def viewCoordsToImage(self,x,y):
 		""" translates from a point for the input event to a point on the actual canvas.  Simply using mapToScene isn't sufficient because this needs to handle floats on both sides of the operation """
