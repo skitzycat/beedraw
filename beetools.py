@@ -1479,21 +1479,39 @@ class MoveSelectionTool(AbstractTool):
 		if self.layer:
 			if self.layer.type==LayerTypes.floating:
 				self.pendown=True
-				self.lastx=x
-				self.lasty=y
+				self.lastx=int(x)
+				self.lasty=int(y)
+
+	def moveLayer(self,x,y,modkeys):
+		x=int(x)
+		y=int(y)
+		if x==self.lastx and y==self.lasty:
+			return
+
+		oldrect=qtcore.QRectF(self.layer.boundingRect())
+		oldrect.moveTo(self.layer.pos())
+		newrect=oldrect.translated(x-self.lastx,y-self.lasty)
+
+
+		# determine if move would move selection completely off the layer
+		overlap=newrect.intersected(self.layer.scene().sceneRect())
+		if overlap.isNull():
+			boundingrect=self.layer.scene().sceneRect().adjusted(1-self.layer.boundingRect().width(),1-self.layer.boundingRect().height(),2*(self.layer.boundingRect().width()-1),2*(self.layer.boundingRect().height()-1))
+			newloc=snapRectToRect(boundingrect,newrect.toAlignedRect())
+			x=newloc.x()
+			y=newloc.y()
+
+		self.layer.moveBy(x-self.lastx,y-self.lasty)
+
+		# update whole scene because for some reason I can't figure out how to just update the needed areas
+		self.layer.scene().update()
+
+		self.lastx=x
+		self.lasty=y
+
 	def guiLevelPenMotion(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
 		if self.pendown:
-			oldrect=qtcore.QRectF(self.layer.boundingRect())
-			oldrect.moveTo(self.layer.pos())
-			oldrect.adjust(0,0,1,1)
-
-			self.layer.moveBy(x-self.lastx,y-self.lasty)
-			#self.layer.scene().update(oldrect)
-			# update whole scene because for some reason I can't figure out how to just update the needed areas
-			self.layer.scene().update()
-
-			self.lastx=x
-			self.lasty=y
+			self.moveLayer(x,y,modkeys)
 
 	def guiLevelPenUp(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
 		self.layer=None

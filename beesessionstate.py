@@ -322,6 +322,7 @@ class BeeSessionState:
 		pass
 
 	def nextLayerKey(self):
+		""" returns the next layer key available, thread safe """
 		# get a lock so we don't get a collision ever
 		lock=qtcore.QMutexLocker(self.nextlayerkeymutex)
 
@@ -333,7 +334,9 @@ class BeeSessionState:
 		""" This needs to be reimplemented in subclass """
 		print "ERROR: abstract call to queueCommand"
 
+	# central function for finding a layer with a given key, right now layers are stored in a list to preserve order, eventually there may need to be an addintional dictionary to index them and make this faster when lots of layers are in the list
 	def getLayerForKey(self,key,lock=None):
+		""" Retruns a the BeeLayer object with the matching layer key """
 		if not lock:
 			lock=qtcore.QReadLocker(self.layerslistlock)
 		for layer in self.layers:

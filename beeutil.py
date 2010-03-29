@@ -211,6 +211,33 @@ def adjustPointToBounds(x,y,rect):
 
 	return x,y
 
+# return the closest rectangle to small rectangle that fits completely inside the big rectangle
+def snapRectToRect(bigrect,smallrect):
+	if bigrect.width()<smallrect.width() or bigrect.height()<smallrect.height():
+		print "ERROR: first argument should be larger in both dimensions"
+		return None
+
+	print "snapRectToRect called with:"
+	print "bigger rect:", rectToTuple(bigrect)
+	print "small  rect:", rectToTuple(smallrect)
+
+	newrect=qtcore.QRect(smallrect)
+	if newrect.x() < bigrect.x():
+		print "found that x value is too small"
+		print "translating by:", bigrect.x()-newrect.x()
+		newrect.translate(int(bigrect.x()-newrect.x()),0)
+	elif newrect.x()+newrect.width() > bigrect.x()+bigrect.width():
+		newrect.translate(bigrect.x()+bigrect.width()-newrect.width()-newrect.x(),0)
+
+	#if newrect.y() < bigrect.y():
+	#	newrect.setY(bigrect.y())
+	#elif newrect.y()+newrect.height() > bigrect.y()+bigrect.height():
+	#	newrect.setY(bigrect.y()+bigrect.height()-newrect.height())
+
+	print "return value:", rectToTuple(newrect)
+
+	return newrect
+
 # gets passed 2 QColor objects and similarity if colors are close enough according to similarity return true, otherwise return false.
 def compareColors(color1,color2,similarity):
 	rdiff=abs(color1.red()-color2.red())
@@ -392,10 +419,18 @@ def findLineIntersection(a1,b1,d1,a2,b2,d2):
 		print "ERROR parrallel lines:"
 		print "x *", a1, "+ y *", b1, "=", d1
 		print "x *", a2, "+ y *", b2, "=", d2
-		return -1,-1
+		return None, None
 	x=(b2*d1 - b1*d2)/(a1*b2 - a2*b1)
 	y=(a1*d2 - a2*d1)/(a1*b2 - a2*b1)
 	return x,y
+
+# return true if passed value are of the same sign (both positive, both negative or both 0)
+def sameSign(a,b):
+	if a*b > 0:
+		return True
+	elif a == 0 and b == 0:
+		return True
+	return False
 
 def replaceWidget(oldwidget,newwidget):
 	""" replace one widget with another """

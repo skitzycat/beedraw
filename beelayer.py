@@ -301,6 +301,13 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
 		BeeLayerState.__init__(self,windowid,type,key,image,opacity,visible,compmode,owner)
 		self.setFlag(qtgui.QGraphicsItem.ItemUsesExtendedStyleOption)
 
+	def anchor(self,child):
+		win=BeeApp().master.getWindowById(self.windowid)
+		win.addRawEventToQueue(self.key,child.getImageCopy(),int(child.pos().x()),int(child.pos().y()),None,child.compmode)
+		#self.scene().removeItem(child)
+		child.setParentItem(None)
+		win.requestLayerListRefresh()
+
 	def boundingRect(self):
 		return qtcore.QRectF(self.getImageRect())
 
@@ -396,6 +403,7 @@ class SelectedAreaDisplay(qtgui.QGraphicsItem):
 		painter.setPen(pen)
 		painter.drawPath(self.path)
 
+
 #class FloatingSelection(qtgui.QGraphicsItem):
 class FloatingSelection(BeeGuiLayer):
 	def __init__(self,image,key,parentlayer):
@@ -406,7 +414,7 @@ class FloatingSelection(BeeGuiLayer):
 	def paint(self,painter,options,widget=None):
 		drawrect=options.exposedRect
 		self.scene().tmppainter.save()
-		self.scene().tmppainter.setMatrix(painter.matrix())
+		self.scene().tmppainter.translate(self.pos())
 		self.scene().tmppainter.setCompositionMode(self.compmode)
 		self.scene().tmppainter.setOpacity(painter.opacity())
 		self.scene().tmppainter.drawImage(drawrect,self.image,drawrect)
@@ -414,7 +422,10 @@ class FloatingSelection(BeeGuiLayer):
 
 	# don't allow pasting on other floating selections, go to parent layer instead
 	def paste(self,image,x=0,y=0):
-		self.parent().paste(image,x,y)
+		self.parentItem().paste(image,x,y)
+
+	def anchor(self):
+		self.parentItem().anchor(self)
 
 	def mousePressEvent(self,event):
 		pass
@@ -499,7 +510,7 @@ class LayerConfigWidget(qtgui.QWidget):
 		netbuttonstate=False
 		netbuttontext=""
 
-		# only need text on the button if it's a network layer
+		# only need text on the button if it's a network or floating layer
 		if win.type==WindowTypes.networkclient:
 			if win.ownedByNobody(layer.owner):
 				netbuttontext="Claim ownership"
@@ -507,6 +518,10 @@ class LayerConfigWidget(qtgui.QWidget):
 			elif win.ownedByMe(layer.owner):
 				netbuttontext="Give Up Ownership"
 				netbuttonstate=True
+
+		if layer.type==LayerTypes.floating:
+			netbuttontext="Anchor On Layer"
+			netbuttonstate=True
 
 		# disable controls if client shouldn't be able to control them
 		if win.type==WindowTypes.networkclient:
@@ -562,13 +577,16 @@ class LayerConfigWidget(qtgui.QWidget):
 
 		proplock=qtcore.QReadLocker(layer.propertieslock)
 
+		if layer.type==LayerTypes.floating:
+			layer.parentItem().anchor(layer)
+
 		# the layer is owned locally so change it to be owned by no one
-		if win.ownedByMe(layer.owner):
+		elif win.ownedByMe(layer.owner):
 			#print_debug("adding give up layer to queue for layer key: %d" % layer.key)
 			win.addGiveUpLayerToQueue(layer.key)
 
 		# if the layer is owned by nobody then request it
-		if win.ownedByNobody(layer.owner):
+		elif win.ownedByNobody(layer.owner):
 			win.addRequestLayerToQueue(layer.key)
 
 	def mousePressEvent(self,event):
