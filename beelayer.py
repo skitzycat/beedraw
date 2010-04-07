@@ -239,6 +239,46 @@ class BeeLayerState:
 		self.image=newimage
 		self.prepareGeometryChange()
 
+	def copy(self,path,imagelock=None):
+		pass
+
+	# cut is the only operation I see potential for being used in network communication
+	def cut(self,path,imagelock=None):
+		pathrectf=path.boundingRect()
+		pathrect=pathrectf.toAlignedRect()
+
+		if not imagelock:
+			imagelock=qtcore.QWriteLocker(self.imagelock)
+
+		oldareaimage=self.getImageCopy(imagelock,pathrect)
+
+		win=BeeApp().master.getWindowById(self.windowid)
+		if win.ownedByMe(self.owner):
+			self.copy(path,imagelock)
+
+		# erase from image
+		painter=qtgui.QPainter()
+		painter.begin(self.image)
+		painter.setClipPath(path)
+		painter.setCompositionMode(qtgui.QPainter.CompositionMode_Clear)
+		painter.drawImage(self.image.rect(),self.image)
+		painter.end()
+
+		imagelock.unlock()
+
+		self.update(pathrectf)
+		BeeApp().master.refreshLayerThumb(self.windowid,self.key)
+
+		command=DrawingCommand(self.key,oldareaimage,pathrect)
+		win=BeeApp().master.getWindowById(self.windowid)
+		win.addCommandToHistory(command,self.owner)
+
+class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
+	def __init__(self,windowid,type,key,image=None,opacity=None,visible=None,compmode=None,owner=0,parent=None):
+		qtgui.QGraphicsItem.__init__(self,parent)
+		BeeLayerState.__init__(self,windowid,type,key,image,opacity,visible,compmode,owner)
+		self.setFlag(qtgui.QGraphicsItem.ItemUsesExtendedStyleOption)
+
 	def paste(self,image,x=0,y=0):
 		win=BeeApp().master.getWindowById(self.windowid)
 		newkey=win.nextLayerKey()
@@ -267,45 +307,11 @@ class BeeLayerState:
 
 		BeeApp().master.setClipBoardImage(tmpimage)
 
-	def cut(self,path,imagelock=None):
-		pathrectf=path.boundingRect()
-		pathrect=pathrectf.toAlignedRect()
-
-		if not imagelock:
-			imagelock=qtcore.QWriteLocker(self.imagelock)
-
-		oldareaimage=self.getImageCopy(imagelock,pathrect)
-
-		self.copy(path,imagelock)
-
-		# erase from image
-		painter=qtgui.QPainter()
-		painter.begin(self.image)
-		painter.setClipPath(path)
-		painter.setCompositionMode(qtgui.QPainter.CompositionMode_Clear)
-		painter.drawImage(self.image.rect(),self.image)
-		painter.end()
-
-		imagelock.unlock()
-
-		self.update(pathrectf)
-		BeeApp().master.refreshLayerThumb(self.windowid,self.key)
-
-		command=DrawingCommand(self.key,oldareaimage,pathrect)
-		win=BeeApp().master.getWindowById(self.windowid)
-		win.addCommandToHistory(command,self.owner)
-
-class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
-	def __init__(self,windowid,type,key,image=None,opacity=None,visible=None,compmode=None,owner=0,parent=None):
-		qtgui.QGraphicsItem.__init__(self,parent)
-		BeeLayerState.__init__(self,windowid,type,key,image,opacity,visible,compmode,owner)
-		self.setFlag(qtgui.QGraphicsItem.ItemUsesExtendedStyleOption)
-
 	def anchor(self,child):
 		win=BeeApp().master.getWindowById(self.windowid)
 		win.addRawEventToQueue(self.key,child.getImageCopy(),int(child.pos().x()),int(child.pos().y()),None,child.compmode)
-		#self.scene().removeItem(child)
-		child.setParentItem(None)
+		#child.setParentItem(None)
+		self.scene().removeItem(child)
 		win.requestLayerListRefresh()
 
 	def boundingRect(self):
@@ -329,7 +335,7 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
 		self.scene().tmppainter.drawImage(drawrect,self.image,drawrect)
 
 	def getConfigWidget(self):
-		# can't do this in the constructor because that may occur in a thread other than the main thread, this function however should only occur in the main thread
+		# can't do this in the constructor because that may occur in a thread other than the GUI thread, this function however should only occur in the GUI thread
 		if not self.configwidget:
 			self.configwidget=LayerConfigWidget(self.windowid,self.key)
 			self.configwidget.setSizePolicy(qtgui.QSizePolicy.MinimumExpanding,qtgui.QSizePolicy.Fixed)
@@ -370,6 +376,7 @@ class SelectedAreaAnimation(qtgui.QGraphicsItemAnimation):
 	def afterAnimationStep(self,time):
 		self.item().update()
 
+# This is an animated dashed line displayed to indicate where the current selection is.
 class SelectedAreaDisplay(qtgui.QGraphicsItem):
 	def __init__(self,path,scene):
 		qtgui.QGraphicsItem.__init__(self,None,scene)
@@ -393,7 +400,6 @@ class SelectedAreaDisplay(qtgui.QGraphicsItem):
 		self.prepareGeometryChange()
 
 	def paint(self,painter,options,widget=None):
-
 		painter.setPen(qtgui.QColor(255,255,255,255))
 		painter.drawPath(self.path)
 
@@ -403,8 +409,6 @@ class SelectedAreaDisplay(qtgui.QGraphicsItem):
 		painter.setPen(pen)
 		painter.drawPath(self.path)
 
-
-#class FloatingSelection(qtgui.QGraphicsItem):
 class FloatingSelection(BeeGuiLayer):
 	def __init__(self,image,key,parentlayer):
 		BeeGuiLayer.__init__(self,parentlayer.windowid,LayerTypes.floating,key,image,parent=parentlayer)
@@ -424,8 +428,8 @@ class FloatingSelection(BeeGuiLayer):
 	def paste(self,image,x=0,y=0):
 		self.parentItem().paste(image,x,y)
 
-	def anchor(self):
-		self.parentItem().anchor(self)
+	def anchor(self,layer):
+		print "WARNING: anchor called from child layer"
 
 	def mousePressEvent(self,event):
 		pass
@@ -578,7 +582,8 @@ class LayerConfigWidget(qtgui.QWidget):
 		proplock=qtcore.QReadLocker(layer.propertieslock)
 
 		if layer.type==LayerTypes.floating:
-			layer.parentItem().anchor(layer)
+			parent=layer.parentItem()
+			parent.anchor(layer)
 
 		# the layer is owned locally so change it to be owned by no one
 		elif win.ownedByMe(layer.owner):
