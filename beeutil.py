@@ -214,27 +214,31 @@ def adjustPointToBounds(x,y,rect):
 # return the closest rectangle to small rectangle that fits completely inside the big rectangle
 def snapRectToRect(bigrect,smallrect):
 	if bigrect.width()<smallrect.width() or bigrect.height()<smallrect.height():
-		print "ERROR: first argument should be larger in both dimensions"
-		return None
+		print_debut("ERROR: snapRectToRect first argument should be larger in both dimensions")
+		return smallrect
 
-	print "snapRectToRect called with:"
-	print "bigger rect:", rectToTuple(bigrect)
-	print "small  rect:", rectToTuple(smallrect)
+	#print "snapRectToRect called with:"
+	#print "bigger rect:", rectToTuple(bigrect)
+	#print "small  rect:", rectToTuple(smallrect)
 
 	newrect=qtcore.QRect(smallrect)
 	if newrect.x() < bigrect.x():
-		print "found that x value is too small"
-		print "translating by:", bigrect.x()-newrect.x()
+		#print "found that x value is too small"
+		#print "translating by:", bigrect.x()-newrect.x()
 		newrect.translate(int(bigrect.x()-newrect.x()),0)
 	elif newrect.x()+newrect.width() > bigrect.x()+bigrect.width():
+		#print "found that x value is too big"
 		newrect.translate(bigrect.x()+bigrect.width()-newrect.width()-newrect.x(),0)
 
-	#if newrect.y() < bigrect.y():
-	#	newrect.setY(bigrect.y())
-	#elif newrect.y()+newrect.height() > bigrect.y()+bigrect.height():
-	#	newrect.setY(bigrect.y()+bigrect.height()-newrect.height())
+	if newrect.y() < bigrect.y():
+		#print "found that y value is too small"
+		#print "translating by:", bigrect.y()-newrect.y()
+		newrect.translate(0,int(bigrect.y()-newrect.y()))
+	elif newrect.y()+newrect.height() > bigrect.y()+bigrect.height():
+		#print "found that y value is too big"
+		newrect.translate(0,bigrect.y()+bigrect.height()-newrect.height()-newrect.y())
 
-	print "return value:", rectToTuple(newrect)
+	#print "return value:", rectToTuple(newrect)
 
 	return newrect
 

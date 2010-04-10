@@ -1496,12 +1496,14 @@ class MoveSelectionTool(AbstractTool):
 		# determine if move would move selection completely off the layer
 		overlap=newrect.intersected(self.layer.scene().sceneRect())
 		if overlap.isNull():
-			boundingrect=self.layer.scene().sceneRect().adjusted(1-self.layer.boundingRect().width(),1-self.layer.boundingRect().height(),2*(self.layer.boundingRect().width()-1),2*(self.layer.boundingRect().height()-1))
+			boundingrect=self.layer.scene().sceneRect().adjusted(1-self.layer.boundingRect().width(),1-self.layer.boundingRect().height(),self.layer.boundingRect().width()-1,self.layer.boundingRect().height()-1)
 			newloc=snapRectToRect(boundingrect,newrect.toAlignedRect())
-			x=newloc.x()
-			y=newloc.y()
+			newx=newloc.x()
+			newy=newloc.y()
+			self.layer.setPos(float(newx),float(newy))
 
-		self.layer.moveBy(x-self.lastx,y-self.lasty)
+		else:
+			self.layer.moveBy(x-self.lastx,y-self.lasty)
 
 		# update whole scene because for some reason I can't figure out how to just update the needed areas
 		self.layer.scene().update()
