@@ -1478,18 +1478,20 @@ class MoveSelectionTool(AbstractTool):
 		self.layer=self.window.getLayerForKey(self.layerkey)
 		if self.layer:
 			if self.layer.type==LayerTypes.floating:
-				self.pendown=True
-				self.lastx=int(x)
-				self.lasty=int(y)
-				self.startx=self.layer.pos().x()
-				self.starty=self.layer.pos().y()
-
+				self.initializeLayerMove(x,y)
 			else:
 				for item in self.window.scene.items(qtcore.QPointF(x,y)):
 					if item.type==LayerTypes.floating:
 						self.layer=item
-						guiLevelPenDown(x,y,pressure,modkeys)
+						self.initializeLayerMove(x,y)
 						break
+
+	def initializeLayerMove(self,x,y):
+		self.pendown=True
+		self.lastx=int(x)
+		self.lasty=int(y)
+		self.startx=self.layer.pos().x()
+		self.starty=self.layer.pos().y()
 
 	def moveLayer(self,x,y,modkeys):
 		x=int(x)

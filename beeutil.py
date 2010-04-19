@@ -407,6 +407,10 @@ def findLineIntersection(a1,b1,d1,a2,b2,d2):
 	y=(a1*d2 - a2*d1)/(a1*b2 - a2*b1)
 	return x,y
 
+def closestPointOnLineToPoint(x,y,a,b,d):
+	dp=(x*b)+(-y*a)
+	return findLineIntersection(b,-a,dp,a,b,d)
+
 def replaceWidget(oldwidget,newwidget):
 	""" replace one widget with another """
 	parent=oldwidget.parentWidget()

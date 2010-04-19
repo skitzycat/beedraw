@@ -217,8 +217,7 @@ class BeeCanvasScene(qtgui.QGraphicsScene):
 			#print "stopping tmp painter with rectangle:", rectToTuple(rect)
 			painter.setCompositionMode(qtgui.QPainter.CompositionMode_Source)
 			painter.drawImage(rect,self.image,rect)
-			#self.locker.unlock()
-			#self.locker=None
+			self.locker=None
 
 	def drawForeground(self,painter,rect):
 		rectpath=qtgui.QPainterPath()
@@ -237,7 +236,7 @@ class BeeCanvasScene(qtgui.QGraphicsScene):
 		# unfortunately we can't just draw onto the standard painter because it does not support all blending modes
 		# instead we draw onto a temporary image which does support all blending modes and then paint that onto the final painter
 		self.tmppainter=qtgui.QPainter()
-		#self.locker=qtcore.QWriteLocker(self.imagelock)
+		self.locker=qtcore.QWriteLocker(self.imagelock)
 		self.tmppainter.begin(self.image)
 
 		drawrect=rect.intersected(self.getSceneRect())
