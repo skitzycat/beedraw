@@ -38,6 +38,10 @@ class BeeLayerState:
 		self.key=key
 		self.owner=owner
 
+		# way to flag that the layer should be deleted later, currently only used for anchoring floating selection layers
+		self.shoulddelete=False
+		self.deletelock=qtcore.QReadWriteLock()
+
 		win=BeeApp().master.getWindowById(windowid)
 
 		#print "creating layer with key:", key
@@ -70,6 +74,14 @@ class BeeLayerState:
 
 		# set default name for layer
 		self.changeName("Layer %d" % key)
+
+	def setDelete(self,state):
+		proplock=qtcore.QWriteLocker(self.deletelock)
+		self.shoulddelete=state
+
+	def shouldBeDeleted(self):
+		proplock=qtcore.QReadLocker(self.deletelock)
+		return self.shoulddelete
 
 	def changeOpacity(self,opacity):
 		self.opacity_setting=opacity
@@ -196,7 +208,7 @@ class BeeLayerState:
 		painter.setOpacity(self.opacity())
 		painter.setCompositionMode(self.compmode)
 
-		lock=ReadWriteLocker(self.imagelock,True)
+		lock=qtcore.QWriteLocker(self.imagelock)
 
 		painter.drawImage(dirtyrect,self.image,dirtyrect)
 
@@ -217,8 +229,9 @@ class BeeLayerState:
 
 		BeeApp().master.getWindowById(self.windowid).reCompositeImage()
 
-	def adjustCanvasSize(self,leftadj,topadj,rightadj,bottomadj):
-		lock=ReadWriteLocker(self.imagelock,True)
+	def adjustCanvasSize(self,leftadj,topadj,rightadj,bottomadj,lock=None):
+		if not lock:
+			lock=qtcore.QWriteLocker(self.imagelock)
 
 		win=BeeApp().master.getWindowById(self.windowid)
 		newimage=qtgui.QImage(win.docwidth,win.docheight,qtgui.QImage.Format_ARGB32_Premultiplied)
@@ -310,8 +323,8 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
 	def anchor(self,child):
 		win=BeeApp().master.getWindowById(self.windowid)
 		win.addRawEventToQueue(self.key,child.getImageCopy(),int(child.pos().x()),int(child.pos().y()),None,child.compmode)
-		#child.setParentItem(None)
-		self.scene().removeItem(child)
+		# can't actually delete it here or it will cause a segfault, just flag it for deletetion
+		child.setDelete(True)
 		win.requestLayerListRefresh()
 
 	def boundingRect(self):
@@ -609,7 +622,7 @@ class BeeLayersWindow(qtgui.QMainWindow):
 		qtgui.QMainWindow.__init__(self)
 
 		self.master=master
-		self.mutex=qtcore.QMutex()
+		#self.mutex=qtcore.QMutex()
 
 		#setup ui
 		self.ui=Ui_LayersWindow()
@@ -654,7 +667,7 @@ class BeeLayersWindow(qtgui.QMainWindow):
 	def refreshLayersList(self,layers,curlayerkey):
 		""" Update the list of layers displayed in the layers display window, if passed none for the layers arguement, the list of layers is cleared
 		"""
-		lock=qtcore.QMutexLocker(self.mutex)
+		#lock=qtcore.QMutexLocker(self.mutex)
 
 		frame=self.layersListArea.widget()
 
@@ -676,9 +689,13 @@ class BeeLayersWindow(qtgui.QMainWindow):
 		# ask each layer for it's widget and add it
 		for layer in reversed(layers):
 			for floating in layer.childItems():
-				newwidget=floating.getConfigWidget()
-				vbox.addWidget(newwidget)
-				newwidget.show()
+				if floating.shouldBeDeleted():
+					scene=floating.scene()
+					scene.removeItem(floating)
+				else:
+					newwidget=floating.getConfigWidget()
+					vbox.addWidget(newwidget)
+					newwidget.show()
 
 			newwidget=layer.getConfigWidget()
 			if layer.key==curlayerkey:
@@ -695,7 +712,7 @@ class BeeLayersWindow(qtgui.QMainWindow):
 
 	# set proper highlight for layer with passed key
 	def refreshLayerHighlight(self,key):
-		lock=qtcore.QMutexLocker(self.mutex)
+		#lock=qtcore.QMutexLocker(self.mutex)
 		frame=self.layersListArea.widget()
 		# go through all the children of the frame
 		# this seems like a hackish way to do things, but I've yet to find better and speed is not all that vital here
@@ -713,7 +730,7 @@ class BeeLayersWindow(qtgui.QMainWindow):
 					return
 
 	def refreshLayerThumb(self,key=None):
-		lock=qtcore.QMutexLocker(self.mutex)
+		#lock=qtcore.QMutexLocker(self.mutex)
 		vbox=self.layersListArea.widget().layout()
 		for item in range(vbox.count()):
 			widget=vbox.itemAt(item).widget()
@@ -758,8 +775,6 @@ class LayerPreviewWidget(qtgui.QWidget):
 		self.layerkey=layerkey
 		self.show()
 
-		self.mutex=qtcore.QMutex()
-
 	# repaint preview for layer, I want to keep this in the same aspect ratio as the layer
 	def paintEvent(self,event):
 		layer=BeeApp().master.getLayerById(self.windowid,self.layerkey)
@@ -768,7 +783,6 @@ class LayerPreviewWidget(qtgui.QWidget):
 			return
 
 		window=BeeApp().master.getWindowById(self.windowid)
-		lock=qtcore.QMutexLocker(self.mutex)
 		# get how much we need to scale down both dimensions
 		maximagedimension=max(layer.image.width(),layer.image.height())
 		if maximagedimension==0:

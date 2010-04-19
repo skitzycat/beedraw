@@ -249,12 +249,12 @@ class BeeSessionState:
 		log=SketchLogWriter(logfile)
 
 		# lock for reading the size of the document
-		sizelocker=ReadWriteLocker(self.docsizelock)
+		sizelocker=qtcore.QReadLocker(self.docsizelock)
 		log.logResyncStart(self.docwidth,self.docheight,0)
 		# log everything to get upto this point
 		pos=0
 		for layer in self.layers:
-			locks.append(ReadWriteLocker(layer.imagelock,True))
+			locks.append(qtcore.QWriteLocker(layer.imagelock))
 			log.logLayerAdd(pos,layer.key, layer.image)
 			#log.logRawEvent(0,0,layer.key,layer.image)
 			pos+=1
@@ -376,7 +376,7 @@ class BeeSessionState:
 
 	def addSetCanvasSizeRequestToQueue(self,width,height,source=ThreadTypes.user,owner=0):
 		# lock for reading the size of the document
-		lock=ReadWriteLocker(self.docsizelock)
+		lock=qtcore.QReadLocker(self.docsizelock)
 		if width!=self.docwidth or height!=self.docheight:
 			#print "changing size from:", self.docwidth, self.docheight, "to size:", width, height
 			self.addAdjustCanvasSizeRequestToQueue(0,0,width-self.docwidth,height-self.docheight,source,owner)
@@ -386,16 +386,16 @@ class BeeSessionState:
 
 	def setCanvasSize(self,width,height):
 		#print "DEBUG: setting canvas size to:", width, height
-		lock=ReadWriteLocker(self.docsizelock,False)
+		sizelock=qtcore.QWriteLocker(self.docsizelock)
 		rightadj=width-self.docwidth
 		bottomadj=height-self.docheight
-		lock.unlock()
-		self.adjustCanvasSize(0,0,rightadj,bottomadj)
+		self.adjustCanvasSize(0,0,rightadj,bottomadj,sizelock)
 
 	# grow or crop canvas according to adjustments on each side
-	def adjustCanvasSize(self,leftadj,topadj,rightadj,bottomadj):
+	def adjustCanvasSize(self,leftadj,topadj,rightadj,bottomadj,sizelock=None):
 		# get lock on adjusting the document size
-		sizelock=ReadWriteLocker(self.docsizelock,True)
+		if not sizelock:
+			sizelock=qtcore.QWriteLocker(self.docsizelock)
 
 		self.docwidth=self.docwidth+leftadj+rightadj
 		self.docheight=self.docheight+topadj+bottomadj

@@ -193,9 +193,10 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		self.layerfinisher.resize(qtcore.QRectF(0,0,self.docwidth,self.docheight))
 		self.scene.setCanvasSize(newwidth,newheight)
 
-	def adjustCanvasSize(self,leftadj,topadj,rightadj,bottomadj):
+	def adjustCanvasSize(self,leftadj,topadj,rightadj,bottomadj,sizelock=None):
 		# lock the image so no updates can happen in the middle of this
-		sizelock=ReadWriteLocker(self.docsizelock,True)
+		if not sizelock:
+			sizelock=qtcore.QWriteLocker(self.docsizelock)
 
 		self.docwidth=self.docwidth+leftadj+rightadj
 		self.docheight=self.docheight+topadj+bottomadj

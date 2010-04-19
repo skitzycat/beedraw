@@ -125,27 +125,6 @@ def rectIntersectBoundingRect(rect1,rect2):
 	region=region.intersect(qtgui.QRegion(rect2))
 	return region.boundingRect()
 
-# a class to do the same thing as the QMutexLocker only for read write locks
-class ReadWriteLocker:
-	def __init__(self,lock,write=False):
-		self.lock=lock
-		self.locked=False
-		self.relock(write)
-	def unlock(self):
-		if self.locked:
-			self.locked=False
-			self.lock.unlock()
-	def relock(self,write=False):
-		if not self.locked:
-			self.locked=True
-			if write:
-				self.lock.lockForWrite()
-			else:
-				self.lock.lockForRead()
-	def __del__(self):
-		if self.locked:
-			self.lock.unlock()
-
 class BlendTranslations:
 	map={
 	qtcore.QString("Normal"):qtgui.QPainter.CompositionMode_SourceOver,
@@ -427,14 +406,6 @@ def findLineIntersection(a1,b1,d1,a2,b2,d2):
 	x=(b2*d1 - b1*d2)/(a1*b2 - a2*b1)
 	y=(a1*d2 - a2*d1)/(a1*b2 - a2*b1)
 	return x,y
-
-# return true if passed value are of the same sign (both positive, both negative or both 0)
-def sameSign(a,b):
-	if a*b > 0:
-		return True
-	elif a == 0 and b == 0:
-		return True
-	return False
 
 def replaceWidget(oldwidget,newwidget):
 	""" replace one widget with another """
