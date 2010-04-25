@@ -44,14 +44,15 @@ class BeeSessionState:
 
 		self.historysize=20
 
+		self.layers=[]
+		# mutex for messing with the list of layer: adding, removing or rearranging
+		self.layerslistlock=qtcore.QReadWriteLock()
+
 		# never have a local clip path
 		self.clippath=None
 
 		# set unique ID
 		self.id=master.getNextWindowId()
-
-		# register state so the master can get back to here
-		master.registerWindow(self)
 
 		# initialize values
 		self.backdropcolor=0xFFFFFFFF
@@ -68,9 +69,8 @@ class BeeSessionState:
 		self.remoteoutputqueue=Queue(0)
 		self.remotedrawingthread=None
 
-		self.layers=[]
-		# mutex for messing with the list of layer: adding, removing or rearranging
-		self.layerslistlock=qtcore.QReadWriteLock()
+		# register state so the master can get back to here
+		master.registerWindow(self)
 
 		# start log if autolog is enabled
 		self.log=None
@@ -133,27 +133,18 @@ class BeeSessionState:
 		self.queueCommand((DrawingCommandTypes.quit,),source)
 
 	def removeLayer(self,layer,history=0,lock=None):
-		if(layer):
+		if layer:
 			if not lock:
 				lock=qtcore.QWriteLocker(self.layerslistlock)
-			index=self.layers.index(layer)
-			if history!=-1:
-				self.addCommandToHistory(DelLayerCommand(layer,index))
-			self.layers.pop(index)
+			if layer in self.layers:
+				index=self.layers.index(layer)
+				if history!=-1:
+					self.addCommandToHistory(DelLayerCommand(layer,index))
+				self.layers.pop(index)
 
-			# try to set current layer to a valid layer
-			if index==0:
-				if len(self.layers) == 0:
-					self.curlayerkey=None
-				else:
-					self.curlayerkey=self.layers[index].key
-			else:
-				self.curlayerkey=self.layers[index-1].key
-
-			lock.unlock()
-			self.requestLayerListRefresh()
-			self.reCompositeImage()
-			return (layer,index)
+				self.requestLayerListRefresh(lock)
+				self.reCompositeImage()
+				return (layer,index)
 
 		return (None,None)
 
@@ -316,7 +307,7 @@ class BeeSessionState:
 		#self.requestLayerListRefresh()
 		#self.reCompositeImage()
 
-	def requestLayerListRefresh(self):
+	def requestLayerListRefresh(self,lock=None):
 		""" Only needed in subclasses that display a list of layers
 		"""
 		pass

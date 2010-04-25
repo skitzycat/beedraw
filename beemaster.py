@@ -70,10 +70,9 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		self.setMaximumHeight(0)
 
 		# list to hold drawing windows and lock for it
+		self.curwindow=None
 		self.drawingwindows=[]
 		self.drawingwindowslock=qtcore.QReadWriteLock()
-
-		self.curwindow=None
 
 		self.curpointertype=-1
 		self.curtoolname=self.toolbox.getCurToolDesc().name
@@ -119,6 +118,18 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		else:
 			colors=[]
 
+	def getCurWindow(self,lock=None):
+		if not lock:
+			lock=qtcore.QReadLocker(self.drawingwindowslock)
+		return self.curwindow
+
+	def setCurWindow(self,window,lock=None):
+		if not lock:
+			lock=qtcore.QWriteLocker(self.drawingwindowslock)
+		if self.curwindow!=window:
+			self.curwindow=window
+			self.refreshLayersList(lock)
+
 	def setClipBoardImage(self,image):
 		lock=qtcore.QWriteLocker(self.clipboardlock)
 		self.clipboardimage=image
@@ -147,6 +158,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 	def registerWindow(self,window):
 		lock=qtcore.QWriteLocker(self.drawingwindowslock)
 		self.drawingwindows.append(window)
+		self.setCurWindow(window,lock)
 
 	def unregisterWindow(self,window):
 		lock=qtcore.QWriteLocker(self.drawingwindowslock)
@@ -159,7 +171,6 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			else:
 				self.curwindow=None
 
-			#self.refreshLayersList()
 			self.requestLayerListRefresh()
 
 	def requestLayerListRefresh(self):
@@ -327,10 +338,10 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			reader=qtgui.QImageReader(filename)
 			image=reader.read()
 
-			self.curwindow=BeeDrawingWindow(self,image.width(),image.height(),False)
-			self.curwindow.loadLayer(image)
+			newwindow=BeeDrawingWindow(self,image.width(),image.height(),False)
+			newwindow.loadLayer(image)
 
-			self.refreshLayersList()
+			self.registerWindow(newwindow)
 
 	def on_action_File_New_triggered(self,accept=True):
 		if not accept:
@@ -343,8 +354,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		if dialog.result():
 			width=dialogui.width_box.value()
 			height=dialogui.height_box.value()
-			self.curwindow=BeeDrawingWindow(self,width=width,height=height)
-			self.refreshLayersList()
+			self.registerWindow(BeeDrawingWindow(self,width=width,height=height))
 
 	def on_action_Edit_Configure_triggered(self,accept=True):
 		if not accept:
@@ -437,8 +447,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		socket=self.getServerConnection(username,password,hostname,port)
 
 		if socket:
-			self.curwindow=NetworkClientDrawingWindow(self,socket)
-			self.refreshLayersList()
+			self.registerWindow(NetworkClientDrawingWindow(self,socket))
 
 	# connect to host and authticate
 	def getServerConnection(self,username,password,host,port):
@@ -498,8 +507,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		if not accept:
 			return
 		self.serverwin=HiveMasterWindow(BeeApp().app)
-		self.curwindow=BeeDrawingWindow.startNetworkServer(self)
-		self.refreshLayersList()
+		self.registerWindow(BeeDrawingWindow.startNetworkServer(self))
 
 	def uncheckWindowLayerBox(self):
 		self.ui.Window_Layers.setChecked(False)
@@ -560,23 +568,24 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		# then do the standard main window close event
 		qtgui.QMainWindow.closeEvent(self,event)
 
-	def refreshLayersList(self):
+	def refreshLayersList(self,winlock=None,layerslock=None):
+		if not winlock:
+			winlock=qtcore.QReadLocker(self.drawingwindowslock)
 		if self.layerswindow:
 			if self.curwindow:
+				if not layerslock:
+					layerslock=qtcore.QReadLocker(self.curwindow.layerslistlock)
 				self.layerswindow.refreshLayersList(self.curwindow.layers,self.curwindow.curlayerkey)
 			else:
 				self.layerswindow.refreshLayersList(None,None)
 
 	# function for a window to take the focus from other windows
 	def takeFocus(self,window):
-		if window != self.curwindow:
-			self.curwindow=window
-			self.refreshLayersList()
+		self.setCurWindow(window)
 
-	def updateLayerHighlight(self,key):
-		if self.layerswindow:
-			if key:
-				self.layerswindow.refreshLayerHighlight(key)
+	def updateLayerHighlight(self,win,key,lock=None):
+		if self.layerswindow and key:
+			self.layerswindow.refreshLayerHighlight(win,key,lock)
 
 	# refresh thumbnail of layer with inidcated key
 	def refreshLayerThumb(self,windowid,key=None):

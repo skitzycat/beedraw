@@ -24,7 +24,7 @@ from Queue import Queue
 
 from beeutil import *
 
-from beeeventstack import DrawingCommand
+from beeeventstack import DrawingCommand, AnchorCommand
 
 from beeapp import BeeApp
 
@@ -174,7 +174,7 @@ class DrawingThread(qtcore.QThread):
 			if int(layerkey) in self.inprocesstools:
 				self.inprocesstools[int(layerkey)].penLeave()
 
-		elif subtype==LayerCommandTypes.rawevent:
+		elif subtype==LayerCommandTypes.rawevent or subtype==LayerCommandTypes.anchor:
 			x=command[3]
 			y=command[4]
 			image=command[5]
@@ -191,12 +191,15 @@ class DrawingThread(qtcore.QThread):
 
 			# set up history event
 			oldimage=layer.image.copy(dirtyrect)
-			historycommand=DrawingCommand(layerkey,oldimage,dirtyrect)
-
 			layer.compositeFromCorner(image,x,y,compmode,clippath,lock=layerimagelock)
-			window.logCommand(command,self.type)
 
-			layerpropertieslock=qtcore.QReadLocker(layer.propertieslock)
+			if subtype==LayerCommandTypes.rawevent:
+				historycommand=DrawingCommand(layerkey,oldimage,dirtyrect)
+			else:
+				floating=command[8]
+				historycommand=AnchorCommand(layerkey,oldimage,dirtyrect,floating)
+
+			window.logCommand(command,self.type)
 
 			# add to undo/redo history
 			window.addCommandToHistory(historycommand,layer.owner)

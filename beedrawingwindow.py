@@ -399,17 +399,58 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 			self.remotecommandqueue.put(command)
 
 	# send event to GUI to update the list of current layers
-	def requestLayerListRefresh(self):
-		self.resetLayerZValues()
+	def requestLayerListRefresh(self,lock=None):
+		self.resetLayerZValues(lock)
 		event=qtcore.QEvent(BeeCustomEventTypes.refreshlayerslist)
 		BeeApp().app.postEvent(self.master,event)
 
-	def removeLayer(self,layer,history=0,lock=None):
-		(layer,index)=BeeSessionState.removeLayer(self,layer,history,lock)
+	def layerDownPushed(self):
+		layer=self.getCurLayer()
 		if layer:
+			if layer.type==LayerTypes.floating:
+				parent=layer.parentItem()
+				lock=qtcore.QReadLocker(self.layerslistlock)
+				if parent in self.layers:
+					index=self.layers.index(parent)
+					if index>0:
+						layer.setParentItem(self.layers[index-1])
+						self.scene.update()
+						self.master.refreshLayersList(layerslock=lock)
+			else:
+				self.addLayerDownToQueue(layer.key)
+
+	def layerUpPushed(self):
+		layer=self.getCurLayer()
+		if layer:
+			if layer.type==LayerTypes.floating:
+				parent=layer.parentItem()
+				lock=qtcore.QReadLocker(self.layerslistlock)
+				if parent in self.layers:
+					index=self.layers.index(parent)
+					if index<len(self.layers)-1:
+						layer.setParentItem(self.layers[index+1])
+						self.scene.update()
+						self.master.refreshLayersList(layerslock=lock)
+			else:
+				self.addLayerUpToQueue(layer.key)
+
+	def removeLayer(self,layer,history=0,listlock=None):
+		index=-1
+		if not listlock:
+			listlock=qtcore.QWriteLocker(self.layerslistlock)
+
+		if layer.type==LayerTypes.floating:
 			self.scene.removeItem(layer)
 			self.scene.update()
-			self.setValidActiveLayer(True,True)
+			self.setValidActiveLayer(True,listlock=listlock)
+			self.requestLayerListRefresh(listlock)
+
+		else:
+			(layer,index)=BeeSessionState.removeLayer(self,layer,history,listlock)
+			if layer:
+				self.scene.removeItem(layer)
+				self.scene.update()
+				self.setValidActiveLayer(True,listlock=listlock)
 
 		return layer,index
 
@@ -479,13 +520,16 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 
 		return qtgui.QMainWindow.event(self,event)
 
-# get the current layer key and make sure it is valid, if it is not valid then set it to something valid if there are any layers
-	def getCurLayerKey(self):
+# get the current layer key
+	def getCurLayerKey(self,curlayerlock=None):
+		if not curlayerlock:
+			curlayerlock=qtcore.QMutexLocker(self.curlayerkeymutex)
+		return self.curlayerkey
+
+	def getCurLayer(self):
 		if self.layers:
 			if self.getLayerForKey(self.curlayerkey):
-				return self.curlayerkey
-			self.curlayerkey=self.layers[0].key
-			return self.curlayerkey
+				return self.getLayerForKey(self.curlayerkey)
 		return None
 
 	# not sure how useful these will be, but just in case a tool wants to do something special when it leaves the drawable area they are here
@@ -608,6 +652,15 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 			path=self.getClipPathCopy()
 			self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.cut,layerkey,self.getClipPathCopy()),ThreadTypes.user)
 
+	def addAnchorToQueue(self,parentkey,floating):
+		pos=floating.pos()
+		x=pos.x()
+		y=pos.y()
+		image=floating.getImageCopy()
+		clippath=None
+		compmode=floating.getCompmode()
+		self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.anchor,parentkey,x,y,image,clippath,compmode,floating),ThreadTypes.user)
+
 	# create backdrop for bottom of all layers, eventually I'd like this to be configurable, but for now it just fills in all white
 	def recreateBackdrop(self):
 		self.backdrop=qtgui.QImage(self.docwidth,self.docheight,qtgui.QImage.Format_ARGB32_Premultiplied)
@@ -701,7 +754,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		needchange=False
 		if not curlayerkeylock:
 			curlayerkeylock=qtcore.QMutexLocker(self.curlayerkeymutex)
-		curlayer=self.getLayerForKey(self.curlayerkey)
+		curlayer=self.getLayerForKey(self.curlayerkey,listlock)
 		if not curlayer:
 			needchange=True
 		elif self.type==WindowTypes.networkclient:
@@ -714,18 +767,22 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 			for layer in self.layers:
 				if self.ownedByMe(layer.getOwner()):
 					self.setActiveLayer(layer.key,curlayerkeylock)
-					return
+					return layer.key
 
 			self.setActiveLayer(None,curlayerkeylock)
+			return None
+
+		return self.curlayerkey
 
 	def setActiveLayer(self,newkey,lock=None):
 		if not lock:
-			curlayerkeylock=qtcore.QMutexLocker(self.curlayerkeymutex)
+			lock=qtcore.QMutexLocker(self.curlayerkeymutex)
 
 		oldkey=self.curlayerkey
+		oldkey=self.getCurLayerKey(lock)
 		self.curlayerkey=newkey
-		self.master.updateLayerHighlight(newkey)
-		self.master.updateLayerHighlight(oldkey)
+		self.master.updateLayerHighlight(self,newkey,lock)
+		self.master.updateLayerHighlight(self,oldkey,lock)
 
 	# do what's needed to start up any network threads
 	def startNetworkThreads(self,socket):
@@ -744,7 +801,6 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 	def clearAllLayers(self):
 		# lock all layers and the layers list
 		lock=qtcore.QWriteLocker(self.layerslistlock)
-		locklist=[]
 		for layer in self.layers[:]:
 			self.removeLayer(layer,history=0,lock=lock)
 

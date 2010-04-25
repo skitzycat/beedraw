@@ -72,6 +72,9 @@ class AbstractBeeMaster:
 	def getCurToolInst(self,window):
 		pass
 
+	def getCurWindow(self,lock=None):
+		return self.curwindow
+
 	def getCurToolDesc(self):
 		"""	return description object for current tool """
 		return self.toolbox.getCurToolDesc()
@@ -83,8 +86,8 @@ class AbstractBeeMaster:
 		""" return layer of current window that has specified ID, return None if no layer with that ID is found """
 		return self.curwindow.getLayerByKey(layer_id)
 
-	def getLayerById(self,win_id):
-		return self.curwindow
+	#def getLayerById(self,win_id):
+	#	return self.curwindow
 
 	def startRemoteDrawingThreads(self):
 		pass

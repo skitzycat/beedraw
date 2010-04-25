@@ -98,9 +98,35 @@ class DrawingCommand(AbstractCommand):
 			layer.compositeFromCorner(self.oldimage,self.location.x(),self.location.y(),qtgui.QPainter.CompositionMode_Source)
 
 	def redo(self,windowid):
+		print_debug("running redo in drawing command")
 		layer=BeeApp().master.getLayerById(windowid,self.layerkey)
 		if layer:
 			layer.compositeFromCorner(self.redoimage,self.location.x(),self.location.y(),qtgui.QPainter.CompositionMode_Source)
+
+class AnchorCommand(DrawingCommand):
+	def __init__(self,layerkey,oldimage,location,floating):
+		DrawingCommand.__init__(self,layerkey,oldimage,location)
+		self.floating=floating
+
+	def undo(self,windowid):
+		DrawingCommand.undo(self,windowid)
+		layer=BeeApp().master.getLayerById(windowid,self.layerkey)
+		win=BeeApp().master.getWindowById(windowid)
+		if layer:
+			layer.scene().addItem(self.floating)
+			self.floating.setParentItem(layer)
+			win.requestLayerListRefresh()
+			BeeApp().master.updateLayerHighlight(win,self.floating.key)
+
+	def redo(self,windowid):
+		DrawingCommand.redo(self,windowid)
+		layer=BeeApp().master.getLayerById(windowid,self.layerkey)
+		win=BeeApp().master.getWindowById(windowid)
+		if layer:
+			#self.floating.setParentItem(None)
+			layer.scene().removeItem(self.floating)
+			win.setValidActiveLayer()
+			win.requestLayerListRefresh()
 
 class AddLayerCommand(AbstractCommand):
 	def __init__(self,layerkey):

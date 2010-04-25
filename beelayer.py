@@ -75,19 +75,14 @@ class BeeLayerState:
 		# set default name for layer
 		self.changeName("Layer %d" % key)
 
-	def setDelete(self,state):
-		proplock=qtcore.QWriteLocker(self.deletelock)
-		self.shoulddelete=state
-
-	def shouldBeDeleted(self):
-		proplock=qtcore.QReadLocker(self.deletelock)
-		return self.shoulddelete
-
 	def changeOpacity(self,opacity):
 		self.opacity_setting=opacity
 
 	def getOpacity(self):
 		return self.opacity_setting
+
+	def getCompmode(self):
+		return self.compmode
 
 	def scale(self,newwidth,newheight):
 		lock=qtcore.QWriteLocker(self.imagelock)
@@ -322,9 +317,11 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
 
 	def anchor(self,child):
 		win=BeeApp().master.getWindowById(self.windowid)
-		win.addRawEventToQueue(self.key,child.getImageCopy(),int(child.pos().x()),int(child.pos().y()),None,child.compmode)
-		# can't actually delete it here or it will cause a segfault, just flag it for deletetion
-		child.setDelete(True)
+		win.addAnchorToQueue(self.key,child)
+		win.scene.removeItem(child)
+		newactive=win.setValidActiveLayer()
+		if newactive:
+			win.master.updateLayerHighlight(win,newactive)
 		win.requestLayerListRefresh()
 
 	def boundingRect(self):
@@ -689,13 +686,9 @@ class BeeLayersWindow(qtgui.QMainWindow):
 		# ask each layer for it's widget and add it
 		for layer in reversed(layers):
 			for floating in layer.childItems():
-				if floating.shouldBeDeleted():
-					scene=floating.scene()
-					scene.removeItem(floating)
-				else:
-					newwidget=floating.getConfigWidget()
-					vbox.addWidget(newwidget)
-					newwidget.show()
+				newwidget=floating.getConfigWidget()
+				vbox.addWidget(newwidget)
+				newwidget.show()
 
 			newwidget=layer.getConfigWidget()
 			if layer.key==curlayerkey:
@@ -711,9 +704,14 @@ class BeeLayersWindow(qtgui.QMainWindow):
 			frame.setGeometry(qtcore.QRect(0,0,0,0))
 
 	# set proper highlight for layer with passed key
-	def refreshLayerHighlight(self,key):
-		#lock=qtcore.QMutexLocker(self.mutex)
+	def refreshLayerHighlight(self,win,key,lock=None):
 		frame=self.layersListArea.widget()
+
+		if not lock:
+			lock=qtcore.QMutexLocker(win.curlayerkeymutex)
+
+		winkey=win.getCurLayerKey(lock)
+
 		# go through all the children of the frame
 		# this seems like a hackish way to do things, but I've yet to find better and speed is not all that vital here
 		for widget in frame.children():
@@ -722,7 +720,7 @@ class BeeLayersWindow(qtgui.QMainWindow):
 				continue
 
 			if key==widget.layerkey:
-				if key==self.master.curwindow.curlayerkey:
+				if key==winkey:
 					widget.highlight()
 					return
 				else:
@@ -746,17 +744,19 @@ class BeeLayersWindow(qtgui.QMainWindow):
 	def on_delete_layer_button_clicked(self,accept=True):
 		if accept:
 			if self.master.curwindow:
-				self.master.curwindow.addRemoveLayerRequestToQueue(self.master.curwindow.curlayerkey)
+				self.master.curwindow.addRemoveLayerRequestToQueue(self.master.curwindow.getCurLayerKey())
 
 	def on_layer_up_button_clicked(self,accept=True):
 		if accept:
 			if self.master.curwindow:
-				self.master.curwindow.addLayerUpToQueue(self.master.curwindow.curlayerkey)
+				self.master.curwindow.layerUpPushed()
+				#self.master.curwindow.addLayerUpToQueue(self.master.curwindow.getCurLayerKey())
 
 	def on_layer_down_button_clicked(self,accept=True):
 		if accept:
 			if self.master.curwindow:
-				self.master.curwindow.addLayerDownToQueue(self.master.curwindow.curlayerkey)
+				self.master.curwindow.layerDownPushed()
+				#self.master.curwindow.addLayerDownToQueue(self.master.curwindow.getCurLayerKey())
 
 	def hideEvent(self,event):
 		if not self.isMinimized():
