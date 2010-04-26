@@ -207,10 +207,11 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 
 	def stopServer(self):
 		if self.serverthread:
+			self.serverthread.stopServerThread()
 			#self.serverthread.terminate()
 			#self.serverthread.quit()
-			self.serverthread.exit()
-			self.serverthread.wait()
+			#self.serverthread.exit()
+			#self.serverthread.wait()
 			self.serverthread=None
 			self.ui.statusLabel.setText("Serving not running")
 
@@ -225,7 +226,6 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 		for i in self.clientnames.keys():
 			if self.clientnames[i]==name:
 				self.socketsmap[i].abort()
-				self.socketsmap[i].close()
 				self.socketsmap[i].socket.disconnectFromHost()
 				self.routinginput.put(((DrawingCommandTypes.quit,),0-i))
 
@@ -258,6 +258,7 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 
 			if dialog.result():
 				self.port=dialog.ui.port_box.value()
+				print "set new port value to", self.port
 				self.password=dialog.ui.password_entry.text()
 				self.width=dialog.ui.width_box.value()
 				self.height=dialog.ui.height_box.value()
@@ -280,8 +281,16 @@ class HiveServerThread(qtcore.QThread):
 			return
 
 		# needs to be done here because this is running in the proper thread
-		self.server=BeeTCPServer(BeeSocketTypes.qt,8333,self,self.master)
+		self.server=BeeTCPServer(BeeSocketTypes.qt,self.port,self,self.master)
 		self.server.start()
+
+	def stopServerThread(self):
+		self.server.stop()
+		if os.name=="posix":
+			self.terminate()
+		else:
+			self.quit()
+			self.wait()
 
 	def finished(self):
 		print_debug("server thread has finished")
@@ -289,7 +298,7 @@ class HiveServerThread(qtcore.QThread):
 	def run(self):
 		if os.name=="posix":
 			# under linux Qt sockets aren't working correctly for me
-			self.server=BeeTCPServer(BeeSocketTypes.python,8333,self,self.master)
+			self.server=BeeTCPServer(BeeSocketTypes.python,self.port,self,self.master)
 			self.server.start()
 		else:
 			self.exec_()
@@ -343,7 +352,6 @@ class HiveRoutingThread(qtcore.QThread):
 		for id in self.master.clientwriterqueues.keys():
 			if source!=id:
 				#print_debug("sending to client: %d" % id)
-				print "putting in queue:", self.master.clientwriterqueues[id]
 				self.master.clientwriterqueues[id].put(command)
 
 	def sendToSingleClient(self,id,command):

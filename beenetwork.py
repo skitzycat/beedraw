@@ -115,10 +115,12 @@ class BeeTCPServer(qtcore.QObject):
 				self.server.serve_forever()
 
 	def stop(self):
-		if self.type==BeeSocketTypes.qt:
-			self.server.close()
-		elif self.type==BeeSocketTypes.python:
-			self.server.shutdown()
+		if self.server:
+			if self.type==BeeSocketTypes.qt:
+				self.server.close()
+			elif self.type==BeeSocketTypes.python:
+				self.server.shutdown()
+				self.server.socket.close()
 
 	def newConnectionQt(self):
 		print_debug("found new connection")
@@ -220,10 +222,6 @@ class BeeSocket:
 		elif self.type==BeeSocketTypes.python:
 			return self.connected
 
-	def close(self):
-		if self.type==BeeSocketTypes.qt:
-			self.socket.close()
-
 	def write(self,data):
 		if not data:
 			return
@@ -312,7 +310,7 @@ class HiveClientListener(qtcore.QThread):
 
 	def readyRead(self):
 		data=self.socket.read(readybytes)
-		#print_debug("got animation data from socket: %s" % qtcore.QString(data))
+		print_debug("got animation data from socket: %s" % qtcore.QString(data))
 		self.parser.xml.addData(data)
 		error=self.parser.read()
 

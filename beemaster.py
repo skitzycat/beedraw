@@ -128,7 +128,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			lock=qtcore.QWriteLocker(self.drawingwindowslock)
 		if self.curwindow!=window:
 			self.curwindow=window
-			self.refreshLayersList(lock)
+			self.refreshLayersList(winlock=lock)
 
 	def setClipBoardImage(self,image):
 		lock=qtcore.QWriteLocker(self.clipboardlock)
@@ -181,18 +181,19 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		self.nextwindowid+=1
 		return self.nextwindowid
 
-	def getWindowById(self,id):
-		lock=qtcore.QReadLocker(self.drawingwindowslock)
+	def getWindowById(self,id,lock=None):
+		if not lock:
+			lock=qtcore.QReadLocker(self.drawingwindowslock)
 		for win in self.drawingwindows:
 			if win.id==id:
 				return win
 		print_debug("WARNING: Couldn't find window with ID: %d" % id)
 		return None
 
-	def getLayerById(self,win_id,layer_id):
+	def getLayerById(self,win_id,layer_id,winlock=None):
 		win=self.getWindowById(win_id)
 		if win:
-			return win.getLayerForKey(layer_id)
+			return win.getLayerForKey(layer_id,winlock)
 		else:
 			print_debug("WARNING: can't find layer with id: %d in window: %d" % (layer_id,win_id))
 		return None
@@ -575,7 +576,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			if self.curwindow:
 				if not layerslock:
 					layerslock=qtcore.QReadLocker(self.curwindow.layerslistlock)
-				self.layerswindow.refreshLayersList(self.curwindow.layers,self.curwindow.curlayerkey)
+				self.layerswindow.refreshLayersList(self.curwindow.layers,self.curwindow.curlayerkey,winlock)
 			else:
 				self.layerswindow.refreshLayersList(None,None)
 

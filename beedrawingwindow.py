@@ -827,7 +827,7 @@ class NetworkClientDrawingWindow(BeeDrawingWindow):
 	""" Represents a window that the user can draw in with others in a network session
 	"""
 	def __init__(self,parent,socket):
-		print_debug("initializign network window")
+		print_debug("initializing network window")
 		self.socket=socket
 		BeeDrawingWindow.__init__(self,parent,startlayer=False,type=WindowTypes.networkclient)
 		self.disconnectmessage=None

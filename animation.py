@@ -206,8 +206,9 @@ class XmlToQueueEventsConverter:
 
 		elif name == 'rawevent':
 			self.raweventargs=[]
-			(self.x,ok)=attrs.value('x').toString().toInt()
-			(self.y,ok)=attrs.value('y').toString().toInt()
+			xstr=attrs.value('x').toString()
+			(self.x,ok)=xstr.toFloat()
+			(self.y,ok)=attrs.value('y').toString().toFloat()
 			(layerkey,ok)=attrs.value('layerkey').toString().toInt()
 			self.layerkey=self.translateKey(layerkey)
 
@@ -362,7 +363,7 @@ class NetworkListenerThread (qtcore.QThread):
 				self.window.setDisconnectMessage("Server has closed connection")
 				break
 
-			#print_debug("got animation data from socket: %s" % data)
+			print_debug("got animation data from socket: %s" % data)
 
 			self.parser.xml.addData(data)
 			error=self.parser.read()

@@ -344,14 +344,14 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
 		self.scene().tmppainter.setOpacity(painter.opacity())
 		self.scene().tmppainter.drawImage(drawrect,self.image,drawrect)
 
-	def getConfigWidget(self):
+	def getConfigWidget(self,winlock=None):
 		# can't do this in the constructor because that may occur in a thread other than the GUI thread, this function however should only occur in the GUI thread
 		if not self.configwidget:
 			self.configwidget=LayerConfigWidget(self.windowid,self.key)
 			self.configwidget.setSizePolicy(qtgui.QSizePolicy.MinimumExpanding,qtgui.QSizePolicy.Fixed)
 			self.configwidget.ui.background_frame.setSizePolicy(qtgui.QSizePolicy.MinimumExpanding,qtgui.QSizePolicy.MinimumExpanding)
 		else:
-			self.configwidget.updateValuesFromLayer()
+			self.configwidget.updateValuesFromLayer(winlock)
 		return self.configwidget
 
 class LayerFinisher(qtgui.QGraphicsItem):
@@ -491,9 +491,9 @@ class LayerConfigWidget(qtgui.QWidget):
 	getStandardGeometry=staticmethod(getStandardGeometry)
 
 	# update the gui to reflect the values of the layer
-	def updateValuesFromLayer(self):
-		layer=BeeApp().master.getLayerById(self.windowid,self.layerkey)
-		win=BeeApp().master.getWindowById(self.windowid)
+	def updateValuesFromLayer(self,winlock=None):
+		win=BeeApp().master.getWindowById(self.windowid,winlock)
+		layer=win.getLayerForKey(self.layerkey)
 
 		if not layer:
 			print_debug("WARNING: updateValueFromLayer could not find layer with key %s" % self.layerkey)
@@ -661,11 +661,9 @@ class BeeLayersWindow(qtgui.QMainWindow):
 		self.layersListArea=layersListArea
 
 	# rebuild layers window by removing all the layers widgets and then adding them back in order
-	def refreshLayersList(self,layers,curlayerkey):
+	def refreshLayersList(self,layers,curlayerkey,winlock=None):
 		""" Update the list of layers displayed in the layers display window, if passed none for the layers arguement, the list of layers is cleared
 		"""
-		#lock=qtcore.QMutexLocker(self.mutex)
-
 		frame=self.layersListArea.widget()
 
 		vbox=frame.layout()
@@ -680,17 +678,18 @@ class BeeLayersWindow(qtgui.QMainWindow):
 
 		newwidget=None
 
+
 		if not layers:
 			return
 
 		# ask each layer for it's widget and add it
 		for layer in reversed(layers):
 			for floating in layer.childItems():
-				newwidget=floating.getConfigWidget()
+				newwidget=floating.getConfigWidget(winlock)
 				vbox.addWidget(newwidget)
 				newwidget.show()
 
-			newwidget=layer.getConfigWidget()
+			newwidget=layer.getConfigWidget(winlock)
 			if layer.key==curlayerkey:
 				newwidget.highlight()
 			else:
