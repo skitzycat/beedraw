@@ -620,7 +620,7 @@ class LayerConfigWidget(qtgui.QWidget):
 		win=BeeApp().master.getWindowById(self.windowid)
 		if layer:
 			if win.type==WindowTypes.networkclient:
-				if win.ownedByMe(layer.owner):
+				if win.ownedByMe(layer.owner) or layer.type==LayerTypes.floating:
 					win.setActiveLayer(layer.key)
 			else:
 				win.setActiveLayer(layer.key)
