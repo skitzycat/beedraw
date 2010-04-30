@@ -260,6 +260,7 @@ class DrawingThread(qtcore.QThread):
 			layer=window.getLayerForKey(command[3])
 			if not layer:
 				return
+			layer.deleteChildren()
 			layer.changeOwner(0)
 			window.logCommand(command,self.type)
 

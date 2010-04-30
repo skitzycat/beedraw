@@ -155,14 +155,26 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 	def getBGColor(self):
 		return self.bgcolor
 
+	def isWindowRegistered(self,window,winlock):
+		if not winlock:
+			winlock=qtcore.QReadLocker(self.drawingwindowslock)
+
+		if window in self.drawingwindows:
+			return True
+
+		return False
+
 	def registerWindow(self,window):
 		lock=qtcore.QWriteLocker(self.drawingwindowslock)
 		self.drawingwindows.append(window)
 		self.setCurWindow(window,lock)
+		print "registering window:", window
 
 	def unregisterWindow(self,window):
+		print "unregistering window"
 		lock=qtcore.QWriteLocker(self.drawingwindowslock)
 		self.drawingwindows.remove(window)
+		print "window removed from list"
 		# if the window we're deleting was the active window
 		if self.curwindow==window:
 			# if there is at least one other window make that the current window
@@ -342,8 +354,6 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			newwindow=BeeDrawingWindow(self,image.width(),image.height(),False)
 			newwindow.loadLayer(image)
 
-			self.registerWindow(newwindow)
-
 	def on_action_File_New_triggered(self,accept=True):
 		if not accept:
 			return
@@ -355,7 +365,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		if dialog.result():
 			width=dialogui.width_box.value()
 			height=dialogui.height_box.value()
-			self.registerWindow(BeeDrawingWindow(self,width=width,height=height))
+			window=BeeDrawingWindow(self,width=width,height=height)
 
 	def on_action_Edit_Configure_triggered(self,accept=True):
 		if not accept:
@@ -448,7 +458,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		socket=self.getServerConnection(username,password,hostname,port)
 
 		if socket:
-			self.registerWindow(NetworkClientDrawingWindow(self,socket))
+			window=NetworkClientDrawingWindow(self,socket)
 
 	# connect to host and authticate
 	def getServerConnection(self,username,password,host,port):
@@ -508,7 +518,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		if not accept:
 			return
 		self.serverwin=HiveMasterWindow(BeeApp().app)
-		self.registerWindow(BeeDrawingWindow.startNetworkServer(self))
+		window=BeeDrawingWindow.startNetworkServer(self)
 
 	def uncheckWindowLayerBox(self):
 		self.ui.Window_Layers.setChecked(False)
@@ -576,7 +586,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			if self.curwindow:
 				if not layerslock:
 					layerslock=qtcore.QReadLocker(self.curwindow.layerslistlock)
-				self.layerswindow.refreshLayersList(self.curwindow.layers,self.curwindow.curlayerkey,winlock)
+				self.layerswindow.refreshLayersList(self.curwindow,self.curwindow.curlayerkey,winlock)
 			else:
 				self.layerswindow.refreshLayersList(None,None)
 

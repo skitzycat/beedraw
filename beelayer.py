@@ -315,6 +315,12 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
 
 		BeeApp().master.setClipBoardImage(tmpimage)
 
+	def deleteChildren(self):
+		win=BeeApp().master.getWindowById(self.windowid)
+		for child in self.childItems():
+			child.setParent(None)
+			win.scene.removeItem(child)
+
 	def anchor(self,child):
 		win=BeeApp().master.getWindowById(self.windowid)
 		win.addAnchorToQueue(self.key,child)
@@ -598,6 +604,11 @@ class LayerConfigWidget(qtgui.QWidget):
 		# the layer is owned locally so change it to be owned by no one
 		elif win.ownedByMe(layer.owner):
 			#print_debug("adding give up layer to queue for layer key: %d" % layer.key)
+			if len(layer.childItems()):
+				result=qtgui.QMessageBox.warning(None,"Floating layers can not be given up","You are attempting to give up ownership of layer that has floting layers, if you continue the floating layers will be destroyed.  To avoid having them destroyed please anchor them or move them to other layers.","Continue","Cancel")
+				if result:
+					return
+
 			win.addGiveUpLayerToQueue(layer.key)
 
 		# if the layer is owned by nobody then request it
@@ -661,9 +672,12 @@ class BeeLayersWindow(qtgui.QMainWindow):
 		self.layersListArea=layersListArea
 
 	# rebuild layers window by removing all the layers widgets and then adding them back in order
-	def refreshLayersList(self,layers,curlayerkey,winlock=None):
+	def refreshLayersList(self,win,curlayerkey,winlock=None):
 		""" Update the list of layers displayed in the layers display window, if passed none for the layers arguement, the list of layers is cleared
 		"""
+		if not winlock:
+			winlock=qtcore.QReadLocker(self.master.drawingwindowslock)
+
 		frame=self.layersListArea.widget()
 
 		vbox=frame.layout()
@@ -676,14 +690,14 @@ class BeeLayersWindow(qtgui.QMainWindow):
 			widget.setParent(None)
 			vbox.removeWidget(widget)
 
-		newwidget=None
-
-
-		if not layers:
+		# make sure the window has not be unregistered already
+		if not self.master.isWindowRegistered(win,winlock):
 			return
 
+		newwidget=None
+
 		# ask each layer for it's widget and add it
-		for layer in reversed(layers):
+		for layer in reversed(win.layers):
 			for floating in layer.childItems():
 				newwidget=floating.getConfigWidget(winlock)
 				vbox.addWidget(newwidget)

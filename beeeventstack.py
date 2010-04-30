@@ -123,7 +123,6 @@ class AnchorCommand(DrawingCommand):
 		layer=BeeApp().master.getLayerById(windowid,self.layerkey)
 		win=BeeApp().master.getWindowById(windowid)
 		if layer:
-			#self.floating.setParentItem(None)
 			layer.scene().removeItem(self.floating)
 			win.setValidActiveLayer()
 			win.requestLayerListRefresh()
