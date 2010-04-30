@@ -168,13 +168,10 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		lock=qtcore.QWriteLocker(self.drawingwindowslock)
 		self.drawingwindows.append(window)
 		self.setCurWindow(window,lock)
-		print "registering window:", window
 
 	def unregisterWindow(self,window):
-		print "unregistering window"
 		lock=qtcore.QWriteLocker(self.drawingwindowslock)
 		self.drawingwindows.remove(window)
-		print "window removed from list"
 		# if the window we're deleting was the active window
 		if self.curwindow==window:
 			# if there is at least one other window make that the current window
