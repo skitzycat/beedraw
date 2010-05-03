@@ -412,10 +412,13 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 				lock=qtcore.QReadLocker(self.layerslistlock)
 				if parent in self.layers:
 					index=self.layers.index(parent)
-					if index>0:
-						layer.setParentItem(self.layers[index-1])
-						self.scene.update()
-						self.master.refreshLayersList(layerslock=lock)
+					while index>0:
+						index-=1
+						if self.ownedByMe(self.layers[index]):
+							layer.setParentItem(self.layers[index])
+							self.scene.update()
+							self.master.refreshLayersList(layerslock=lock)
+							break
 			else:
 				self.addLayerDownToQueue(layer.key)
 
@@ -427,10 +430,13 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 				lock=qtcore.QReadLocker(self.layerslistlock)
 				if parent in self.layers:
 					index=self.layers.index(parent)
-					if index<len(self.layers)-1:
-						layer.setParentItem(self.layers[index+1])
-						self.scene.update()
-						self.master.refreshLayersList(layerslock=lock)
+					while index<len(self.layers):
+						index+=1
+						if self.ownedByMe(self.layers[index]):
+							layer.setParentItem(self.layers[index])
+							self.scene.update()
+							self.master.refreshLayersList(layerslock=lock)
+							break
 			else:
 				self.addLayerUpToQueue(layer.key)
 
