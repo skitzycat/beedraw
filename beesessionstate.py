@@ -165,7 +165,7 @@ class BeeSessionState:
 	def addLayerDownToQueue(self,key,source=ThreadTypes.user):
 		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.layerdown,key),source)
 
-	def layerDown(self,key):
+	def layerDown(self,key,history=True):
 		index=self.getLayerIndexForKey(key)
 		lock=qtcore.QWriteLocker(self.layerslistlock)
 		if index>0:
@@ -177,13 +177,13 @@ class BeeSessionState:
 			# if we are only running locally add command to local history
 			# otherwise do nothing
 			# layer movment operations can't be undone with an undo command when in a network session
-			if self.type==WindowTypes.singleuser:
+			if self.type==WindowTypes.singleuser and history:
 				self.addCommandToHistory(LayerDownCommand(key))
 
 	def addLayerUpToQueue(self,key,source=ThreadTypes.user):
 		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.layerup,key),source)
 
-	def layerUp(self,key):
+	def layerUp(self,key,history=True):
 		lock=qtcore.QWriteLocker(self.layerslistlock)
 		index=self.getLayerIndexForKey(key)
 		if index==None:
@@ -196,7 +196,7 @@ class BeeSessionState:
 
 			# if we are only running locally add command to local history
 			# otherwise do nothing
-			if self.type==WindowTypes.singleuser:
+			if self.type==WindowTypes.singleuser and history:
 				self.addCommandToHistory(LayerUpCommand(key))
 
 	def reCompositeImage(self,dirtyrect=None):

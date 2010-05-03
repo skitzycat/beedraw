@@ -310,22 +310,22 @@
   </action>
   <action name="Tool_save_default" >
    <property name="text" >
-    <string>Save as defaults</string>
+    <string>Save  all current options as defaults</string>
    </property>
   </action>
   <action name="Tool_load_default" >
    <property name="text" >
-    <string>Load defaults</string>
+    <string>Set current options to defaults</string>
    </property>
   </action>
   <action name="Tool_save_as" >
    <property name="text" >
-    <string>Save options as</string>
+    <string>Save all current tool options as</string>
    </property>
   </action>
   <action name="Tool_load_from" >
    <property name="text" >
-    <string>Load from file</string>
+    <string>Load tool options from file</string>
    </property>
   </action>
   <action name="Window_Tool_Options" >

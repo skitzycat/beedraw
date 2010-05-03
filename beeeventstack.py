@@ -162,11 +162,11 @@ class LayerUpCommand(AbstractCommand):
 
 	def undo(self,windowid):
 		window=BeeApp().master.getWindowById(windowid)
-		window.layerDown(self.layerkey)
+		window.layerDown(self.layerkey,history=False)
 
 	def redo(self,windowid):
 		window=BeeApp().master.getWindowById(windowid)
-		window.layerUp(self.layerkey)
+		window.layerUp(self.layerkey,history=False)
 
 class LayerDownCommand(AbstractCommand):
 	def __init__(self,layerkey):
@@ -175,8 +175,8 @@ class LayerDownCommand(AbstractCommand):
 
 	def undo(self,windowid):
 		window=BeeApp().master.getWindowById(windowid)
-		window.layerUp(self.layerkey)
+		window.layerUp(self.layerkey,history=False)
 
 	def redo(self,windowid):
 		window=BeeApp().master.getWindowById(windowid)
-		window.layerDown(self.layerkey)
+		window.layerDown(self.layerkey,history=False)
