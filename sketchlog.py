@@ -79,7 +79,6 @@ class SketchLogWriter:
 			self.logLayerModeChange(layer,command[3])
 
 		elif subtype==LayerCommandTypes.rawevent or subtype==LayerCommandTypes.anchor:
-			print "logging raw event with coords:", command[3],command[4]
 			self.logRawEvent(command[3],command[4],layer,command[5],command[6])
 
 		elif subtype==LayerCommandTypes.tool:

@@ -316,10 +316,14 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
 		BeeApp().master.setClipBoardImage(tmpimage)
 
 	def deleteChildren(self):
+		num_deleted=0
 		win=BeeApp().master.getWindowById(self.windowid)
 		for child in self.childItems():
-			child.setParent(None)
+			num_deleted+=1
+			child.setParentItem(None)
 			win.scene.removeItem(child)
+
+		return num_deleted
 
 	def anchor(self,child):
 		win=BeeApp().master.getWindowById(self.windowid)
