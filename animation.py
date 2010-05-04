@@ -143,6 +143,7 @@ class XmlToQueueEventsConverter:
 			(key,ok)=attrs.value("key").toString().toInt()
 			(opacity,ok)=attrs.value("alpha").toString().toFloat()
 			self.window.addOpacityChangeToQueue(key,opacity,type)
+			self.window.addOpacityDoneToQueue(key,type)
 
 		elif name == 'layermode':
 			time.sleep(self.stepdelay)

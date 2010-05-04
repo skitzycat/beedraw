@@ -665,6 +665,19 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		image=floating.getImageCopy()
 		clippath=None
 		compmode=floating.getCompmode()
+		alphachannel=qtgui.QImage(image.size(),qtgui.QImage.Format_ARGB32_Premultiplied)
+
+		# fade image if the opacity is less than full
+		alphaammount=int(255*floating.getOpacity())
+		if alphaammount < 255:
+			alphachannel.fill(qtgui.QColor(0,0,0,alphaammount).rgba())
+			#image.setAlphaChannel(alphachannel)
+			painter=qtgui.QPainter()
+			painter.begin(image)
+			painter.setCompositionMode(qtgui.QPainter.CompositionMode_DestinationIn)
+			painter.drawImage(0,0,alphachannel)
+			painter.end()
+		
 		self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.anchor,parentkey,x,y,image,clippath,compmode,floating),ThreadTypes.user)
 
 	# create backdrop for bottom of all layers, eventually I'd like this to be configurable, but for now it just fills in all white

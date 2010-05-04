@@ -467,3 +467,12 @@ class ThreadNotifierQueue(Queue,qtcore.QObject):
 
 	def connectNotify(self,signal):
 		print "signal connected to Queue:", signal
+
+#class ItemRenderer(qtgui.QGraphicsView):
+#	class ItemRendererScene(qtgui.QGraphicsScene):
+#	def __init__(self,items):
+#		self.scene=qtgui.QGraphicsScene()
+#		for i in items:
+#			self.scene.addItem(i)
+#	def render(self,rect):
+#		self.scene.tmppainter

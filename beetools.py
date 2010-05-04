@@ -401,8 +401,8 @@ class DrawingTool(AbstractTool):
 			return
  
 		# scaled size for brush
-		bdiameter=self.options["maxdiameter"]*pressure
-		self.diameter=int(math.ceil(bdiameter))+1
+		bdiameter=((self.options["maxdiameter"]-self.options["mindiameter"])*pressure) + self.options["mindiameter"]
+		self.diameter=int(math.ceil(bdiameter))
 
 		# make target size an odd number
 		if self.diameter%2==0:
@@ -1183,10 +1183,12 @@ class SketchTool(DrawingTool):
 	def scaleForPressure(self,pressure):
 		minsize=self.options["mindiameter"]
 		maxsize=self.options["maxdiameter"]
+		sizediff=maxsize-minsize
 
 		#unroundedscale=(((maxsize-minsize)/maxsize)*pressure) + ((minsize/maxsize) * pressure)
+		unroundedscale=((sizediff/maxsize)*pressure) + (minsize/maxsize)
 		#print "unrounded scale:", unroundedscale
-		unroundedscale=pressure
+		#unroundedscale=pressure
 		#iscale=int(unroundedscale*BRUSH_SIZE_GRANULARITY)
 		#scale=float(iscale)/BRUSH_SIZE_GRANULARITY
 		scale=unroundedscale

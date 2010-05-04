@@ -419,6 +419,9 @@ class BeeSessionState:
 	def addOpacityChangeToQueue(self,key,value,source=ThreadTypes.user):
 		self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.alpha,key,value),source)
 
+	def addOpacityDoneToQueue(self,key,source=ThreadTypes.user):
+		self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.alphadone,key),source)
+
 	def addBlendModeChangeToQueue(self,key,value,source=ThreadTypes.user):
 		self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.mode,key,value),source)
 

@@ -56,7 +56,11 @@ class HistoryCommandTypes:
 
 # events that effect only one layer
 class LayerCommandTypes:
-	alpha, mode, pendown, penmotion, penup, penleave, penenter, rawevent, tool, cut, copy, paste, anchor = range(13)
+	""" layer command type definitions
+				alpha : the alpha of the layer has been changed
+				alphadone : the alpha of the layer is finished being changed, this is for when the user lets the cursor up on the slider and the event can actually be logged and sent externally
+	"""
+	alpha, alphadone, mode, pendown, penmotion, penup, penleave, penenter, rawevent, tool, cut, copy, paste, anchor = range(14)
 
 # events that effect the list of layers, all layers or layer ownership
 class AllLayerCommandTypes:

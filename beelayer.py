@@ -583,6 +583,10 @@ class LayerConfigWidget(qtgui.QWidget):
 		win=BeeApp().master.getWindowById(self.windowid)
 		win.addOpacityChangeToQueue(self.layerkey,value/100.)
 
+	def on_opacity_slider_sliderReleased(self):
+		win=BeeApp().master.getWindowById(self.windowid)
+		win.addOpacityDoneToQueue(self.layerkey)
+
 	def on_blend_mode_box_activated(self,value):
 		# we only want the event with the string
 		if not type(value) is qtcore.QString:
