@@ -507,7 +507,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		if answer=="Success":
 			return socket
 
-		socket.close()
+		socket.disconnect()
 		qtgui.QMessageBox.warning(None,"Server Refused Connection",message)
 		return None
 

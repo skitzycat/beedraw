@@ -333,9 +333,8 @@ class HiveClientListener(qtcore.QThread):
 		print_debug("authentication succeded")
 
 		if not self.register():
-			print_debug("register failed, probably due to duplicate username")
-			self.socket.write(qtcore.QByteArray("Regististration failed\nRegistration with server failed, the username you chose is probably in use already, try a different one\n"))
-			self.socket.waitForBytesWritten()
+			print_debug("Registration with server failed, probably due to duplicate username")
+			self.socket.write(qtcore.QByteArray("Registration Failed\nRegistration with server failed, the username you chose is already in use already, try a different one\n"))
 			self.socket.disconnect()
 			return
 

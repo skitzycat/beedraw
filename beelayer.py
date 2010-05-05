@@ -536,10 +536,10 @@ class LayerConfigWidget(qtgui.QWidget):
 
 		# only need text on the button if it's a network or floating layer
 		if win.type==WindowTypes.networkclient:
-			if win.ownedByNobody(layer.owner):
-				netbuttontext="Claim ownership"
+			if win.ownedByNobody(layer.getOwner(proplock)):
+				netbuttontext="Claim Ownership"
 				netbuttonstate=True
-			elif win.ownedByMe(layer.owner):
+			elif win.ownedByMe(layer.getOwner(proplock)):
 				netbuttontext="Give Up Ownership"
 				netbuttonstate=True
 
@@ -549,7 +549,7 @@ class LayerConfigWidget(qtgui.QWidget):
 
 		# disable controls if client shouldn't be able to control them
 		if win.type==WindowTypes.networkclient:
-			if win.ownedByMe(layer.owner):
+			if win.ownedByMe(layer.getOwner(proplock)) or layer.type==LayerTypes.floating:
 				self.ui.opacity_slider.setEnabled(True)
 				self.ui.blend_mode_box.setEnabled(True)
 			else:
