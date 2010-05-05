@@ -50,6 +50,7 @@ from beedrawingwindow import BeeDrawingWindow, NetworkClientDrawingWindow, Anima
 
 class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 	def __init__(self):
+		self.initializedwindows=False
 		qtgui.QMainWindow.__init__(self)
 		AbstractBeeMaster.__init__(self)
 
@@ -105,6 +106,8 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 		# setup window with colors
 		self.palettewindow=PaletteWindow(self)
+
+		self.initializedwindows=True
 
 		self.fgcolor=qtgui.QColor(0,0,0)
 		self.bgcolor=qtgui.QColor(255,255,255)
@@ -175,14 +178,15 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		return qtgui.QMainWindow.event(self,event)
 
 	def raiseAllWindows(self,curwin):
-		lock=qtcore.QReadLocker(self.drawingwindowslock)
-		self.palettewindow.raise_()
-		self.layerswindow.raise_()
-		self.tooloptionswindow.raise_()
-		for window in self.drawingwindows:
-			window.raise_()
-		self.raise_()
-		curwin.raise_()
+		if self.initializedwindows:
+			lock=qtcore.QReadLocker(self.drawingwindowslock)
+			self.palettewindow.raise_()
+			self.layerswindow.raise_()
+			self.tooloptionswindow.raise_()
+			for window in self.drawingwindows:
+				window.raise_()
+			self.raise_()
+			curwin.raise_()
 
 	def unregisterWindow(self,window):
 		lock=qtcore.QWriteLocker(self.drawingwindowslock)
