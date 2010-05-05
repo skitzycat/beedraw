@@ -516,6 +516,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 				self.startRemoteDrawingThreads()
 
 			self.master.takeFocus(self)
+			self.master.raiseAllWindows(self)
 
 		elif event.type()==BeeCustomEventTypes.displaymessage:
 			self.displayMessage(event.boxtype,event.title,event.message)

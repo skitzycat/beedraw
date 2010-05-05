@@ -169,6 +169,21 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		self.drawingwindows.append(window)
 		self.setCurWindow(window,lock)
 
+	def event(self,event):
+		if event.type()==qtcore.QEvent.WindowActivate:
+			self.raiseAllWindows(self)
+		return qtgui.QMainWindow.event(self,event)
+
+	def raiseAllWindows(self,curwin):
+		lock=qtcore.QReadLocker(self.drawingwindowslock)
+		self.palettewindow.raise_()
+		self.layerswindow.raise_()
+		self.tooloptionswindow.raise_()
+		for window in self.drawingwindows:
+			window.raise_()
+		self.raise_()
+		curwin.raise_()
+
 	def unregisterWindow(self,window):
 		lock=qtcore.QWriteLocker(self.drawingwindowslock)
 		self.drawingwindows.remove(window)

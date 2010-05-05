@@ -679,6 +679,11 @@ class BeeLayersWindow(qtgui.QMainWindow):
 
 		self.layersListArea=layersListArea
 
+	def event(self,event):
+		if event.type()==qtcore.QEvent.WindowActivate:
+			self.master.raiseAllWindows(self)
+		return qtgui.QMainWindow.event(self,event)
+
 	# rebuild layers window by removing all the layers widgets and then adding them back in order
 	def refreshLayersList(self,win,curlayerkey,winlock=None):
 		""" Update the list of layers displayed in the layers display window, if passed none for the layers arguement, the list of layers is cleared
