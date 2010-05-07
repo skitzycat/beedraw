@@ -1,5 +1,5 @@
 #    Beedraw/Hive network capable client and server allowing collaboration on a single image
-#    Copyright (C) 2009 B. Becker
+#    Copyright (C) 2009-2010 B. Becker
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 PROTOCOL_VERSION=1
-BEE_FILE_FORMAT_VERSION=1
+BEE_FILE_FORMAT_VERSION=2
 SUBPIXELS=4
 BRUSH_SIZE_GRANULARITY=10
 MAXIMUM_SCALE=1
