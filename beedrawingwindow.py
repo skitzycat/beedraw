@@ -50,7 +50,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 	def __init__(self,master,width=600,height=400,startlayer=True,type=WindowTypes.singleuser,maxundo=20):
 		BeeSessionState.__init__(self,master,width,height,type)
 		#qtgui.QMainWindow.__init__(self,master)
-		qtgui.QMainWindow.__init__(self)
+		qtgui.QMainWindow.__init__(self,master.topwinparent)
 
 		self.localcommandstack=CommandStack(self.id,maxundo)
 
@@ -120,6 +120,10 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 	# this is for debugging memory cleanup
 	#def __del__(self):
 	#	print "DESTRUCTOR: bee drawing window"
+
+	def closeEvent(self,event):
+		event.ignore()
+		self.hide()
 
 	def resetLayerZValues(self,lock=None):
 		i=0
@@ -516,7 +520,6 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 				self.startRemoteDrawingThreads()
 
 			self.master.takeFocus(self)
-			self.master.raiseAllWindows(self)
 
 		elif event.type()==BeeCustomEventTypes.displaymessage:
 			self.displayMessage(event.boxtype,event.title,event.message)

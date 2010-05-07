@@ -9,7 +9,7 @@ from ToolOptionsUi import Ui_ToolOptionsWindow
 
 class ToolWindow(qtgui.QMainWindow):
 	def __init__(self,master):
-		qtgui.QMainWindow.__init__(self)
+		qtgui.QMainWindow.__init__(self,master.topwinparent)
 		self.master=master
 
 		self.ui=Ui_ToolOptionsWindow()
@@ -19,10 +19,9 @@ class ToolWindow(qtgui.QMainWindow):
 		self.curwidget=self.ui.toolwidget
 		self.toolwidgetparent=self.curwidget.parentWidget()
 
-	def event(self,event):
-		if event.type()==qtcore.QEvent.WindowActivate:
-			self.master.raiseAllWindows(self)
-		return qtgui.QMainWindow.event(self,event)
+	def closeEvent(self,event):
+		event.ignore()
+		self.hide()
 
 	def updateCurrentTool(self):
 		curtool=self.master.getCurToolDesc()

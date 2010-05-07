@@ -50,7 +50,12 @@ from beedrawingwindow import BeeDrawingWindow, NetworkClientDrawingWindow, Anima
 
 class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 	def __init__(self):
-		qtgui.QMainWindow.__init__(self)
+		# create a top level widget to be the parent for all windows so they will all be connected
+		self.topwinparent=qtgui.QWidget()
+		self.topwinparent.setAttribute(qtcore.Qt.WA_DeleteOnClose,False)
+		self.topwinparent.setAttribute(qtcore.Qt.WA_QuitOnClose,False)
+		self.topwinparent.setAttribute(qtcore.Qt.WA_ForceUpdatesDisabled)
+		qtgui.QMainWindow.__init__(self,self.topwinparent)
 		AbstractBeeMaster.__init__(self)
 
 		# read tool options from file if needed
@@ -168,21 +173,6 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		lock=qtcore.QWriteLocker(self.drawingwindowslock)
 		self.drawingwindows.append(window)
 		self.setCurWindow(window,lock)
-
-	def event(self,event):
-		if event.type()==qtcore.QEvent.WindowActivate:
-			self.raiseAllWindows(self)
-		return qtgui.QMainWindow.event(self,event)
-
-	def raiseAllWindows(self,curwin):
-		lock=qtcore.QReadLocker(self.drawingwindowslock)
-		self.palettewindow.raise_()
-		self.layerswindow.raise_()
-		self.tooloptionswindow.raise_()
-		for window in self.drawingwindows:
-			window.raise_()
-		self.raise_()
-		curwin.raise_()
 
 	def unregisterWindow(self,window):
 		lock=qtcore.QWriteLocker(self.drawingwindowslock)

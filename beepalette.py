@@ -81,7 +81,8 @@ class BeeSwatchScrollArea(qtgui.QScrollArea):
 
 class PaletteWindow(qtgui.QMainWindow):
 	def __init__(self,master):
-		qtgui.QMainWindow.__init__(self)
+		qtgui.QMainWindow.__init__(self,master.topwinparent)
+		self.setAttribute(qtcore.Qt.WA_DeleteOnClose,False)
 		self.master=master
 
 		self.ui=Ui_PaletteWindow()
@@ -108,10 +109,9 @@ class PaletteWindow(qtgui.QMainWindow):
 
 		self.ui.swatch_frame.setupSwatches(colors)
 
-	def event(self,event):
-		if event.type()==qtcore.QEvent.WindowActivate:
-			self.master.raiseAllWindows(self)
-		return qtgui.QMainWindow.event(self,event)
+	def closeEvent(self,event):
+		event.ignore()
+		self.hide()
 
 	def setFGColor(self,color):
 		self.ui.FGSwatch.updateColor(color)
