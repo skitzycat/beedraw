@@ -50,12 +50,17 @@ from beedrawingwindow import BeeDrawingWindow, NetworkClientDrawingWindow, Anima
 
 class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 	def __init__(self):
+<<<<<<< HEAD:beemaster.py
 		# create a top level widget to be the parent for all windows so they will all be connected
 		self.topwinparent=qtgui.QWidget()
 		self.topwinparent.setAttribute(qtcore.Qt.WA_DeleteOnClose,False)
 		self.topwinparent.setAttribute(qtcore.Qt.WA_QuitOnClose,False)
 		self.topwinparent.setAttribute(qtcore.Qt.WA_ForceUpdatesDisabled)
 		qtgui.QMainWindow.__init__(self,self.topwinparent)
+=======
+		self.initializedwindows=False
+		qtgui.QMainWindow.__init__(self)
+>>>>>>> 3efd470bfed24fe078105ee116de2a09d29ae930:beemaster.py
 		AbstractBeeMaster.__init__(self)
 
 		# read tool options from file if needed
@@ -110,6 +115,8 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 		# setup window with colors
 		self.palettewindow=PaletteWindow(self)
+
+		self.initializedwindows=True
 
 		self.fgcolor=qtgui.QColor(0,0,0)
 		self.bgcolor=qtgui.QColor(255,255,255)
