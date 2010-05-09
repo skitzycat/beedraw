@@ -287,14 +287,19 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
 		BeeLayerState.__init__(self,windowid,type,key,image,opacity,visible,compmode,owner)
 		self.setFlag(qtgui.QGraphicsItem.ItemUsesExtendedStyleOption)
 
-	def paste(self,image,x=0,y=0):
+	def paste(self,image,x,y):
 		win=BeeApp().master.getWindowById(self.windowid)
 		newkey=win.nextLayerKey()
 		newlayer=FloatingSelection(image,newkey,self)
+		newlayer.setPos(qtcore.QPointF(x,y))
 		BeeApp().master.requestLayerListRefresh()
 
 	def copy(self,path,imagelock=None):
-		pathrectf=path.boundingRect()
+		if path:
+			pathrectf=path.boundingRect()
+		else:
+			pathrectf=self.boundingRect()
+
 		pathrect=pathrectf.toAlignedRect()
 
 		if not imagelock:
@@ -445,7 +450,8 @@ class FloatingSelection(BeeGuiLayer):
 		self.scene().tmppainter.restore()
 
 	# don't allow pasting on other floating selections, go to parent layer instead
-	def paste(self,image,x=0,y=0):
+	def paste(self,image,x,y):
+		win=BeeApp().master.getWindowById(self.windowid)
 		self.parentItem().paste(image,x,y)
 
 	def anchor(self,layer):
@@ -627,11 +633,11 @@ class LayerConfigWidget(qtgui.QWidget):
 		layer=BeeApp().master.getLayerById(self.windowid,self.layerkey)
 		win=BeeApp().master.getWindowById(self.windowid)
 		if layer:
-			if win.type==WindowTypes.networkclient:
-				if win.ownedByMe(layer.owner) or layer.type==LayerTypes.floating:
-					win.setActiveLayer(layer.key)
-			else:
-				win.setActiveLayer(layer.key)
+			win.setActiveLayer(layer.key)
+			#if win.type==WindowTypes.networkclient:
+				#if win.ownedByMe(layer.owner) or layer.type==LayerTypes.floating:
+			#else:
+			#	win.setActiveLayer(layer.key)
 
 class BeeLayersWindow(qtgui.QMainWindow):
 	def __init__(self,master):

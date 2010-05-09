@@ -47,14 +47,18 @@ from beeapp import BeeApp
 from abstractbeemaster import AbstractBeeMaster
 from beedrawingwindow import BeeDrawingWindow, NetworkClientDrawingWindow, AnimationDrawingWindow
 
+class BeeWindowParent(qtgui.QMainWindow):
+	def __init__(self):
+		qtgui.QWidget.__init__(self)
+		self.setAttribute(qtcore.Qt.WA_ForceUpdatesDisabled)
+
+	def closeEvent(self,event):
+		print_debug("Window parent got close event")
 
 class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 	def __init__(self):
 		# create a top level widget to be the parent for all windows so they will all be connected
-		self.topwinparent=qtgui.QWidget()
-		self.topwinparent.setAttribute(qtcore.Qt.WA_DeleteOnClose,False)
-		self.topwinparent.setAttribute(qtcore.Qt.WA_QuitOnClose,False)
-		self.topwinparent.setAttribute(qtcore.Qt.WA_ForceUpdatesDisabled)
+		self.topwinparent=BeeWindowParent()
 		qtgui.QMainWindow.__init__(self,self.topwinparent)
 		AbstractBeeMaster.__init__(self)
 
@@ -124,6 +128,10 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			colors=reader.getColors()
 		else:
 			colors=[]
+
+	#def event(self,event):
+	#	print event.type()
+	#	return qtgui.QMainWindow.event(self,event)
 
 	def getCurWindow(self,lock=None):
 		if not lock:
@@ -456,7 +464,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 		# error if username is blank
 		if username=="":
-			qtgui.QMessageBox.warning(None,"No username","You must enter a username")
+			qtgui.QMessageBox.warning(self,"No username","You must enter a username")
 			return
 
 		socket=self.getServerConnection(username,password,hostname,port)
@@ -478,8 +486,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 		# return error if we couldn't get a connection after 30 seconds
 		if not connected:
-			#qtgui.QMessageBox.warning(None,"Failed to connect to server",socket.errorString())
-			qtgui.QMessageBox.warning(None,"Failed to connect to server",socket.errorString())
+			qtgui.QMessageBox.warning(self,"Failed to connect to server",socket.errorString())
 			return None
 
 		#authrequest=qtcore.QByteArray()
@@ -499,7 +506,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 			# if error exit
 			else:
-				qtgui.QMessageBox.warning(None,"Connection Error","server dropped connection")
+				qtgui.QMessageBox.warning(self,"Connection Error","server dropped connection")
 				return None
 
 		# if we get here we have a response that probably wasn't a disconnect
@@ -515,7 +522,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			return socket
 
 		socket.disconnect()
-		qtgui.QMessageBox.warning(None,"Server Refused Connection",message)
+		qtgui.QMessageBox.warning(self,"Server Refused Connection",message)
 		return None
 
 	def on_action_File_Start_Server_triggered(self,accept=True):
@@ -578,6 +585,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		self.tooloptionswindow=None
 
 	def closeEvent(self,event):
+		print_debug("master window got close event")
 		# destroy subwindows
 		self.cleanUp()
 		# then do the standard main window close event

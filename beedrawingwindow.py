@@ -574,7 +574,8 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 
 	def on_action_Edit_Paste_triggered(self,accept=True):
 		if accept:
-			self.addPasteToQueue()
+			x,y=self.view.snapPointToView(0,0)
+			self.addPasteToQueue(x,y)
 
 	def on_action_Edit_Undo_triggered(self,accept=True):
 		if accept:
@@ -639,12 +640,14 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 				bottomadj=dialog.bottomadj
 				self.addAdjustCanvasSizeRequestToQueue(leftadj,topadj,rightadj,bottomadj)
 
-	def addPasteToQueue(self):
+	def addPasteToQueue(self,x=0,y=0):
 		# It is only possible for this to happen from a local source so it's defined here instead of in the base state class.
 		layerkey=self.getCurLayerKey()
 		# don't do anything if there is no current layer
 		if layerkey:
-			self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.paste,layerkey),ThreadTypes.user)
+			# make sure layer is owned locally so it can be altered
+			if self.localLayer(layerkey):
+				self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.paste,layerkey,x,y),ThreadTypes.user)
 
 	def addCopyToQueue(self):
 		# It is only possible for this to happen from a local source so it's defined here instead of in the base state class.
@@ -657,10 +660,13 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 	def addCutToQueue(self):
 		# It is only possible for this to happen from a local source so it's defined here instead of in the base state class.
 		layerkey=self.getCurLayerKey()
-		# don't do anything if there is no current layer
+
+		# make sure current layer is valid
 		if layerkey:
-			path=self.getClipPathCopy()
-			self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.cut,layerkey,self.getClipPathCopy()),ThreadTypes.user)
+			# make sure layer is owned locally so it can be altered
+			if localLayer(layerkey):
+				path=self.getClipPathCopy()
+				self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.cut,layerkey,self.getClipPathCopy()),ThreadTypes.user)
 
 	def addAnchorToQueue(self,parentkey,floating):
 		pos=floating.pos()

@@ -133,7 +133,9 @@ class DrawingThread(qtcore.QThread):
 		elif subtype==LayerCommandTypes.paste:
 			image=self.master.getClipBoardImage()
 			if image:
-				layer.paste(image)
+				x=command[3]
+				y=command[4]
+				layer.paste(image,x,y)
 
 		elif subtype==LayerCommandTypes.pendown:
 			x=command[3]
