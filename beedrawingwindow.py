@@ -68,6 +68,9 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		self.selectionanimation=None
 		self.selectionanimationtimer=None
 
+		self.nextfloatinglayerkey=-1
+		self.nextfloatinglayerkeylock=qtcore.QReadWriteLock()
+
 		self.tooloverlay=None
 
 		self.selectionoutline=[]
@@ -120,6 +123,15 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 	# this is for debugging memory cleanup
 	#def __del__(self):
 	#	print "DESTRUCTOR: bee drawing window"
+
+	def nextFloatingLayerKey(self):
+		""" returns the next floating layer key available, thread safe """
+		# get a lock so we don't get a collision ever
+		lock=qtcore.QWriteLocker(self.nextfloatinglayerkeylock)
+
+		key=self.nextfloatinglayerkey
+		self.nextfloatinglayerkey-=1
+		return key
 
 	def closeEvent(self,event):
 		event.ignore()
@@ -762,6 +774,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 	def tabletEvent(self,event):
 		if event.type()==qtcore.QEvent.TabletRelease:
 			self.view.cursorReleaseEvent(event.x(),event.y(),event.modifiers())
+		return qtgui.QMainWindow.tabletEvent(self,event)
 
 	def getLayerForKey(self,key,lock=None):
 		if key==None:

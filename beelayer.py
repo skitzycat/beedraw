@@ -289,7 +289,7 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
 
 	def paste(self,image,x,y):
 		win=BeeApp().master.getWindowById(self.windowid)
-		newkey=win.nextLayerKey()
+		newkey=win.nextFloatingLayerKey()
 		newlayer=FloatingSelection(image,newkey,self)
 		newlayer.setPos(qtcore.QPointF(x,y))
 		BeeApp().master.requestLayerListRefresh()
@@ -619,7 +619,7 @@ class LayerConfigWidget(qtgui.QWidget):
 		elif win.ownedByMe(layer.owner):
 			#print_debug("adding give up layer to queue for layer key: %d" % layer.key)
 			if len(layer.childItems()):
-				result=qtgui.QMessageBox.warning(None,"Floating layers can not be given up","You are attempting to give up ownership of layer that has floting layers, if you continue the floating layers will be destroyed.  To avoid having them destroyed please anchor them or move them to other layers.","Continue","Cancel")
+				result=qtgui.QMessageBox.warning(win,"Floating layers can not be given up","You are attempting to give up ownership of layer that has floting layers, if you continue the floating layers will be destroyed.  To avoid having them destroyed please anchor them or move them to other layers.","Continue","Cancel")
 				if result:
 					return
 
