@@ -154,7 +154,7 @@ class AbstractTool:
 		self.options[key]=value
  
 	# what to do when pen is down to be implemented in subclasses
-	def penDown(self,x,y,pressure=None):
+	def penDown(self,x,y,pressure):
 		pass
  
 	def penMotion(self,x,y,pressure):
@@ -431,7 +431,7 @@ class DrawingTool(AbstractTool):
 		center=int(self.diameter/2)
 		self.brushimage.setPixel(center,center,self.getColorRGBA())
  
-	def penDown(self,x,y,pressure=1):
+	def penDown(self,x,y,pressure):
 		if self.logtype==ToolLogTypes.unlogable:
 			return
 
@@ -1070,7 +1070,7 @@ class PaintBucketTool(AbstractTool):
 			image=self.window.scene.getImageCopy()
 			self.newpath=getSimilarColorPath(image,x,y,self.options['similarity'])
 
-	def penDown(self,x,y,pressure=None):
+	def penDown(self,x,y,pressure):
 		self.pointshistory=[(x,y,pressure)]
 		layer=self.window.getLayerForKey(self.layerkey)
 		if not layer:

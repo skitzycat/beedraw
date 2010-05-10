@@ -54,6 +54,8 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 
 		self.localcommandstack=CommandStack(self.id,maxundo)
 
+		self.layerfinisher=LayerFinisher(qtcore.QRectF(0,0,width,height))
+
 		# initialize values
 		self.zoom=1.0
 		self.ui=Ui_DrawingWindowSpec()
@@ -89,8 +91,6 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		self.view.setCursor(master.getCurToolDesc().getCursor())
 
 		self.show()
-
-		self.layerfinisher=LayerFinisher(qtcore.QRectF(0,0,width,height))
 
 		self.scene.addItem(self.layerfinisher)
 
