@@ -713,7 +713,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		If log box is now unchecked end the current log file
 		"""
 		if state:
-			filename=qtgui.QFileDialog.getSaveFileName(self,"Choose File Name",".","Logfiles (*.slg)")
+			filename=qtgui.QFileDialog.getSaveFileName(self.master,"Choose File Name",".","Logfiles (*.slg)")
 			if not filename:
 				return
 			self.startLog(filename)
@@ -745,7 +745,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		# add in extension for custom file format
 		filterstring.append(" *.bee)")
 
-		filename=qtgui.QFileDialog.getSaveFileName(self,"Choose File Name",".",filterstring)
+		filename=qtgui.QFileDialog.getSaveFileName(self.master,"Choose File Name",".",filterstring)
 		if filename:
 			self.saveFile(filename)
 
