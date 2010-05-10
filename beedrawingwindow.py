@@ -115,7 +115,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		# don't go through the queue for this layer add because we need it to
 		# be done before the next step
 		if startlayer:
-			self.addInsertLayerEventToQueue(0,self.nextLayerKey(),source=ThreadTypes.user)
+			self.insertLayer(self.nextLayerKey(),0,history=False)
 
 		# have window get destroyed when it gets a close event
 		self.setAttribute(qtcore.Qt.WA_DeleteOnClose)
@@ -457,7 +457,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 			else:
 				self.addLayerUpToQueue(layer.key)
 
-	def removeLayer(self,layer,history=0,listlock=None):
+	def removeLayer(self,layer,history=True,listlock=None):
 		index=-1
 		if not listlock:
 			listlock=qtcore.QWriteLocker(self.layerslistlock)
@@ -477,7 +477,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 
 		return layer,index
 
-	def insertLayer(self,key,index,type=LayerTypes.user,image=None,opacity=None,visible=None,compmode=None,owner=0,history=0):
+	def insertLayer(self,key,index,type=LayerTypes.user,image=None,opacity=None,visible=None,compmode=None,owner=0,history=True):
 		lock=qtcore.QWriteLocker(self.layerslistlock)
 		# make sure layer doesn't exist already
 		oldlayer=self.getLayerForKey(key,lock=lock)
@@ -491,7 +491,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		lock.unlock()
 
 		# only add command to history if we are in a local session
-		if self.type==WindowTypes.singleuser and history!=-1:
+		if self.type==WindowTypes.singleuser and history:
 			self.addCommandToHistory(AddLayerCommand(layer.key))
 
 		self.scene.addItem(layer)
@@ -845,7 +845,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		# lock all layers and the layers list
 		lock=qtcore.QWriteLocker(self.layerslistlock)
 		for layer in self.layers[:]:
-			self.removeLayer(layer,history=0,lock=lock)
+			self.removeLayer(layer,history=False,lock=lock)
 
 		self.layers=[]
 		lock.unlock()

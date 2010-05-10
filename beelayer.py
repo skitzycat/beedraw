@@ -354,7 +354,11 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
 		self.prepareGeometryChange()
 
 	def paint(self,painter,options,widget=None):
+		"""
+    paint method of BeeGuiLayer:
+      Draws the needed section of the layer image onto a temporary image """
 		drawrect=options.exposedRect
+		drawrect=drawrect.toAlignedRect()
 		self.scene().tmppainter.setCompositionMode(self.compmode)
 		self.scene().tmppainter.setOpacity(painter.opacity())
 		self.scene().tmppainter.drawImage(drawrect,self.image,drawrect)
@@ -374,6 +378,7 @@ class LayerFinisher(qtgui.QGraphicsItem):
 	def __init__(self,rect):
 		qtgui.QGraphicsItem.__init__(self)
 		self.rect=rect
+		self.setFlag(qtgui.QGraphicsItem.ItemUsesExtendedStyleOption)
 
 	def resize(self,newrect):
 		self.rect=newrect
@@ -442,6 +447,7 @@ class FloatingSelection(BeeGuiLayer):
 
 	def paint(self,painter,options,widget=None):
 		drawrect=options.exposedRect
+		drawrect=drawrect.toAlignedRect()
 		self.scene().tmppainter.save()
 		self.scene().tmppainter.translate(self.pos())
 		self.scene().tmppainter.setCompositionMode(self.compmode)
