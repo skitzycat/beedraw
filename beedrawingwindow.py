@@ -272,6 +272,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 			self.addPenDownToQueue(x,y,pressure,tool.layerkey,tool,source,modkeys=modkeys)
 
 	def penMotion(self,x,y,pressure,modkeys,source=ThreadTypes.user):
+		#print "window pen motion: (x,y,pressure):", x,y,pressure
 		if self.curtool:
 			self.curtool.guiLevelPenMotion(x,y,pressure,modkeys)
 

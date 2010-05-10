@@ -40,10 +40,10 @@ class BeeApp(object):
 		return BeeApp.instances[cls]
 
 	def __init__(self,argv,type=1):
+		self.debug_flags={}
 		self.master=None
 		self.type=type
 		self.app=BeeGuiApp(argv)
-		#self.app=qtgui.QApplication(argv)
 
 class BeeGuiApp(qtgui.QApplication):
 	def event(self,event):

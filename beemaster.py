@@ -411,7 +411,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		else:
 			self.config['debug']=False
 
-		BEE_DEBUG=self.config['debug']
+		BeeApp().debug_flags[DebugFlags.allon]=self.config['debug']
 
 		if dialogui.autolog_checkBox.isChecked():
 			self.config['autolog']=True

@@ -87,6 +87,7 @@ class BeeCanvasView(qtgui.QGraphicsView):
 		if event.type()==qtcore.QEvent.TabletMove:
 			event.accept()
 			if event.pressure()>0:
+				#print "tablet move event (x,y,pressure):", event.x(),event.y(), event.pressure()
 				self.cursorMoveEvent(event.x(),event.y(),event.modifiers(),event.pointerType(),event.pressure(),event.hiResGlobalX()%1,event.hiResGlobalY()%1)
 
 		elif event.type()==qtcore.QEvent.TabletPress:
@@ -111,7 +112,7 @@ class BeeCanvasView(qtgui.QGraphicsView):
 	# these are called regardless of if a mouse or tablet event was used
 	def cursorPressEvent(self,x,y,modkeys,pointertype=4,pressure=1,subx=0,suby=0):
 		#print "cursorPressEvent:",x,y,pressure
-		
+
 		window=BeeApp().master.getWindowById(self.windowid)
 		# if the window has no layers in it's layers list then just return
 		if not window.layers:

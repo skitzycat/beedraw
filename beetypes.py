@@ -125,3 +125,6 @@ class BeeAppType:
 
 class ImageCombineTypes:
 	composite, add, darkest = range(3)
+
+class DebugFlags:
+  alloff, allon = range(2)

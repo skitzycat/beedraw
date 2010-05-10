@@ -20,6 +20,8 @@ import PyQt4.QtGui as qtgui
 
 import os
 
+from beetypes import *
+from beeapp import BeeApp
 from beetools import BeeToolBox
 from beeload import BeeMasterConfigParser
 
@@ -52,7 +54,7 @@ class AbstractBeeMaster:
 
 				self.config.update(fileconfig)
 
-		BEE_DEBUG=self.config['debug']
+		BeeApp().debug_flags[DebugFlags.allon]=self.config['debug']
 
 	def getConfigOption(self,key,default=None):
 		""" This function is used to fetch options, I'm well aware that dictionaries have a get function, but I want this function to output a debug message if the key isn't found """

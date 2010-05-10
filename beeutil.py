@@ -311,7 +311,7 @@ def norme(a,b):
 	return (a*a)+(b*b)
 
 def print_debug(s):
-	if BEE_DEBUG:
+	if BeeApp().debug_flags.get(DebugFlags.allon):
 		print s
 
 # convert from PIL to QImage

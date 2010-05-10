@@ -154,6 +154,7 @@ class DrawingThread(qtcore.QThread):
 			x=command[3]
 			y=command[4]
 			pressure=command[5]
+			#print "drawing thread pen motion (x,y,pressure)", x,y,pressure
 			if int(layerkey) in self.inprocesstools:
 				tool=self.inprocesstools[int(layerkey)]
 				tool.penMotion(x,y,pressure)
