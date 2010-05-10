@@ -401,7 +401,7 @@ class DrawingTool(AbstractTool):
 			return
  
 		# scaled size for brush
-		bdiameter=((self.options["maxdiameter"]-self.options["mindiameter"])*pressure) + self.options["mindiameter"]
+		bdiameter=self.scaleForPressure*self.options["maxdiameter"]
 		self.diameter=int(math.ceil(bdiameter))
 
 		# make target size an odd number
@@ -453,8 +453,24 @@ class DrawingTool(AbstractTool):
 			return False
 		return True
 
+	# return how much to scale down the brush for the current pressure
 	def scaleForPressure(self,pressure):
 		return pressure
+		minsize=self.options["mindiameter"]
+		maxsize=self.options["maxdiameter"]
+		sizediff=maxsize-minsize
+
+		#unroundedscale=(((maxsize-minsize)/maxsize)*pressure) + ((minsize/maxsize) * pressure)
+		unroundedscale=((sizediff/maxsize)*pressure) + (minsize/maxsize)
+		#print "unrounded scale:", unroundedscale
+		#unroundedscale=pressure
+		#iscale=int(unroundedscale*BRUSH_SIZE_GRANULARITY)
+		#scale=float(iscale)/BRUSH_SIZE_GRANULARITY
+		scale=unroundedscale
+
+		#print "calculated that scale should be:", scale
+
+		return scale
 
 	def getFullSizedBrushWidth(self):
 		return self.fullsizedbrush.width()
@@ -1178,24 +1194,6 @@ class SketchTool(DrawingTool):
 		if distance2d(self.lastpoint[0],self.lastpoint[1],x,y) < self.options["step"]:
 			return False
 		return True
-
-	# return how much to scale down the brush for the current pressure
-	def scaleForPressure(self,pressure):
-		minsize=self.options["mindiameter"]
-		maxsize=self.options["maxdiameter"]
-		sizediff=maxsize-minsize
-
-		#unroundedscale=(((maxsize-minsize)/maxsize)*pressure) + ((minsize/maxsize) * pressure)
-		unroundedscale=((sizediff/maxsize)*pressure) + (minsize/maxsize)
-		#print "unrounded scale:", unroundedscale
-		#unroundedscale=pressure
-		#iscale=int(unroundedscale*BRUSH_SIZE_GRANULARITY)
-		#scale=float(iscale)/BRUSH_SIZE_GRANULARITY
-		scale=unroundedscale
-
-		#print "calculated that scale should be:", scale
-
-		return scale
 
 	def updateBrushForPressure(self,pressure,subpixelx=0,subpixely=0):
 		self.lastpressure=pressure
