@@ -306,12 +306,16 @@ class AnimationEventsConverter(XmlToQueueEventsConverter):
 	def translateKey(self,key):
 		""" Translate key from local id to current window ID
 		"""
-		return self.keymap[key]
+		if key in self.keymap:
+			return self.keymap[key]
+		else:
+			print "WARNING: couldn't find layer in keymap with key:", key
+			return None
 
 	def addKeyTranslation(self,key,dockey):
 		""" add in key translation, since this is an animation thread
 		"""
-		self.keymap[key]=key
+		self.keymap[key]=dockey
 
 # thread for playing local animations out of a file
 class PlayBackAnimation (qtcore.QThread):
