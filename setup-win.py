@@ -16,7 +16,7 @@
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 # used to make app into windows executable by running command:
-# /cygdrive/c/Python25/python.exe -OO setup-win.py py2exe
+# /cygdrive/c/Python26/python.exe -OO setup-win.py py2exe
 
 import sys
 

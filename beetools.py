@@ -390,6 +390,7 @@ class DrawingTool(AbstractTool):
 	def updateBrushForPressure(self,pressure,subpixelx=0,subpixely=0):
 		# see if we need to update at all
 		if self.lastpressure==pressure:
+			#print "updateBrushForPressure returning with same pressure as last time"
 			return
  
 		self.lastpressure=pressure
@@ -398,11 +399,14 @@ class DrawingTool(AbstractTool):
 		if self.options["pressuresize"]==0 or pressure==1:
 			self.brushimage=self.fullsizedbrush
 			self.lastpressure=1
+			#print "updateBrushForPressure returning full sized brush"
 			return
  
 		# scaled size for brush
-		bdiameter=self.scaleForPressure*self.options["maxdiameter"]
+		bdiameter=self.scaleForPressure(pressure)*self.options["maxdiameter"]
 		self.diameter=int(math.ceil(bdiameter))
+
+		#print "updateBrushForPressure calculated that brush size should be:", self.diameter
 
 		# make target size an odd number
 		if self.diameter%2==0:
@@ -432,16 +436,15 @@ class DrawingTool(AbstractTool):
 		self.brushimage.setPixel(center,center,self.getColorRGBA())
  
 	def penDown(self,x,y,pressure):
+		""" penDown for DrawingTool class """
 		if self.logtype==ToolLogTypes.unlogable:
 			return
 
-		#print "Got penDown",x,y
 		self.returning=False
 		self.inside=True
 		self.pendown=True
 
-		#print "pen down point:", x, y
-		#print "pen pressure:", pressure
+		#print "pen down (x,y,pressure):", x, y, pressure
 		self.layer=self.window.getLayerForKey(self.layerkey)
 		self.oldlayerimage=self.layer.getImageCopy()
 
@@ -455,6 +458,7 @@ class DrawingTool(AbstractTool):
 
 	# return how much to scale down the brush for the current pressure
 	def scaleForPressure(self,pressure):
+		#print "calculating scale for pressure:", pressure
 		return pressure
 		minsize=self.options["mindiameter"]
 		maxsize=self.options["maxdiameter"]
@@ -1199,6 +1203,7 @@ class SketchTool(DrawingTool):
 		self.lastpressure=pressure
 		#print "updating brush for pressure/subpixels:", pressure, subpixelx, subpixely
 		scale=self.scaleForPressure(pressure)
+		#print "brush scale:", scale
 
 		fullwidth,fullheight=self.fullsizedbrush.size
 		targetwidth=int(math.ceil(fullwidth*scale))+1
