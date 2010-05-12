@@ -84,21 +84,17 @@ class BeeCanvasView(qtgui.QGraphicsView):
 		self.updateScene([qtcore.QRectF(dirtyrect)])
 
 	def tabletEvent(self,event):
+		event.accept()
 		if event.type()==qtcore.QEvent.TabletMove:
-			event.accept()
 			if event.pressure()>0:
 				#print "tablet move event (x,y,pressure):", event.x(),event.y(), event.pressure()
 				self.cursorMoveEvent(event.x(),event.y(),event.modifiers(),event.pointerType(),event.pressure(),event.hiResGlobalX()%1,event.hiResGlobalY()%1)
 
 		elif event.type()==qtcore.QEvent.TabletPress:
-			event.accept()
 			self.cursorPressEvent(event.x(),event.y(),event.modifiers(),event.pointerType(),event.pressure(),event.hiResGlobalX()%1,event.hiResGlobalY()%1)
 
 		elif event.type()==qtcore.QEvent.TabletRelease:
-			event.accept()
 			self.cursorReleaseEvent(event.x(),event.y(),event.modifiers())
-
-		return qtgui.QGraphicsView.tabletEvent(self,event)
 
 	def mousePressEvent(self,event):
 		self.cursorPressEvent(event.x(),event.y(),event.modifiers())
@@ -111,7 +107,7 @@ class BeeCanvasView(qtgui.QGraphicsView):
 
 	# these are called regardless of if a mouse or tablet event was used
 	def cursorPressEvent(self,x,y,modkeys,pointertype=4,pressure=1,subx=0,suby=0):
-		#print "cursorPressEvent:",x,y,pressure
+		#print "cursorPressEvent:(x,y,pressure)",x,y,pressure
 
 		window=BeeApp().master.getWindowById(self.windowid)
 		# if the window has no layers in it's layers list then just return
@@ -127,7 +123,7 @@ class BeeCanvasView(qtgui.QGraphicsView):
 
 	def cursorMoveEvent(self,x,y,modkeys,pointertype=4,pressure=1,subx=0,suby=0):
 		window=BeeApp().master.getWindowById(self.windowid)
-		#print "cursorMoveEvent:",x,y,pressure
+		#print "cursorMoveEvent (x,y,pressure):",x,y,pressure
 		x=x+subx
 		y=y+suby
 		x,y=self.viewCoordsToImage(x,y)

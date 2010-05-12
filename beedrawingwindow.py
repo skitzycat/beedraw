@@ -745,7 +745,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		# add in extension for custom file format
 		filterstring.append(" *.bee)")
 
-		filename=qtgui.QFileDialog.getSaveFileName(self,"Choose File Name",".",filterstring)
+		filename=qtgui.QFileDialog.getSaveFileName(self.master,"Choose File Name",".",filterstring)
 		if filename:
 			self.saveFile(filename)
 
