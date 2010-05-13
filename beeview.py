@@ -84,8 +84,8 @@ class BeeCanvasView(qtgui.QGraphicsView):
 			#dirtyrect=dirtyrect.toAlignedRect()
 			dirtyrect=dirtyrect.adjusted(-1,-1,2,2)
 
-			vpoint=self.mapToScene(self.mapFromScene(qtcore.QPointF(dirtyrect.x(),dirtyrect.y())))
-			dirtyrect=dirtyrect.adjusted(1-(vpoint.x()%1),1-(vpoint.y()%1),0,0)
+			#vpoint=self.mapToScene(self.mapFromScene(qtcore.QPointF(dirtyrect.x(),dirtyrect.y())))
+			#dirtyrect=dirtyrect.adjusted(1-(vpoint.x()%1),1-(vpoint.y()%1),0,0)
 
 			#print "updating view with rect:", rectToTuple(dirtyrect)
 
