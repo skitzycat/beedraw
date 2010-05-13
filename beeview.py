@@ -79,23 +79,26 @@ class BeeCanvasView(qtgui.QGraphicsView):
 		return self.scene().getSceneRect()
 
 	def updateView(self,dirtyrect=qtcore.QRectF()):
-		dirtyrect=qtcore.QRectF(dirtyrect)
-		if not dirtyrect.isEmpty():
-			#dirtyrect=dirtyrect.toAlignedRect()
-			dirtyrect=dirtyrect.adjusted(-1,-1,2,2)
+		#dirtyrect=qtcore.QRectF(dirtyrect)
 
-			#vpoint=self.mapToScene(self.mapFromScene(qtcore.QPointF(dirtyrect.x(),dirtyrect.y())))
-			#dirtyrect=dirtyrect.adjusted(1-(vpoint.x()%1),1-(vpoint.y()%1),0,0)
+		#dirtyrect=dirtyrect.toAlignedRect()
+		#dirtyrect=dirtyrect.adjusted(-1,-1,2,2)
 
-			#print "updating view with rect:", rectToTuple(dirtyrect)
+		#vpoint=self.mapToScene(self.mapFromScene(qtcore.QPointF(dirtyrect.x(),dirtyrect.y())))
+		#dirtyrect=dirtyrect.adjusted(1-(vpoint.x()%1),1-(vpoint.y()%1),0,0)
 
-		self.updateScene([dirtyrect])
+		#print "updating view with rect:", rectToTuple(dirtyrect)
+
+		#dirtyrect=self.mapToScene(self.viewport().visibleRegion().boundingRect()).boundingRect()
+		#self.updateScene([qtcore.QRectF(dirtyrect)])
+		# just update the whole thing, since it causes little graphics problems when I only update subregions
+		self.scene().update()
 
 	def tabletEvent(self,event):
 		event.accept()
+		#print "tablet event (x,y,pressure):", event.x(),event.y(), event.pressure()
 		if event.type()==qtcore.QEvent.TabletMove:
 			if event.pressure()>0:
-				#print "tablet move event (x,y,pressure):", event.x(),event.y(), event.pressure()
 				self.cursorMoveEvent(event.x(),event.y(),event.modifiers(),event.pointerType(),event.pressure(),event.hiResGlobalX()%1,event.hiResGlobalY()%1)
 
 		elif event.type()==qtcore.QEvent.TabletPress:
@@ -108,6 +111,7 @@ class BeeCanvasView(qtgui.QGraphicsView):
 		self.cursorPressEvent(event.x(),event.y(),event.modifiers())
 
 	def mouseMoveEvent(self,event):
+		#print "mouseMoveEvent (x,y,pressure):",x,y,pressure
 		self.cursorMoveEvent(event.x(),event.y(),event.modifiers())
 
 	def mouseReleaseEvent(self,event):

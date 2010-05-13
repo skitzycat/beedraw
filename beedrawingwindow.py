@@ -604,14 +604,14 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 
 	def on_action_Zoom_In_triggered(self,accept=True):
 		if accept:
-			#self.zoom*=1.25
-			self.zoom*=2
+			self.zoom*=1.25
+			#self.zoom*=2
 			self.view.newZoom(self.zoom)
 
 	def on_action_Zoom_Out_triggered(self,accept=True):
 		if accept:
-			#self.zoom/=1.25
-			self.zoom/=2
+			self.zoom/=1.25
+			#self.zoom/=2
 			self.view.newZoom(self.zoom)
 
 	def on_action_Zoom_1_1_triggered(self,accept=True):
