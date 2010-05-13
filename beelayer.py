@@ -274,7 +274,7 @@ class BeeLayerState:
 
 		imagelock.unlock()
 
-		self.update(pathrectf)
+		win.view.updateView(pathrectf)
 		BeeApp().master.refreshLayerThumb(self.windowid,self.key)
 
 		command=DrawingCommand(self.key,oldareaimage,pathrect)
@@ -391,7 +391,7 @@ class LayerFinisher(qtgui.QGraphicsItem):
 		self.scene().stopTmpPainter(painter,options.exposedRect)
 
 class SelectedAreaAnimation(qtgui.QGraphicsItemAnimation):
-	def __init__(self,item,parent=None):
+	def __init__(self,item,view,parent=None):
 		qtgui.QGraphicsItemAnimation.__init__(self,parent)
 		self.timer=qtcore.QTimeLine(10,self)
 		self.timer.setUpdateInterval(100)
@@ -399,12 +399,14 @@ class SelectedAreaAnimation(qtgui.QGraphicsItemAnimation):
 		self.setTimeLine(self.timer)
 		self.setItem(item)
 		self.timer.start()
+		self.view=view
 
 	def beforeAnimationStep(self,time):
 		self.item().incrementDashOffset()
 
 	def afterAnimationStep(self,time):
-		self.item().update()
+		#self.item().update()
+		self.view.updateView(self.item().boundingRect())
 
 # This is an animated dashed line displayed to indicate where the current selection is.
 class SelectedAreaDisplay(qtgui.QGraphicsItem):

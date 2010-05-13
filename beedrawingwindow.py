@@ -303,7 +303,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 				self.selectiondisplay.updatePath(path)
 			else:
 				self.selectiondisplay=SelectedAreaDisplay(path,self.scene)
-				self.selectionanimation=SelectedAreaAnimation(self.selectiondisplay)
+				self.selectionanimation=SelectedAreaAnimation(self.selectiondisplay,self.view)
 				self.resetLayerZValues(lock)
 
 		else:
@@ -504,9 +504,9 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 	# when a thread calls this method it shouldn't have a lock on any layers
 	def reCompositeImage(self,dirtyrect=None):
 		if dirtyrect:
-			self.scene.update(qtcore.QRectF(dirtyrect))
+			self.view.updateView(qtcore.QRectF(dirtyrect))
 		else:
-			self.scene.update()
+			self.view.updateView()
 		return
 
 	def getImagePixelColor(self,x,y,size=1):
@@ -604,12 +604,14 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 
 	def on_action_Zoom_In_triggered(self,accept=True):
 		if accept:
-			self.zoom*=1.25
+			#self.zoom*=1.25
+			self.zoom*=2
 			self.view.newZoom(self.zoom)
 
 	def on_action_Zoom_Out_triggered(self,accept=True):
 		if accept:
-			self.zoom/=1.25
+			#self.zoom/=1.25
+			self.zoom/=2
 			self.view.newZoom(self.zoom)
 
 	def on_action_Zoom_1_1_triggered(self,accept=True):

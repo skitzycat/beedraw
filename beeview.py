@@ -29,6 +29,8 @@ class BeeCanvasView(qtgui.QGraphicsView):
 		replaceWidget(oldwidget,self)
 		self.windowid=window.id
 
+		self.curzoom=1
+
 		# don't draw in the widget background
 		self.setAttribute(qtcore.Qt.WA_NoSystemBackground)
 		# don't double buffer
@@ -70,6 +72,8 @@ class BeeCanvasView(qtgui.QGraphicsView):
 	def newZoom(self,newzoom):
 		self.setMatrix(qtgui.QMatrix())
 		self.scale(newzoom,newzoom)
+		self.curzoom=newzoom
+		print_debug("canvas zoom is now: %f" % newzoom)
 
 	def getVisibleImageRect(self):
 		return self.scene().getSceneRect()
@@ -77,11 +81,15 @@ class BeeCanvasView(qtgui.QGraphicsView):
 	def updateView(self,dirtyrect=qtcore.QRectF()):
 		dirtyrect=qtcore.QRectF(dirtyrect)
 		if not dirtyrect.isEmpty():
-			dirtyrect=dirtyrect.toAlignedRect()
+			#dirtyrect=dirtyrect.toAlignedRect()
 			dirtyrect=dirtyrect.adjusted(-1,-1,2,2)
 
-		#print "updating view with rect:", rectToTuple(dirtyrect)
-		self.updateScene([qtcore.QRectF(dirtyrect)])
+			vpoint=self.mapToScene(self.mapFromScene(qtcore.QPointF(dirtyrect.x(),dirtyrect.y())))
+			dirtyrect=dirtyrect.adjusted(1-(vpoint.x()%1),1-(vpoint.y()%1),0,0)
+
+			#print "updating view with rect:", rectToTuple(dirtyrect)
+
+		self.updateScene([dirtyrect])
 
 	def tabletEvent(self,event):
 		event.accept()
@@ -181,9 +189,6 @@ class BeeCanvasScene(qtgui.QGraphicsScene):
 		if not lock:
 			lock=qtcore.QReadLocker(self.scenerectlock)
 		return qtcore.QRectF(self.sceneRect())
-
-	def updateView(self,dirtyrect=qtcore.QRectF()):
-		pass
 
 	def setCanvasSize(self,newwidth,newheight):
 		scenelocker=qtcore.QWriteLocker(self.scenerectlock)
