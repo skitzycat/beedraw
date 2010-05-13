@@ -679,7 +679,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		# make sure current layer is valid
 		if layerkey:
 			# make sure layer is owned locally so it can be altered
-			if localLayer(layerkey):
+			if self.localLayer(layerkey):
 				path=self.getClipPathCopy()
 				self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.cut,layerkey,self.getClipPathCopy()),ThreadTypes.user)
 
