@@ -129,6 +129,8 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		else:
 			colors=[]
 
+		self.raise_()
+
 	#def event(self,event):
 	#	print event.type()
 	#	return qtgui.QMainWindow.event(self,event)

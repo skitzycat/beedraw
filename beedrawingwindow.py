@@ -621,7 +621,7 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 
 	def on_action_Image_Scale_Image_triggered(self,accept=True):
 		if accept:
-			dialog=qtgui.QDialog()
+			dialog=qtgui.QDialog(self)
 			dialog.ui=Ui_CanvasScaleDialog()
 			dialog.ui.setupUi(dialog)
 
