@@ -53,7 +53,9 @@ class BeeWindowParent(qtgui.QMainWindow):
 		self.setAttribute(qtcore.Qt.WA_ForceUpdatesDisabled)
 
 	def closeEvent(self,event):
-		print_debug("Window parent got close event")
+		print_debug("Window Parent got close event")
+		print "Window Parent got close event"
+		qtgui.QMainWindow.closeEvent(self,event)
 
 class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 	def __init__(self):
@@ -587,11 +589,12 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		self.tooloptionswindow=None
 
 	def closeEvent(self,event):
-		print_debug("master window got close event")
-		# destroy subwindows
-		self.cleanUp()
-		# then do the standard main window close event
-		qtgui.QMainWindow.closeEvent(self,event)
+		result=qtgui.QMessageBox.question(self,"Ready to Quit?","Are you sure you'd like to exit the whole application?\nAll unsaved changes will be lost.",qtgui.QMessageBox.Ok,qtgui.QMessageBox.Cancel)
+		if result==qtgui.QMessageBox.Ok:
+			self.cleanUp()
+			qtgui.QMainWindow.closeEvent(self,event)
+		else:
+			event.ignore()
 
 	def refreshLayersList(self,winlock=None,layerslock=None):
 		if not winlock:

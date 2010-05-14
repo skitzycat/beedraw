@@ -734,6 +734,18 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 
 		self.master.on_action_File_Open_triggered()
 
+	def on_action_File_Play_triggered(self,accept=True):
+		if not accept:
+			return
+
+		self.master.on_action_File_Play_triggered()
+
+	def on_action_File_Connect_triggered(self,accept=True):
+		if not accept:
+			return
+
+		self.master.on_action_File_Connect_triggered()
+
 	def on_action_File_Save_triggered(self,accept=True):
 		if not accept:
 			return

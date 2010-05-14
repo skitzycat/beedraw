@@ -56,6 +56,8 @@
     </property>
     <addaction name="action_File_New" />
     <addaction name="action_File_Open" />
+    <addaction name="action_File_Play" />
+    <addaction name="action_File_Connect" />
     <addaction name="separator" />
     <addaction name="action_File_Save" />
     <addaction name="action_File_Save_As" />
@@ -308,6 +310,16 @@
    </property>
    <property name="shortcut" >
     <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="action_File_Play" >
+   <property name="text" >
+    <string>Play</string>
+   </property>
+  </action>
+  <action name="action_File_Connect" >
+   <property name="text" >
+    <string>Connect</string>
    </property>
   </action>
  </widget>
