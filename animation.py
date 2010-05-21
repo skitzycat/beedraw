@@ -332,6 +332,7 @@ class PlayBackAnimation (qtcore.QThread):
 		parser=AnimationEventsConverter(f,self.window,self.stepdelay)
 		parser.read()
 		f.close()
+		self.window.type=WindowTypes.singleuser
 
 class NetworkListenerThread (qtcore.QThread):
 	def __init__(self,window,socket):

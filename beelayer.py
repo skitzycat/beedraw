@@ -300,9 +300,7 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
 			lock=qtcore.QWriteLocker(self.imagelock)
 		BeeLayerState.adjustCanvasSize(self,leftadj,topadj,rightadj,bottomadj,lock)
 
-		print "about to run prepareGeometryChange in layer"
 		self.prepareGeometryChange()
-		print "finished running prepareGeometryChange in layer"
 
 	def prepareGeometryChange(self):
 		self.update()
