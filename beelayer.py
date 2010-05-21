@@ -32,6 +32,8 @@ from LayersWindowUi import Ui_LayersWindow
 from beeapp import BeeApp
 from beeeventstack import *
 
+from abstractbeewindow import AbstractBeeWindow
+
 class BeeLayerState:
 	def __init__(self,windowid,type,key,image=None,opacity=None,visible=None,compmode=None,owner=0):
 		self.windowid=windowid
@@ -245,7 +247,6 @@ class BeeLayerState:
 		painter.end()
 
 		self.image=newimage
-		self.prepareGeometryChange()
 
 	def copy(self,path,imagelock=None):
 		pass
@@ -293,6 +294,18 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
 		newlayer=FloatingSelection(image,newkey,self)
 		newlayer.setPos(qtcore.QPointF(x,y))
 		BeeApp().master.requestLayerListRefresh()
+
+	def adjustCanvasSize(self,leftadj,topadj,rightadj,bottomadj,lock=None):
+		if not lock:
+			lock=qtcore.QWriteLocker(self.imagelock)
+		BeeLayerState.adjustCanvasSize(self,leftadj,topadj,rightadj,bottomadj,lock)
+
+		print "about to run prepareGeometryChange in layer"
+		self.prepareGeometryChange()
+		print "finished running prepareGeometryChange in layer"
+
+	def prepareGeometryChange(self):
+		self.update()
 
 	def copy(self,path,imagelock=None):
 		if path:
@@ -647,12 +660,9 @@ class LayerConfigWidget(qtgui.QWidget):
 			#else:
 			#	win.setActiveLayer(layer.key)
 
-class BeeLayersWindow(qtgui.QMainWindow):
+class BeeLayersWindow(AbstractBeeWindow):
 	def __init__(self,master):
-		qtgui.QMainWindow.__init__(self,master.topwinparent)
-
-		self.master=master
-		#self.mutex=qtcore.QMutex()
+		AbstractBeeWindow.__init__(self,master)
 
 		#setup ui
 		self.ui=Ui_LayersWindow()

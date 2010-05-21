@@ -27,7 +27,7 @@ from ImageSizeAdjustDialogUi import Ui_CanvasSizeDialog
 
 class CanvasAdjustDialog(qtgui.QDialog):
 	def __init__(self,window):
-		qtgui.QDialog.__init__(self)
+		qtgui.QDialog.__init__(self,window)
 
 		self.scene=qtgui.QGraphicsScene()
 		self.view=qtgui.QGraphicsView(self.scene,self)
