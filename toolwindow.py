@@ -5,11 +5,13 @@ from beeutil import *
 
 import os
 
+from abstractbeewindow import AbstractBeeWindow
+
 from ToolOptionsUi import Ui_ToolOptionsWindow
 
-class ToolWindow(qtgui.QMainWindow):
+class ToolWindow(AbstractBeeWindow):
 	def __init__(self,master):
-		qtgui.QMainWindow.__init__(self,master.topwinparent)
+		AbstractBeeWindow.__init__(self,master)
 		self.master=master
 
 		self.ui=Ui_ToolOptionsWindow()

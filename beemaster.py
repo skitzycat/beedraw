@@ -48,19 +48,19 @@ from abstractbeemaster import AbstractBeeMaster
 from beedrawingwindow import BeeDrawingWindow, NetworkClientDrawingWindow, AnimationDrawingWindow
 
 class BeeWindowParent(qtgui.QMainWindow):
-	def __init__(self):
+	def __init__(self,master):
 		qtgui.QWidget.__init__(self)
+		self.master=master
 		self.setAttribute(qtcore.Qt.WA_ForceUpdatesDisabled)
 
 	def closeEvent(self,event):
 		print_debug("Window Parent got close event")
-		print "Window Parent got close event"
 		qtgui.QMainWindow.closeEvent(self,event)
 
 class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 	def __init__(self):
 		# create a top level widget to be the parent for all windows so they will all be connected
-		self.topwinparent=BeeWindowParent()
+		self.topwinparent=BeeWindowParent(self)
 		qtgui.QMainWindow.__init__(self,self.topwinparent)
 		AbstractBeeMaster.__init__(self)
 
@@ -132,6 +132,16 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			colors=[]
 
 		self.raise_()
+
+	def keyEvent(self,event):
+		if event.key() in (qtcore.Qt.Key_Shift,qtcore.Qt.Key_Control,qtcore.Qt.Key_Alt,qtcore.Qt.Key_Meta):
+			self.newModKeys(event.modifiers())
+
+	def keyReleaseEvent(self,event):
+		self.keyEvent(event)
+
+	def keyPressEvent(self,event):
+		self.keyEvent(event)
 
 	#def event(self,event):
 	#	print event.type()
@@ -252,8 +262,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			self.toolbox.getCurToolDesc().pressToolButton()
 
 	def newModKeys(self,modkeys):
-		#print "master got new mod keys"
-		pass
+		print "master got new mod keys"
 
 	def pointerTypeCheck(self,pointertype):
 		if pointertype!=self.curpointertype:
@@ -369,6 +378,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 			newwindow=BeeDrawingWindow(self,image.width(),image.height(),False)
 			newwindow.loadLayer(image)
+			newwindow.setFileName(filename)
 
 	def on_action_File_New_triggered(self,accept=True):
 		if not accept:

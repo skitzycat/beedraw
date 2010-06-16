@@ -42,17 +42,18 @@ from beesessionstate import BeeSessionState
 
 from animation import *
 
+from abstractbeewindow import AbstractBeeWindow
+
 from canvasadjustpreview import CanvasAdjustDialog
 
-class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
+class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 	""" Represents a window that the user can draw in
 	"""
 	def __init__(self,master,width=600,height=400,startlayer=True,type=WindowTypes.singleuser,maxundo=20):
 		BeeSessionState.__init__(self,master,width,height,type)
-		#qtgui.QMainWindow.__init__(self,master)
-		qtgui.QMainWindow.__init__(self,master.topwinparent)
+		AbstractBeeWindow.__init__(self,master)
 
-		self.localcommandstack=CommandStack(self.id,maxundo)
+		self.localcommandstack=CommandStack(self,maxundo)
 
 		self.layerfinisher=LayerFinisher(qtcore.QRectF(0,0,width,height))
 
@@ -62,6 +63,8 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		self.ui.setupUi(self)
 		self.activated=False
 		self.backdrop=None
+
+		self.filename=""
 
 		self.cursoroverlay=None
 		self.remotedrawingthread=None
@@ -120,9 +123,18 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		# have window get destroyed when it gets a close event
 		self.setAttribute(qtcore.Qt.WA_DeleteOnClose)
 
+		self.changeWindowTitle("")
+
 	# this is for debugging memory cleanup
 	#def __del__(self):
 	#	print "DESTRUCTOR: bee drawing window"
+
+	def changeWindowTitle(self,name):
+		self.setWindowTitle("Bee Canvas " + str(self.id) + " " + name)
+
+	def setFileName(self,filename):
+		self.filename=filename
+		self.changeWindowTitle(os.path.basename(str(filename)))
 
 	def nextFloatingLayerKey(self):
 		""" returns the next floating layer key available, thread safe """
@@ -132,10 +144,6 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		key=self.nextfloatinglayerkey
 		self.nextfloatinglayerkey-=1
 		return key
-
-	def closeEvent(self,event):
-		event.ignore()
-		self.hide()
 
 	def resetLayerZValues(self,lock=None):
 		i=0
@@ -212,7 +220,10 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 	def adjustCanvasSize(self,leftadj,topadj,rightadj,bottomadj,sizelock=None):
 		# lock the image so no updates can happen in the middle of this
 		if not sizelock:
+			print "attempting to get doc size lock"
 			sizelock=qtcore.QWriteLocker(self.docsizelock)
+
+		print "have doc size lock"
 
 		self.docwidth=self.docwidth+leftadj+rightadj
 		self.docheight=self.docheight+topadj+bottomadj
@@ -321,6 +332,8 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 
 		# if we get a clear operation clear the seleciton and outline then return
 		if type==SelectionModTypes.clear:
+			if not self.selection:
+				return
 			for s in self.selection:
 				dirtyregion=dirtyregion.united(qtgui.QRegion(s.boundingRect().toAlignedRect()))
 			self.selection=[]
@@ -664,6 +677,9 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 			if self.localLayer(layerkey):
 				self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.paste,layerkey,x,y),ThreadTypes.user)
 
+		# deselect everything when we do this
+		self.changeSelection(SelectionModTypes.clear)
+
 	def addCopyToQueue(self):
 		# It is only possible for this to happen from a local source so it's defined here instead of in the base state class.
 		layerkey=self.getCurLayerKey()
@@ -680,8 +696,10 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		if layerkey:
 			# make sure layer is owned locally so it can be altered
 			if self.localLayer(layerkey):
-				path=self.getClipPathCopy()
 				self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.cut,layerkey,self.getClipPathCopy()),ThreadTypes.user)
+
+		# deselect everything when we do this
+		self.changeSelection(SelectionModTypes.clear)
 
 	def addAnchorToQueue(self,parentkey,floating):
 		pos=floating.pos()
@@ -747,6 +765,13 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		self.master.on_action_File_Connect_triggered()
 
 	def on_action_File_Save_triggered(self,accept=True):
+		if not self.filename:
+			self.on_action_File_Save_As_triggered()
+			return
+
+		self.saveFile(self.filename)
+
+	def on_action_File_Save_As_triggered(self,accept=True):
 		if not accept:
 			return
 
@@ -762,6 +787,9 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 		filename=qtgui.QFileDialog.getSaveFileName(self.master,"Choose File Name",".",filterstring)
 		if filename:
 			self.saveFile(filename)
+
+		self.setFileName(filename)
+
 
 	# this is here because the window doesn't seem to get deleted when it's closed
 	# the cleanUp function attempts to clean up as much memory as possible
@@ -784,6 +812,8 @@ class BeeDrawingWindow(qtgui.QMainWindow,BeeSessionState):
 
 		# this should be the last referece to the window
 		self.master.unregisterWindow(self)
+
+		self.localcommandstack=None
 
 	# just in case someone lets up on the cursor when outside the drawing area this will make sure it's caught
 	def tabletEvent(self,event):

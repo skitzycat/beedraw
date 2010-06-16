@@ -218,6 +218,7 @@ class DrawingThread(qtcore.QThread):
 		window=self.master.getWindowById(self.windowid)
 		subtype=command[1]
 		if subtype==AllLayerCommandTypes.resize:
+			print "drawing thread processing canvas resize"
 			window.adjustCanvasSize(command[2],command[3],command[4],command[5])
 
 		elif subtype==AllLayerCommandTypes.scale:

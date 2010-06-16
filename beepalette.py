@@ -6,6 +6,8 @@ import os
 from beeglobals import BEE_CONFIG_DIR
 from colorswatch import *
 
+from abstractbeewindow import AbstractBeeWindow
+
 from beesave import PaletteXmlWriter,BeeToolConfigWriter,BeeMasterConfigWriter
 from beeload import PaletteParser,BeeToolConfigParser
 
@@ -79,11 +81,10 @@ class BeeSwatchScrollArea(qtgui.QScrollArea):
 		# readjust the whole palette widget to the right size
 		widget.adjustSize()
 
-class PaletteWindow(qtgui.QMainWindow):
+class PaletteWindow(AbstractBeeWindow):
 	def __init__(self,master):
-		qtgui.QMainWindow.__init__(self,master.topwinparent)
+		AbstractBeeWindow.__init__(self,master)
 		self.setAttribute(qtcore.Qt.WA_DeleteOnClose,False)
-		self.master=master
 
 		self.ui=Ui_PaletteWindow()
 		self.ui.setupUi(self)
@@ -108,10 +109,6 @@ class PaletteWindow(qtgui.QMainWindow):
 			colors=[]
 
 		self.ui.swatch_frame.setupSwatches(colors)
-
-	def closeEvent(self,event):
-		event.ignore()
-		self.hide()
 
 	def setFGColor(self,color):
 		self.ui.FGSwatch.updateColor(color)

@@ -1,5 +1,5 @@
 PYUIC=pyuic4
-main: BeeMasterUI.py DrawingWindowUI.py LayerWidgetUi.py LayersWindowUi.py HiveMasterUi.py HiveOptionsUi.py ImageSizeAdjustDialogUi.py ConnectionDialogUi.py ImageScaleDialog.py PencilOptionsWidgetUi.py BrushOptionsWidgetUi.py EraserOptionsWidgetUi.py PaintBucketOptionsWidgetUi.py HiveLayerWidgetUi.py AboutDisplayDialogUi.py PickNewCanvasSizeDialogUi.py BeeDrawOptionsUi.py BeePaletteUi.py ToolOptionsUi.py EyeDropperOptionsWidget.py FeatherSelectOptionsWidgetUi.py
+main: BeeMasterUI.py DrawingWindowUI.py LayerWidgetUi.py LayersWindowUi.py HiveMasterUi.py HiveOptionsUi.py ImageSizeAdjustDialogUi.py ConnectionDialogUi.py ImageScaleDialog.py PencilOptionsWidgetUi.py BrushOptionsWidgetUi.py EraserOptionsWidgetUi.py PaintBucketOptionsWidgetUi.py HiveLayerWidgetUi.py AboutDisplayDialogUi.py PickNewCanvasSizeDialogUi.py BeeDrawOptionsUi.py BeePaletteUi.py ToolOptionsUi.py EyeDropperOptionsWidget.py FeatherSelectOptionsWidgetUi.py SelectionModificationWidget.py
 
 %.py : %.ui
 	$(PYUIC) $< > $@

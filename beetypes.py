@@ -105,7 +105,15 @@ class ThreadTypes:
 	user, animation, network, server = range(4)
 
 class ToolLogTypes:
-	unlogable, regular, raw = range(3)
+	"""
+	      unlogable
+        regular: log a tool event by points
+        raw: log an event that changes a layer by raw image change
+        selection: log an event that changes the selection
+        selectionraw: log an event that changes both a layer image and the selection
+        move: log an event that moves a layer
+	"""
+	unlogable, regular, raw, selection, selectionraw, move = range(6)
 
 # types of ways to modify the current selection
 class SelectionModTypes:
@@ -128,3 +136,6 @@ class ImageCombineTypes:
 
 class DebugFlags:
   alloff, allon = range(2)
+
+class UndoCommandTypes:
+	localonly,remote,notinnetwork = range(3)

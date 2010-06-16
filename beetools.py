@@ -108,7 +108,8 @@ class AbstractToolDesc:
 	# this should be implemented in subclass if needed
 	def setupTool(self,window,layerkey):
 		self.layerkey=layerkey
-		return self.getTool(window)
+		tool=self.getTool(window)
+		tool.tooldesc=self
  
 	def getTool(self,window):
 		return None
@@ -887,12 +888,8 @@ class SelectionTool(AbstractTool):
  
 	def guiLevelPenUp(self,x,y,source=0):
 		self.pendown=False
-		#x,y=self.window.view.snapPointToView(x,y)
-		#x=int(x)
-		#y=int(y)
  
-		# see how the user wants the selection altered
-		modkeys=BeeApp().app.keyboardModifiers()
+	def penUp(self,x,y,source=0):
 		selectionmod=getCurSelectionModType()
 
 		if self.overlay:
@@ -919,9 +916,10 @@ class SelectionTool(AbstractTool):
  
 		self.updateOverlay(x,y)
 		self.lastpoint=(x,y)
- 
+
 # this is the most basic selection tool (rectangular)
 class RectSelectionToolDesc(AbstractToolDesc):
+	logtype=ToolLogTypes.selection
 	def __init__(self):
 		AbstractToolDesc.__init__(self,"rectselect")
 		self.displayname="Rectangle Selection"
@@ -996,6 +994,7 @@ class FeatherSelectOptionsWidget(qtgui.QWidget):
 
 # fuzzy selection tool
 class FeatherSelectTool(AbstractTool):
+	logtype=ToolLogTypes.selection
 	def __init__(self,options,window):
 		AbstractTool.__init__(self,options,window)
 
@@ -1473,6 +1472,7 @@ class MoveSelectionToolDesc(AbstractToolDesc):
 
 # selection move tool
 class MoveSelectionTool(AbstractTool):
+	logtype=ToolLogTypes.move
 	def __init__(self,options,window):
 		AbstractTool.__init__(self,options,window)
 		self.pendown=False
