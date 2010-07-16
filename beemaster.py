@@ -1,5 +1,5 @@
 #    Beedraw/Hive network capable client and server allowing collaboration on a single image
-#    Copyright (C) 2009 B. Becker
+#    Copyright (C) 2009 Thomas Becker
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -262,7 +262,8 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			self.toolbox.getCurToolDesc().pressToolButton()
 
 	def newModKeys(self,modkeys):
-		print "master got new mod keys"
+		#print "master got new mod keys"
+		pass
 
 	def pointerTypeCheck(self,pointertype):
 		if pointertype!=self.curpointertype:

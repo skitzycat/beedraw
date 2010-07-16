@@ -1,5 +1,5 @@
 #    Beedraw/Hive network capable client and server allowing collaboration on a single image
-#    Copyright (C) 2009 B. Becker
+#    Copyright (C) 2009 Thomas Becker
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -855,6 +855,7 @@ class RectangleSelectionPickOverlay(qtgui.QGraphicsItem):
  
 # basic rectangle selection tool
 class SelectionTool(AbstractTool):
+	logtype=ToolLogTypes.selection
 	def __init__(self,options,window):
 		AbstractTool.__init__(self,options,window)
  
@@ -886,18 +887,17 @@ class SelectionTool(AbstractTool):
 		self.startpoint=(x,y)
 		self.lastpoint=(x,y)
  
-	def guiLevelPenUp(self,x,y,source=0):
+	def guiLevelPenUp(self,x,y,modkeys=qtcore.Qt.NoModifier):
 		self.pendown=False
- 
-	def penUp(self,x,y,source=0):
-		selectionmod=getCurSelectionModType()
+		selectionop=getCurSelectionModType(modkeys)
 
 		if self.overlay:
-			newpath=qtgui.QPainterPath()
-			newpath.addRect(qtcore.QRectF(self.overlay.rect))
-			self.window.changeToolOverlay()
-			self.window.changeSelection(selectionmod,newpath)
+			path=qtgui.QPainterPath()
+			path.addRect(qtcore.QRectF(self.overlay.rect))
 
+			self.window.addSelectionChangeToQueue(selectionop,path)
+
+		self.window.changeToolOverlay()
 		self.overlay=None
  
 	# set overlay to display area that would be selected if user lifted up button

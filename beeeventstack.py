@@ -1,5 +1,5 @@
 #    Beedraw/Hive network capable client and server allowing collaboration on a single image
-#    Copyright (C) 2009 B. Becker
+#    Copyright (C) 2009 Thomas Becker
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -58,22 +58,27 @@ class CommandStack:
 
 	def undo(self):
 		if self.index<=0:
-			return
+			return UndoCommandTypes.none
 
 		self.index-=1
-		self.commandstack[self.index].undo(self.window)
-		BeeApp().master.refreshLayerThumb(self.window)
+		command=self.commandstack[self.index]
+		command.undo(self.win)
+		BeeApp().master.refreshLayerThumb(self.win)
+		return command.undotype
 
 	def redo(self):
 		if self.index>=len(self.commandstack):
-			return
+			return UndoCommandTypes.none
 
-		self.commandstack[self.index].redo(self.win)
+		command=self.commandstack[self.index]
+		command.redo(self.win)
 		self.index+=1
 		BeeApp().master.refreshLayerThumb(self.win)
+		return command.undotype
 
 # parent class for all commands that get put in undo/redo stack
 class AbstractCommand:
+	undotype=UndoCommandTypes.localonly
 	def __init__(self):
 		self.layerkey=0
 	def undo(self):
@@ -114,6 +119,7 @@ class AnchorCommand(DrawingCommand):
 		DrawingCommand.undo(self,windowid)
 		layer=win.getLayerForKey(self.layerkey)
 		if layer:
+			lock=qtcore.QWriteLocker(win.layerslistlock)
 			layer.scene().addItem(self.floating)
 			self.floating.setParentItem(layer)
 			win.requestLayerListRefresh()
@@ -123,8 +129,9 @@ class AnchorCommand(DrawingCommand):
 		DrawingCommand.redo(self,windowid)
 		layer=win.getLayerForKey(self.layerkey)
 		if layer:
+			lock=qtcore.QWriteLocker(win.layerslistlock)
 			layer.scene().removeItem(self.floating)
-			win.setValidActiveLayer()
+			win.setValidActiveLayer(listlock=lock)
 			win.requestLayerListRefresh()
 
 class AddLayerCommand(AbstractCommand):
@@ -185,14 +192,14 @@ class CutCommand(DrawingCommand):
 
 	def undo(self,win):
 		DrawingCommand.undo(self,win)
-		win.changeSelection(SelectionModTypes.new,path)
+		win.changeSelection(SelectionModTypes.new,path,history=False)
 
 	def redo(self,win):
 		DrawingCommand.redo(self,win)
-		win.changeSelection(SelectionModTypes.clear)
+		win.changeSelection(SelectionModTypes.clear,history=False)
 
 class PasteCommand(AddLayerCommand):
-	undotype=UndoCommandTypes.localonly
+	undotype=UndoCommandTypes.nolog
 	def __init__(self,layerkey,path):
 		AbstractCommand.__init__(self)
 		self.path=path
@@ -201,25 +208,33 @@ class PasteCommand(AddLayerCommand):
 		AddLayerCommand.undo(self,win)
 		layer=getLayerForKey(self.layerkey)
 		self.layerparent=layer.parentItem()
-		win.changeSelection(SelectionModTypes.new,path)
+		win.changeSelection(SelectionModTypes.new,path,history=False)
 
 	def redo(self,win):
 		AddLayerCommand.redo(self,win)
-		win.changeSelection(SelectionModTypes.clear)
+		win.changeSelection(SelectionModTypes.clear,history=False)
 
 class ChangeSelectionCommand(AbstractCommand):
+	undotype=UndoCommandTypes.localonly
 	def __init__(self,oldpath,newpath):
 		AbstractCommand.__init__(self)
 		self.oldpath=oldpath
 		self.newpath=newpath
 
 	def undo(self,win):
-		win.changeSelection(SelectionModTypes.new,oldpath)
+		if self.oldpath:
+			win.changeSelection(SelectionModTypes.setlist,self.oldpath,history=False)
+		else:
+			win.changeSelection(SelectionModTypes.clear,history=False)
 
 	def redo(self,win):
-		win.changeSelection(SelectionModTypes.new,newpath)
+		if self.newpath:
+			win.changeSelection(SelectionModTypes.setlist,self.newpath,history=False)
+		else:
+			win.changeSelection(SelectionModTypes.clear,history=False)
 
 class MoveSelectionCommand(AbstractCommand):
+	undotype=UndoCommandTypes.localonly
 	def __init__(self,layerkey,oldpos,newpos):
 		AbstractCommand.__init__(self)
 		self.oldpos=oldpos

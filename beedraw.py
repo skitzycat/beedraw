@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 #    Beedraw/Hive network capable client and server allowing collaboration on a single image
-#    Copyright (C) 2009 B. Becker
+#    Copyright (C) 2009 Thomas Becker
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by

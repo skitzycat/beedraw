@@ -1,5 +1,5 @@
 #    Beedraw/Hive network capable client and server allowing collaboration on a single image
-#    Copyright (C) 2009 B. Becker
+#    Copyright (C) 2009 Thomas Becker
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -497,20 +497,23 @@ class BeeSessionState:
 	# undo last event in stack for passed client id
 	def undo(self,source=0):
 		if self.ownedByMe(source):
-			self.localcommandstack.undo()
+			return self.localcommandstack.undo()
 		else:
 			if source in self.remotecommandstacks:
-				self.remotecommandstacks[source].undo()
+				return self.remotecommandstacks[source].undo()
 			else:
 				print "ERROR: recieved undo for blank remote command stack:", source
+		return UndoCommandTypes.none
 
 	# redo last event in stack for passed client id
 	def redo(self,source=0):
 		# if we don't get a source then assume that it's local
 		if self.ownedByMe(source):
-			self.localcommandstack.redo()
+			return self.localcommandstack.redo()
 		else:
-			self.remotecommandstacks[source].redo()
+			return self.remotecommandstacks[source].redo()
+
+		return UndoCommandTypes.none
 
 	def refreshLayerThumb(self,window,id):
 		pass

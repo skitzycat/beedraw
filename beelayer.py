@@ -1,5 +1,5 @@
 #    Beedraw/Hive network capable client and server allowing collaboration on a single image
-#    Copyright (C) 2009 B. Becker
+#    Copyright (C) 2009 Thomas Becker
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -411,6 +411,17 @@ class SelectedAreaAnimation(qtgui.QGraphicsItemAnimation):
 		self.setItem(item)
 		self.timer.start()
 		self.view=view
+		self.running=True
+
+	def stop(self):
+		if self.running:
+			self.timeLine().stop()
+			self.running=False
+
+	def start(self):
+		if not self.running:
+			self.timeLine().start()
+			self.running=True
 
 	def beforeAnimationStep(self,time):
 		self.item().incrementDashOffset()
@@ -435,6 +446,8 @@ class SelectedAreaDisplay(qtgui.QGraphicsItem):
 
 	def boundingRect(self):
 		#lock=qtcore.QReadLocker(self.pathlock)
+		if not self.path:
+			return qtcore.QRectF()
 		return qtcore.QRectF(self.path.boundingRect())
 
 	def updatePath(self,path):
@@ -443,6 +456,8 @@ class SelectedAreaDisplay(qtgui.QGraphicsItem):
 		self.prepareGeometryChange()
 
 	def paint(self,painter,options,widget=None):
+		if not self.path:
+			return
 		painter.setPen(qtgui.QColor(255,255,255,255))
 		painter.drawPath(self.path)
 

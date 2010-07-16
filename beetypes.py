@@ -1,5 +1,5 @@
 #    Beedraw/Hive network capable client and server allowing collaboration on a single image
-#    Copyright (C) 2009 B. Becker
+#    Copyright (C) 2009 Thomas Becker
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -23,6 +23,12 @@ class BeeCustomEventTypes:
 	displaymessage = qtcore.QEvent.User+1
 	hiveserverstatus = qtcore.QEvent.User+2
 	starthiveserver = qtcore.QEvent.User+3
+	updateselectiondisplay = qtcore.QEvent.User+4
+
+class SelectionDisplayUpdateEvent(qtcore.QEvent):
+	def __init__(self,path=None):
+		qtcore.QEvent.__init__(self,BeeCustomEventTypes.updateselectiondisplay)
+		self.path=path
 
 class HiveServerStatusEvent(qtcore.QEvent):
 	def __init__(self,status,errorstring=None):
@@ -48,7 +54,7 @@ class BeeSocketTypes:
 
 # custom enumerated types
 class DrawingCommandTypes:
-	quit, history, layer, alllayer, networkcontrol = range(5)
+	quit, history, layer, alllayer, networkcontrol, selection = range(6)
 
 # events that may effect one or more layers
 class HistoryCommandTypes:
@@ -117,7 +123,7 @@ class ToolLogTypes:
 
 # types of ways to modify the current selection
 class SelectionModTypes:
-	clear, new, intersect, add, subtract = range(5)
+	clear, new, intersect, add, subtract, setlist = range(6)
 
 # types of brush shapes
 class BrushShapes:
@@ -138,4 +144,4 @@ class DebugFlags:
   alloff, allon = range(2)
 
 class UndoCommandTypes:
-	localonly,remote,notinnetwork = range(3)
+	none,localonly,remote,notinnetwork,nolog = range(5)

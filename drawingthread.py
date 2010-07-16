@@ -1,5 +1,5 @@
 #    Beedraw/Hive network capable client and server allowing collaboration on a single image
-#    Copyright (C) 2009 B. Becker
+#    Copyright (C) 2009 Thomas Becker
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -79,17 +79,28 @@ class DrawingThread(qtcore.QThread):
 			elif type==DrawingCommandTypes.networkcontrol:
 				self.processNetworkCommand(command)
 
+			elif type==DrawingCommandTypes.selection:
+				self.processSelectionCommand(command)
+
+	def processSelectionCommand(self,command):
+		selectionop=command[1]
+		newpath=command[2]
+		window=self.master.getWindowById(self.windowid)
+		window.changeSelection(selectionop,newpath)
+
 	def processHistoryCommand(self,command):
 		window=self.master.getWindowById(self.windowid)
 		subtype=command[1]
+		undotype=UndoCommandTypes.none
 		if subtype==HistoryCommandTypes.undo:
-			window.undo(command[2])
+			undotype=window.undo(command[2])
 		elif subtype==HistoryCommandTypes.redo:
-			window.redo(command[2])
+			undotype=window.redo(command[2])
 		else:
 			print "unknown processHistoryCommand subtype:", subtype
 
-		window.logCommand(command,self.type)
+		if undotype==UndoCommandTypes.remote or undotype==UndoCommandTypes.notinnetwork:
+			window.logCommand(command,self.type)
 
 	def processLayerCommand(self,command):
 		window=self.master.getWindowById(self.windowid)

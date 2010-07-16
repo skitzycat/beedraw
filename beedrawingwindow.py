@@ -1,5 +1,5 @@
 #    Beedraw/Hive network capable client and server allowing collaboration on a single image
-#    Copyright (C) 2009 B. Becker
+#    Copyright (C) 2009 Thomas Becker
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -71,14 +71,12 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 
 		self.selectiondisplay=None
 		self.selectionanimation=None
-		self.selectionanimationtimer=None
 
 		self.nextfloatinglayerkey=-1
 		self.nextfloatinglayerkeylock=qtcore.QReadWriteLock()
 
 		self.tooloverlay=None
 
-		self.selectionoutline=[]
 		self.selection=[]
 		self.selectionlock=qtcore.QReadWriteLock()
 		self.clippath=None
@@ -307,39 +305,61 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 	def growSelection(self,size):
 		slock=qtcore.QWriteLocker(self.selectionlock)
 
+	def requestUpdateSelectionDisplayPath(self,path=None):
+		event=SelectionDisplayUpdateEvent(path)
+		BeeApp().app.postEvent(self,event)
+
 	def updateSelectionDisplayPath(self,path=None):
-		lock=qtcore.QWriteLocker(self.layerslistlock)
 		if path and not path.isEmpty():
+			lock=qtcore.QReadLocker(self.layerslistlock)
 			if self.selectiondisplay:
 				self.selectiondisplay.updatePath(path)
+				self.selectionanimation.start()
 			else:
 				self.selectiondisplay=SelectedAreaDisplay(path,self.scene)
 				self.selectionanimation=SelectedAreaAnimation(self.selectiondisplay,self.view)
 				self.resetLayerZValues(lock)
 
 		else:
-			self.scene.removeItem(self.selectiondisplay)
-			self.selectiondisplay=None
-			self.selectionanimation=None
-			self.selectionanimationtimer=None
+			if self.selectiondisplay:
+				lock=qtcore.QWriteLocker(self.layerslistlock)
+				self.selectionanimation.stop()
+				self.selectiondisplay.updatePath(None)
+				#self.scene.removeItem(self.selectiondisplay)
+				#self.selectiondisplay=None
+				#self.selectionanimation=None
 
 	# change the current selection path, and update to screen to show it
-	def changeSelection(self,type,newarea=None,slock=None):
+	def changeSelection(self,type,newarea=None,slock=None,history=True):
 		if not slock:
 			slock=qtcore.QWriteLocker(self.selectionlock)
+
+		if history:
+			oldpath=self.selection[:]
 
 		dirtyregion=qtgui.QRegion()
 
 		# if we get a clear operation clear the seleciton and outline then return
 		if type==SelectionModTypes.clear:
+			# in this case there already is no selection so just ignore it
 			if not self.selection:
 				return
 			for s in self.selection:
 				dirtyregion=dirtyregion.united(qtgui.QRegion(s.boundingRect().toAlignedRect()))
 			self.selection=[]
-			self.selectionoutline=[]
 			self.updateClipPath(slock=slock)
-			self.updateSelectionDisplayPath()
+			self.requestUpdateSelectionDisplayPath()
+
+		elif type==SelectionModTypes.setlist:
+			for s in self.selection:
+				dirtyregion=dirtyregion.united(qtgui.QRegion(s.boundingRect().toAlignedRect()))
+
+			self.selection=newarea
+			for s in self.selection:
+				dirtyregion=dirtyregion.united(qtgui.QRegion(s.boundingRect().toAlignedRect()))
+
+			self.updateClipPath(slock=slock)
+			self.requestUpdateSelectionDisplayPath(self.clippath)
 
 		else:
 			# new area argument can be implied to be the cursor overlay, but we need one or the other
@@ -408,13 +428,17 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 				print "unrecognized selection modification type:", type
 
 			self.updateClipPath(slock=slock)
-			self.updateSelectionDisplayPath(self.clippath)
+			self.requestUpdateSelectionDisplayPath(self.clippath)
 
 		# now update screen as needed
 		if not dirtyregion.isEmpty():
 			dirtyrect=dirtyregion.boundingRect()
 			dirtyrect.adjust(-1,-1,2,2)
 			self.view.updateView(dirtyrect)
+
+		if history:
+			command=ChangeSelectionCommand(oldpath,self.selection)
+			self.localcommandstack.add(command)
 
 	def queueCommand(self,command,source=ThreadTypes.user,owner=0):
 		if source==ThreadTypes.user:
@@ -501,13 +525,13 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 		layer=BeeGuiLayer(self.id,type,key,image,opacity=opacity,visible=visible,compmode=compmode,owner=owner)
 
 		self.layers.insert(index,layer)
-		lock.unlock()
 
 		# only add command to history if we are in a local session
 		if self.type==WindowTypes.singleuser and history:
 			self.addCommandToHistory(AddLayerCommand(layer.key))
 
 		self.scene.addItem(layer)
+		lock.unlock()
 
 		self.setValidActiveLayer(None,True)
 		self.requestLayerListRefresh()
@@ -549,6 +573,9 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 
 		elif event.type()==BeeCustomEventTypes.displaymessage:
 			self.displayMessage(event.boxtype,event.title,event.message)
+
+		elif event.type()==BeeCustomEventTypes.updateselectiondisplay:
+			self.updateSelectionDisplayPath(event.path)
 
 		# once the window has received a deferred delete it needs to have all it's references removed so memory can be freed up
 		elif event.type()==qtcore.QEvent.DeferredDelete:
@@ -667,6 +694,9 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 				rightadj=dialog.rightadj
 				bottomadj=dialog.bottomadj
 				self.addAdjustCanvasSizeRequestToQueue(leftadj,topadj,rightadj,bottomadj)
+
+	def addSelectionChangeToQueue(self,selectionop,path):
+		self.queueCommand((DrawingCommandTypes.selection,selectionop,path),ThreadTypes.user)
 
 	def addPasteToQueue(self,x=0,y=0):
 		# It is only possible for this to happen from a local source so it's defined here instead of in the base state class.

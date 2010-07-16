@@ -1,5 +1,5 @@
 #    Beedraw/Hive network capable client and server allowing collaboration on a single image
-#    Copyright (C) 2009 B. Becker
+#    Copyright (C) 2009 Thomas Becker
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -40,6 +40,13 @@ class BeeCanvasView(qtgui.QGraphicsView):
 		#self.setOptimizationFlag(qtgui.QGraphicsView.DontAdjustForAntialiasing)
 
 		self.show()
+
+	def paintEvent(self,event):
+		window=BeeApp().master.getWindowById(self.windowid)
+		lock=qtcore.QReadLocker(window.layerslistlock)
+		#print "starting to handle paint event"
+		qtgui.QGraphicsView.paintEvent(self,event)
+		#print "ending handle paint event"
 
 	def snapPointToView(self,x,y):
 		visible=self.mapToScene(self.viewport().visibleRegion().boundingRect()).boundingRect()

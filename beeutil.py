@@ -1,5 +1,5 @@
 #    Beedraw/Hive network capable client and server allowing collaboration on a single image
-#    Copyright (C) 2009 B. Becker
+#    Copyright (C) 2009 Thomas Becker
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -379,8 +379,9 @@ def translatePoint(x,y,trans):
 	a,b,c,d,e,f=trans
 	return ( (a*x) + (b*y) + c, (d*x) + (e*y) + f )
 
-def getCurSelectionModType():
-	modkeys=BeeApp().app.keyboardModifiers()
+def getCurSelectionModType(modkeys=None):
+	if not modkeys:
+		modkeys=BeeApp().app.keyboardModifiers()
 
 	if modkeys==qtcore.Qt.ShiftModifier:
 		return SelectionModTypes.add
@@ -449,7 +450,6 @@ def requestDisplayMessage(type,title,message,destination=None):
 
 	event=DisplayMessageEvent(type,title,message)
 	BeeApp().app.postEvent(destination,event)
-	print "requesting to display message"
 
 class ThreadNotifierQueue(Queue,qtcore.QObject):
 	__pyqtSignals__ = ("datainqueue()")
