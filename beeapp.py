@@ -20,6 +20,8 @@ from beetypes import BeeAppType
 import PyQt4.QtCore as qtcore
 import PyQt4.QtGui as qtgui
 
+from beetypes import *
+
 class BeeApp(object):
 	""" Represents a beedraw application.
 				This class is a singleton so that from anywhere in the program the master window can be accessed without leaving around extra references
@@ -41,6 +43,7 @@ class BeeApp(object):
 
 	def __init__(self,argv,type=1):
 		self.debug_flags={}
+		self.debug_flags[DebugFlags.allon]=True
 		self.master=None
 		self.type=type
 		self.app=BeeGuiApp(argv)

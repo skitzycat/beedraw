@@ -60,6 +60,7 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 		self.config["height"]=400
 		self.config["networkhistorysize"]=20
 		self.config["password"]=""
+		self.config["autolog"]=False
 
 		# then load from config file if possible
 		configfilename=os.path.join("config","hiveoptions.xml")

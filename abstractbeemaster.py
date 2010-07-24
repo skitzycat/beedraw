@@ -23,6 +23,7 @@ import os
 from beetypes import *
 from beeapp import BeeApp
 from beetools import BeeToolBox
+from beeutil import *
 
 class AbstractBeeMaster:
 	""" This is a class that can be inherited from to provide a bee master object that controls tools, windows, layers, and options
