@@ -122,3 +122,24 @@ class BeeMasterConfigParser:
 				self.options[key]=True
 			else:
 				self.options[key]=False
+
+class HiveMasterConfigParser(BeeMasterConfigParser):
+	def processStartElement(self):
+		name=self.xml.name()
+		attrs=self.xml.attributes()
+
+		if name in ["password"]:
+			key="%s" % name.toString()
+			val="%s" % attrs.value("value").toString()
+			self.options[key]=val
+		elif name in ["port","height","width","networkhistorysize"]:
+			key="%s" % name.toString()
+			(val,ok)=attrs.value("value").toString().toInt()
+			self.options[key]=val
+		elif name in ["debug"]:
+			key="%s" % name.toString()
+			val="%s" % attrs.value("value").toString()
+			if val=="True":
+				self.options[key]=True
+			else:
+				self.options[key]=False

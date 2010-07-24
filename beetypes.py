@@ -85,8 +85,9 @@ class NetworkControlCommandTypes:
       layerowner: sent from server to all clients to show change of a layer owner
       layerowner: sent from server to all clients to show change of a layer owner
       fatalerror: sent from server to client to indicate error occured and that session should end
+			networkhistorysize: sent from server to client to indicate the size of the network history for the session
   """
-	resyncrequest, resyncstart, requestlayer, giveuplayer, revokelayer, layerowner, fatalerror= range(7)
+	resyncrequest, resyncstart, requestlayer, giveuplayer, revokelayer, layerowner, fatalerror, networkhistorysize = range(8)
 
 class LayerTypes:
 	""" Represents types of layers:
@@ -145,3 +146,6 @@ class DebugFlags:
 
 class UndoCommandTypes:
 	none,localonly,remote,notinnetwork,nolog = range(5)
+
+class CommandStackTypes:
+	singleuser, network, remoteonly = range(3)

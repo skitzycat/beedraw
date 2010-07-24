@@ -41,6 +41,7 @@ from beesave import PaletteXmlWriter,BeeToolConfigWriter,BeeMasterConfigWriter
 from beeload import PaletteParser,BeeToolConfigParser
 from beepalette import PaletteWindow
 from toolwindow import ToolWindow
+from beeload import BeeMasterConfigParser
 
 from beeapp import BeeApp
 
@@ -64,6 +65,24 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		qtgui.QMainWindow.__init__(self,self.topwinparent)
 		AbstractBeeMaster.__init__(self)
 
+		# set default config values
+		self.config['username']=""
+		self.config['server']="localhost"
+		self.config['port']=8333
+		self.config['autolog']=False
+		self.config['autosave']=False
+		self.config['debug']=False
+
+		# then load from config file if possible
+		configfilename=os.path.join("config","beedrawoptions.xml")
+		configfile=qtcore.QFile(configfilename)
+		if configfile.exists():
+			if configfile.open(qtcore.QIODevice.ReadOnly):
+				parser=BeeMasterConfigParser(configfile)
+				fileconfig=parser.loadOptions()
+				self.config.update(fileconfig)
+
+		BeeApp().debug_flags[DebugFlags.allon]=self.config['debug']
 		# read tool options from file if needed
 		toolconfigfilename=os.path.join("config","tooloptions.xml")
 		toolconfigfile=qtcore.QFile(toolconfigfilename)

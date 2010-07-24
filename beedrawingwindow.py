@@ -49,11 +49,11 @@ from canvasadjustpreview import CanvasAdjustDialog
 class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 	""" Represents a window that the user can draw in
 	"""
-	def __init__(self,master,width=600,height=400,startlayer=True,type=WindowTypes.singleuser,maxundo=20):
+	def __init__(self,master,width=600,height=400,startlayer=True,type=WindowTypes.singleuser,maxundo=40):
 		BeeSessionState.__init__(self,master,width,height,type)
 		AbstractBeeWindow.__init__(self,master)
 
-		self.localcommandstack=CommandStack(self,maxundo)
+		self.localcommandstack=CommandStack(self,CommandStackTypes.singleuser,maxundo=maxundo)
 
 		self.layerfinisher=LayerFinisher(qtcore.QRectF(0,0,width,height))
 
@@ -947,17 +947,21 @@ class NetworkClientDrawingWindow(BeeDrawingWindow):
 		print_debug("initializing network window")
 		self.socket=socket
 		BeeDrawingWindow.__init__(self,parent,startlayer=False,type=WindowTypes.networkclient)
-		self.disconnectmessage=None
+
+		self.disconnectmessage=""
+		self.netmaxundo=20
 		# disable options that can't be used in network sessions
 		#self.ui.action_Image_Scale_Image.setDisabled(True)
 
 		# enable/disable menu options for network window
 		self.ui.menuImage.setDisabled(True)
-		#self.ui.menuNetwork.setEnabled(True)
+		self.ui.menuNetwork.setEnabled(True)
+
+		# setup command stack with 0 size network history, this should get reset shortly during intialization
+		self.localcommandstack=CommandStack(self,CommandStackTypes.network)
 
 	def setDisconnectMessage(self,message):
-		if not self.disconnectmessage:
-			self.disconnectmessage=message
+		self.disconnectmessage=message
 
 	def startRemoteDrawingThreads(self):
 		self.startNetworkThreads(self.socket)
@@ -981,4 +985,27 @@ class NetworkClientDrawingWindow(BeeDrawingWindow):
 
 		print_debug("disconnected from server")
 		self.switchAllLayersToLocal()
+		self.switchToSingleUser()
 		requestDisplayMessage(BeeDisplayMessageTypes.warning,"Network Session has ended","Connection has been broken: " + self.disconnectmessage,self)
+
+	def switchToSingleUser(self):
+		# change command stack to single user
+		self.localcommandstack.type=CommandStackTypes.singleuser
+		# get rid of all remote command stacks
+		self.remotecommandstacks={}
+
+		# switch around which menus are active
+		self.ui.menuNetwork.setDisabled(True)
+		self.ui.menuImage.setEnabled(True)
+
+	# add an event to the undo/redo history
+	def addCommandToHistory(self,command,source=0):
+		# if we don't get a source then assume that it's local
+		if self.ownedByMe(source):
+			self.localcommandstack.add(command)
+		# else add it to proper remote command stack, add stack if needed
+		elif source in self.remotecommandstacks:
+			self.remotecommandstacks[source].add(command)
+		else:
+			self.remotecommandstacks[source]=CommandStack(self.id,self.netmaxundo,CommandStackTypes.remoteonly)
+			self.remotecommandstacks[source].add(command)

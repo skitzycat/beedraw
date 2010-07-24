@@ -59,6 +59,9 @@ class ServerDrawingThread(DrawingThread):
 		dest=-1*requester
 		self.master.routinginput.put((resynccommand,dest))
 
+		historysizecommand=(DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.networkhistorysize,self.master.getHistorySize())
+		self.master.routinginput.put((historysizecommand,dest))
+
 		window.sendLayersToClient(requester)
 
 		#send event cache to client

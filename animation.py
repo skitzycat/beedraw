@@ -272,6 +272,10 @@ class XmlToQueueEventsConverter:
 		elif name == 'sketchlog':
 			print_debug("DEBUG: got document start tag")
 
+		elif name == 'networkhistorysize':
+			(newsize,ok)=attrs.value('newsize').toString().toInt()
+			self.window.setNetworkHistorySize(newsize)
+
 		elif name == 'null':
 			pass
 

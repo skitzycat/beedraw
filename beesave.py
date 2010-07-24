@@ -118,3 +118,21 @@ class BeeMasterConfigWriter:
 		self.out.writeStartElement(field)
 		self.out.writeAttribute('value',str(value))
 		self.out.writeEndElement()
+
+class HiveMasterConfigWriter(BeeMasterConfigWriter):
+	def writeConfig(self,config):
+		self.startLog()
+		for key in config:
+			if key in ["password"]:
+				self.logTextValue(key,config[key])
+			elif key in ["port","height","width","networkhistorysize"]:
+				self.logIntValue(key,config[key])
+			elif key in ["debug"]:
+				if config[key]:
+					self.logBoolValue(key,"True")
+				else:
+					self.logBoolValue(key,"False")
+		self.endLog()
+
+	def startLog(self):
+		self.out.writeStartElement('hivemasterconfig')

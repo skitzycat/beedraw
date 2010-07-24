@@ -470,17 +470,17 @@ class BeeSessionState:
 				return
 			self.master.routinginput.put((command,layer.owner))
 
-	# add an event to the undo/redo history
+	def setNetworkHistorySize(self,newsize):
+		self.localcommandstack.setNetworkHistorySize(newsize)
+		for key in self.remotecommandstacks.keys():
+			self.remotecommandstacks[key].setHistorySize()
+
+	def setHistorySize(self,newsize):
+		self.localcommandstack.setHistorySize(newsize)
+
+	# subclasses will redefine this if there's more than just the local history
 	def addCommandToHistory(self,command,source=0):
-		# if we don't get a source then assume that it's local
-		if self.ownedByMe(source):
-			self.localcommandstack.add(command)
-		# else add it to proper remote command stack, add stack if needed
-		elif source in self.remotecommandstacks:
-			self.remotecommandstacks[source].add(command)
-		else:
-			self.remotecommandstacks[source]=CommandStack(self.id)
-			self.remotecommandstacks[source].add(command)
+		self.localcommandstack.add(command)
 
 	def addUndoToQueue(self,owner=0,source=ThreadTypes.user):
 		if not owner:

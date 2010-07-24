@@ -19,16 +19,36 @@ import PyQt4.QtCore as qtcore
 import PyQt4.QtGui as qtgui
 
 from beeutil import *
+from beetypes import *
 from beeapp import BeeApp
 
 # object to handle the undo/redo history
 class CommandStack:
-	def __init__(self,window,maxundo=20):
+	def __init__(self,window,type,maxundo=50):
 		self.commandstack=[]
 		self.index=0
 		self.changessincesave=0
-		self.maxundo=maxundo
+		self.type=type
+
 		self.win=window
+
+		if type==CommandStackTypes.remoteonly:
+			self.maxundo=0
+		else:
+			self.maxundo=maxundo
+
+		# start this at 0, it will get reset shortly with data from server
+		self.networkmaxundo=0
+
+		self.networkinhist=0
+
+	def setHistorySize(self,newsize):
+		self.maxundo=newsize
+		checkStackSize()
+
+	def setNetworkHistorySize(self,newsize):
+		self.networkmaxundo=newsize
+		checkStackSize()
 
 	def deleteLayerHistory(self,layerkey):
 		""" remove all references to given layer in history """
@@ -36,21 +56,35 @@ class CommandStack:
 		newstack=self.commandstack[:]
 
 		for c in self.commandstack:
+			# if the currnet time involves the item in question
 			if c.layerkey==layerkey:
+				# if this is behind the current index (not undone)
 				if newstack.index(c)<self.index:
 					self.index-=1
+					# if we care about which events are network events, then keep track
+					if type==CommandStackTypes.network:
+						self.networkinhist-=1
+				# remove the event from the history
 				newstack.remove(c)
 
 		self.commandstack=newstack
 
+	def checkStackSize(self):
+		while len(self.commandstack)>self.maxundo or (type==CommandStackTypes.network and self.networkinhist > self.networkmaxundo):
+			if type==CommandStackTypes.network and self.commandstack[0].type==UndoCommandTypes.remote:
+				self.networkinhist-=1
+			self.commandstack=self.commandstack[1:]
+
 	def add(self,command):
 		# if there are commands ahead of this one delete them
 		if self.index<len(self.commandstack):
-			self.commandstack=self.commandstack[0:self.index]
+			self.commandstack=self.commandstack[0:self.index+1]
+
+		if type==CommandStackTypes.network and command.type==UndoCommandTypes.remote:
+			self.networkinhist+=1
 
 		# if the command stack is full, delete the oldest one
-		if self.index>self.maxundo:
-			self.commandstack=self.commandstack[1:]
+		self.checkStackSize()
 
 		self.commandstack.append(command)
 		self.index=len(self.commandstack)
@@ -60,10 +94,15 @@ class CommandStack:
 		if self.index<=0:
 			return UndoCommandTypes.none
 
+		command=self.commandstack[self.index-1]
+
+		if type==CommandStackTypes.network and command.undotype==UndoCommandTypes.remote:
+			self.networkinhist-=1
+
 		self.index-=1
-		command=self.commandstack[self.index]
 		command.undo(self.win)
 		BeeApp().master.refreshLayerThumb(self.win)
+
 		return command.undotype
 
 	def redo(self):
@@ -71,6 +110,10 @@ class CommandStack:
 			return UndoCommandTypes.none
 
 		command=self.commandstack[self.index]
+
+		if type==CommandStackTypes.network and command.undotype==UndoCommandTypes.remote:
+			self.networkinhist+=1
+
 		command.redo(self.win)
 		self.index+=1
 		BeeApp().master.refreshLayerThumb(self.win)

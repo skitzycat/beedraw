@@ -23,7 +23,6 @@ import os
 from beetypes import *
 from beeapp import BeeApp
 from beetools import BeeToolBox
-from beeload import BeeMasterConfigParser
 
 class AbstractBeeMaster:
 	""" This is a class that can be inherited from to provide a bee master object that controls tools, windows, layers, and options
@@ -34,27 +33,8 @@ class AbstractBeeMaster:
 
 		self.curwindow=None
 
-		# set default config values
-		self.configlock=qtcore.QReadWriteLock()
 		self.config={}
-		self.config['username']=""
-		self.config['server']="localhost"
-		self.config['port']=8333
-		self.config['autolog']=False
-		self.config['autosave']=False
-		self.config['debug']=False
-
-		# then load from config file if possible
-		configfilename=os.path.join("config","beedrawoptions.xml")
-		configfile=qtcore.QFile(configfilename)
-		if configfile.exists():
-			if configfile.open(qtcore.QIODevice.ReadOnly):
-				parser=BeeMasterConfigParser(configfile)
-				fileconfig=parser.loadOptions()
-
-				self.config.update(fileconfig)
-
-		BeeApp().debug_flags[DebugFlags.allon]=self.config['debug']
+		self.configlock=qtcore.QReadWriteLock()
 
 	def getConfigOption(self,key,default=None):
 		""" This function is used to fetch options, I'm well aware that dictionaries have a get function, but I want this function to output a debug message if the key isn't found """

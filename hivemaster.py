@@ -40,6 +40,8 @@ from animation import XmlToQueueEventsConverter
 from sketchlog import SketchLogWriter
 from abstractbeemaster import AbstractBeeMaster
 from hivestate import HiveSessionState
+from beeload import HiveMasterConfigParser
+from beesave import HiveMasterConfigWriter
 
 from Queue import Queue
 import time
@@ -53,16 +55,25 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 		AbstractBeeMaster.__init__(self)
 
 		# set defaults
-		self.port=8333
+		self.config["port"]=8333
+		self.config["width"]=600
+		self.config["height"]=400
+		self.config["networkhistorysize"]=20
+		self.config["password"]=""
 
-		self.width=600
-		self.height=400
+		# then load from config file if possible
+		configfilename=os.path.join("config","hiveoptions.xml")
+		configfile=qtcore.QFile(configfilename)
+		if configfile.exists():
+			if configfile.open(qtcore.QIODevice.ReadOnly):
+				parser=HiveMasterConfigParser(configfile)
+				fileconfig=parser.loadOptions()
+				self.config.update(fileconfig)
 
 		# Initialize values
 		self.nextclientid=1
 		self.nextclientidmutex=qtcore.QMutex()
 
-		self.password=""
 		self.passwordlock=qtcore.QReadWriteLock()
 
 		# setup interface
@@ -183,20 +194,20 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 		# make sure no other instance is running
 		self.stopServer()
 
-		self.serverthread=HiveServerThread(self,self.port)
+		self.serverthread=HiveServerThread(self,self.config["port"])
 		self.serverthread.start()
 
 	def event(self,event):
 		if event.type()==BeeCustomEventTypes.hiveserverstatus:
 			if event.status==HiveServerStatusTypes.running:
-				self.changeStatusLabel("Serving on port: %d" % self.port)
+				self.changeStatusLabel("Serving on port: %d" % self.config["port"])
 			elif event.status==HiveServerStatusTypes.starterror:
 				if event.errorstring:
 					body=event.errorstring
 				else:
-					body="Failed to start server on port %d.\nMake sure port is not already in use." % self.port
+					body="Failed to start server on port %d.\nMake sure port is not already in use." % self.config["port"]
 				qtgui.QMessageBox.critical(self,"Could not start server",body)
-				self.changeStatusLabel("Failed to start on port %d" % self.port)
+				self.changeStatusLabel("Failed to start on port %d" % self.config["port"])
 			elif event.status==HiveServerStatusTypes.stopped:
 				self.changeStatusLabel("Server not running")
 
@@ -246,22 +257,36 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 		self.password=newpass
 
 	def on_actionOptions_triggered(self,accept=True):
-		if accept:
-			dialog=qtgui.QDialog()
-			dialog.ui=Ui_HiveOptionsDialog()
-			dialog.ui.setupUi(dialog)
+		if not accept:
+			return
 
-			dialog.ui.port_box.setValue(self.port)
-			dialog.ui.password_entry.setText(self.password)
+		dialog=qtgui.QDialog()
+		dialog.ui=Ui_HiveOptionsDialog()
+		dialog.ui.setupUi(dialog)
 
-			dialog.exec_()
+		dialog.ui.port_box.setValue(self.config["port"])
+		dialog.ui.history_size_box.setValue(self.config["networkhistorysize"])
+		dialog.ui.password_entry.setText(self.config["password"])
+		dialog.ui.width_box.setValue(self.config["width"])
+		dialog.ui.height_box.setValue(self.config["height"])
 
-			if dialog.result():
-				self.port=dialog.ui.port_box.value()
-				print "set new port value to", self.port
-				self.password=dialog.ui.password_entry.text()
-				self.width=dialog.ui.width_box.value()
-				self.height=dialog.ui.height_box.value()
+		ok=dialog.exec_()
+
+		if not ok:
+			return
+
+		self.config["port"]=dialog.ui.port_box.value()
+		self.config["password"]=str(dialog.ui.password_entry.text())
+		self.config["width"]=dialog.ui.width_box.value()
+		self.config["height"]=dialog.ui.height_box.value()
+		self.config["networkhistorysize"]=dialog.ui.history_size_box.value()
+
+		filename=os.path.join("config","hiveoptions.xml")
+		outfile=qtcore.QFile(filename,self)
+		outfile.open(qtcore.QIODevice.Truncate|qtcore.QIODevice.WriteOnly)
+		writer=HiveMasterConfigWriter(outfile)
+		writer.writeConfig(self.config)
+		outfile.close()
 
 # class to handle running the TCP server and handling new connections
 class HiveServerThread(qtcore.QThread):
