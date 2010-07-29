@@ -943,13 +943,12 @@ class AnimationDrawingWindow(BeeDrawingWindow):
 class NetworkClientDrawingWindow(BeeDrawingWindow):
 	""" Represents a window that the user can draw in with others in a network session
 	"""
-	def __init__(self,parent,socket):
+	def __init__(self,parent,socket,maxundo=50):
 		print_debug("initializing network window")
 		self.socket=socket
-		BeeDrawingWindow.__init__(self,parent,startlayer=False,type=WindowTypes.networkclient)
+		BeeDrawingWindow.__init__(self,parent,startlayer=False,type=WindowTypes.networkclient,maxundo=maxundo)
 
 		self.disconnectmessage=""
-		self.netmaxundo=20
 		# disable options that can't be used in network sessions
 		#self.ui.action_Image_Scale_Image.setDisabled(True)
 
@@ -958,7 +957,7 @@ class NetworkClientDrawingWindow(BeeDrawingWindow):
 		self.ui.menuNetwork.setEnabled(True)
 
 		# setup command stack with 0 size network history, this should get reset shortly during intialization
-		self.localcommandstack=CommandStack(self,CommandStackTypes.network)
+		self.localcommandstack=CommandStack(self,CommandStackTypes.network,maxundo=maxundo)
 
 	def setDisconnectMessage(self,message):
 		self.disconnectmessage=message
@@ -990,7 +989,7 @@ class NetworkClientDrawingWindow(BeeDrawingWindow):
 
 	def switchToSingleUser(self):
 		# change command stack to single user
-		self.localcommandstack.type=CommandStackTypes.singleuser
+		self.localcommandstack.changeToLocal()
 		# get rid of all remote command stacks
 		self.remotecommandstacks={}
 
@@ -1007,5 +1006,5 @@ class NetworkClientDrawingWindow(BeeDrawingWindow):
 		elif source in self.remotecommandstacks:
 			self.remotecommandstacks[source].add(command)
 		else:
-			self.remotecommandstacks[source]=CommandStack(self.id,self.netmaxundo,CommandStackTypes.remoteonly)
+			self.remotecommandstacks[source]=CommandStack(self.id,0,CommandStackTypes.remoteonly)
 			self.remotecommandstacks[source].add(command)

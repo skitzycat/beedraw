@@ -397,6 +397,7 @@ class BeeSessionState:
 	def addInsertLayerEventToQueue(self,index,key,image=None,source=ThreadTypes.user,owner=0):
 		# when the source is local like this the owner will always be me (id 0)
 		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.insertlayer,key,index,image,owner),source,owner)
+		print "adding insert layer to queue"
 		return key
 
 	def addLayer(self):

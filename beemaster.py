@@ -72,6 +72,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		self.config['autolog']=False
 		self.config['autosave']=False
 		self.config['debug']=False
+		self.config['maxundo']=30
 
 		# then load from config file if possible
 		configfilename=os.path.join("config","beedrawoptions.xml")
@@ -396,7 +397,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			reader=qtgui.QImageReader(filename)
 			image=reader.read()
 
-			newwindow=BeeDrawingWindow(self,image.width(),image.height(),False)
+			newwindow=BeeDrawingWindow(self,image.width(),image.height(),False,maxundo=self.config["maxundo"])
 			newwindow.loadLayer(image)
 			newwindow.setFileName(filename)
 
@@ -411,7 +412,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		if dialog.result():
 			width=dialogui.width_box.value()
 			height=dialogui.height_box.value()
-			window=BeeDrawingWindow(self,width=width,height=height)
+			window=BeeDrawingWindow(self,width=width,height=height,maxundo=self.config["maxundo"])
 
 	def on_action_Edit_Configure_triggered(self,accept=True):
 		if not accept:
@@ -423,6 +424,8 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 		# put current values into GUI
 		lock=qtcore.QWriteLocker(self.configlock)
+
+		dialogui.history_size_box.setValue(self.config['maxundo'])
 
 		if self.config['debug']:
 			dialogui.debug_checkBox.setCheckState(qtcore.Qt.Checked)
@@ -439,6 +442,8 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 		# get values out of GUI
 		self.config['username']=dialogui.username_entry.text()
+
+		self.config['maxundo']=dialogui.history_size_box.value()
 
 		if dialogui.debug_checkBox.isChecked():
 			self.config['debug']=True
@@ -558,12 +563,6 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		socket.disconnect()
 		qtgui.QMessageBox.warning(self,"Server Refused Connection",message)
 		return None
-
-	def on_action_File_Start_Server_triggered(self,accept=True):
-		if not accept:
-			return
-		self.serverwin=HiveMasterWindow(BeeApp().app)
-		window=BeeDrawingWindow.startNetworkServer(self)
 
 	def uncheckWindowLayerBox(self):
 		self.ui.Window_Layers.setChecked(False)

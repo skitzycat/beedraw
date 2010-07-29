@@ -236,5 +236,6 @@ class ServerDrawingThread(DrawingThread):
 				print "Error, got redo but no more future history for client", owner
 
 	def processAllLayerCommand(self,command):
+		print_debug("server thread is processing all layer command")
 		DrawingThread.processAllLayerCommand(self,command)
 		self.master.routinginput.put((command,0))

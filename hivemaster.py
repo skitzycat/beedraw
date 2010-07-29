@@ -108,6 +108,9 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 		self.curwindow=None
 		self.serverthread=None
 
+	def getHistorySize(self):
+		return self.config["networkhistorysize"]
+
 	# since there should only be one window just return 1
 	def getNextWindowId(self):
 		return 1
@@ -182,9 +185,9 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 #		self.stopServer()
 
 	def resetState(self):
-		# only do this if the server isn't running yet
+		# only do this if the server isn't running
 		if not self.serverthread:
-			self.curwindow=HiveSessionState(self,self.width,self.height,WindowTypes.standaloneserver,20)
+			self.curwindow=HiveSessionState(self,self.config["width"],self.config["height"],WindowTypes.standaloneserver,20)
 			self.curwindow.startRemoteDrawingThreads()
 
 	def startServer(self):
@@ -251,11 +254,11 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 
 	def getPassword(self):
 		lock=qtcore.QReadLocker(self.passwordlock)
-		return self.password
+		return self.config["password"]
 
 	def setPassword(self,newpass):
 		lock=qtcore.QWriteLocker(self.passwordlock)
-		self.password=newpass
+		self.config["password"]=newpass
 
 	def on_actionOptions_triggered(self,accept=True):
 		if not accept:
@@ -329,22 +332,6 @@ class HiveServerThread(qtcore.QThread):
 		else:
 			self.exec_()
 
-	# signal for the server getting a new connection
-#	def newConnection(self):
-#		print_debug("found new connection")
-#		while self.server.hasPendingConnections():
-#			newsock=self.server.nextPendingConnection()
-
-			# start the listener, that will authenticate client and finish setup
-#			newlistener=HiveClientListener(self,BeeSocket(BeeSocketTypes.qt,newsock),self.master,self.nextid)
-#			self.nextid+=1
-
-			# push responsibility to new thread
-#			newsock.setParent(None)
-#			newsock.moveToThread(newlistener)
-
-#			newlistener.start()
-
 # this thread will route communication as needed between client listeners, the gui and client writers
 class HiveRoutingThread(qtcore.QThread):
 	def __init__(self,master):
@@ -355,7 +342,7 @@ class HiveRoutingThread(qtcore.QThread):
 	def run(self):
 		while 1:
 			data=self.queue.get()
-			#print_debug("routing info recieved: %s" % str(data))
+			print_debug("routing info recieved: %s" % str(data))
 			(command,owner)=data
 			# a negative number is a flag that we only send it to one client
 			if owner<0:
@@ -369,15 +356,15 @@ class HiveRoutingThread(qtcore.QThread):
 	def sendToAllClients(self,command):
 		lock=qtcore.QReadLocker(self.master.clientslistmutex)
 		for id in self.master.clientwriterqueues.keys():
-			#print_debug("sending to client: %d, command: %s" % (id, str(command)))
+			print_debug("sending to client: %d, command: %s" % (id, str(command)))
 			self.master.clientwriterqueues[id].put(command)
 
 	def sendToAllButOwner(self,source,command):
 		lock=qtcore.QReadLocker(self.master.clientslistmutex)
-		#print_debug("sending command to all, but the owner: %s" % str(command))
+		print_debug("sending command to all, but the owner: %s" % str(command))
 		for id in self.master.clientwriterqueues.keys():
 			if source!=id:
-				#print_debug("sending to client: %d" % id)
+				print_debug("sending to client: %d" % id)
 				self.master.clientwriterqueues[id].put(command)
 
 	def sendToSingleClient(self,id,command):

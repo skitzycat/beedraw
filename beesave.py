@@ -89,7 +89,7 @@ class BeeMasterConfigWriter:
 		for key in config:
 			if key in ["username","server"]:
 				self.logTextValue(key,config[key])
-			elif key in ["port"]:
+			elif key in ["port","maxundo"]:
 				self.logIntValue(key,config[key])
 			elif key in ["autolog","autosave","debug"]:
 				if config[key]:

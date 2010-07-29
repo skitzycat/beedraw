@@ -128,7 +128,7 @@ class SketchLogWriter:
 			self.logFatalError(command[3])
 
 		elif subtype==NetworkControlCommandTypes.networkhistorysize:
-			self.logNetworkHistorySize(command[3])
+			self.logNetworkHistorySize(command[2])
 
 	def startEvent(self,owner):
 		self.log.writeStartElement('event')

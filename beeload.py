@@ -111,7 +111,7 @@ class BeeMasterConfigParser:
 			key="%s" % name.toString()
 			val="%s" % attrs.value("value").toString()
 			self.options[key]=val
-		elif name in ["port"]:
+		elif name in ["port","maxundo"]:
 			key="%s" % name.toString()
 			(val,ok)=attrs.value("value").toString().toInt()
 			self.options[key]=val

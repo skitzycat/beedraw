@@ -30,25 +30,36 @@ class CommandStack:
 		self.changessincesave=0
 		self.type=type
 
+		print "creating command stack with type:", self.type
+
 		self.win=window
 
-		if type==CommandStackTypes.remoteonly:
+		self.maxundo=maxundo-1
+		if self.maxundo<0:
 			self.maxundo=0
-		else:
-			self.maxundo=maxundo
 
-		# start this at 0, it will get reset shortly with data from server
+		# start this at 0, it will get reset shortly with data from server if this is a network session
 		self.networkmaxundo=0
 
 		self.networkinhist=0
 
+	def changeToLocal(self):
+		self.type=CommandStackTypes.singleuser
+
 	def setHistorySize(self,newsize):
-		self.maxundo=newsize
-		checkStackSize()
+		if self.type==CommandStackTypes.remoteonly:
+			self.setNetworkHistorySize(newsize)
+		else:
+			self.maxundo=newsize-1
+			if self.maxundo<0:
+				self.maxundo=0
+			self.checkStackSize()
 
 	def setNetworkHistorySize(self,newsize):
-		self.networkmaxundo=newsize
-		checkStackSize()
+		self.networkmaxundo=newsize-1
+		if self.networkmaxundo<0:
+			self.networkmaxundo=0
+		self.checkStackSize()
 
 	def deleteLayerHistory(self,layerkey):
 		""" remove all references to given layer in history """
@@ -62,7 +73,7 @@ class CommandStack:
 				if newstack.index(c)<self.index:
 					self.index-=1
 					# if we care about which events are network events, then keep track
-					if type==CommandStackTypes.network:
+					if self.type==CommandStackTypes.network:
 						self.networkinhist-=1
 				# remove the event from the history
 				newstack.remove(c)
@@ -70,8 +81,8 @@ class CommandStack:
 		self.commandstack=newstack
 
 	def checkStackSize(self):
-		while len(self.commandstack)>self.maxundo or (type==CommandStackTypes.network and self.networkinhist > self.networkmaxundo):
-			if type==CommandStackTypes.network and self.commandstack[0].type==UndoCommandTypes.remote:
+		while len(self.commandstack)>self.maxundo or (self.type==CommandStackTypes.network and self.networkinhist > self.networkmaxundo):
+			if self.type==CommandStackTypes.network and self.commandstack[0].undotype==UndoCommandTypes.remote:
 				self.networkinhist-=1
 			self.commandstack=self.commandstack[1:]
 
@@ -80,7 +91,7 @@ class CommandStack:
 		if self.index<len(self.commandstack):
 			self.commandstack=self.commandstack[0:self.index+1]
 
-		if type==CommandStackTypes.network and command.type==UndoCommandTypes.remote:
+		if self.type==CommandStackTypes.network and command.undotype==UndoCommandTypes.remote:
 			self.networkinhist+=1
 
 		# if the command stack is full, delete the oldest one
@@ -96,7 +107,7 @@ class CommandStack:
 
 		command=self.commandstack[self.index-1]
 
-		if type==CommandStackTypes.network and command.undotype==UndoCommandTypes.remote:
+		if self.type==CommandStackTypes.network and command.undotype==UndoCommandTypes.remote:
 			self.networkinhist-=1
 
 		self.index-=1
@@ -111,7 +122,7 @@ class CommandStack:
 
 		command=self.commandstack[self.index]
 
-		if type==CommandStackTypes.network and command.undotype==UndoCommandTypes.remote:
+		if self.type==CommandStackTypes.network and command.undotype==UndoCommandTypes.remote:
 			self.networkinhist+=1
 
 		command.redo(self.win)

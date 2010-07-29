@@ -422,7 +422,7 @@ class HiveClientWriter(qtcore.QThread):
 			self.xmlgenerator.logCommand(data)
 
 			datastr="%s" % qtcore.QString(self.buffer.data())
-			#print "wrote to buffer: ", datastr
+			print "client writer wrote to sending buffer: ", datastr
 			self.socket.write(datastr)
 			self.buffer.buffer().resize(0)
 			self.buffer.seek(0)
