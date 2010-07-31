@@ -1000,5 +1000,5 @@ class NetworkClientDrawingWindow(BeeDrawingWindow):
 		elif source in self.remotecommandstacks:
 			self.remotecommandstacks[source].add(command)
 		else:
-			self.remotecommandstacks[source]=CommandStack(self.id,0,CommandStackTypes.remoteonly)
+			self.remotecommandstacks[source]=CommandStack(self,0,CommandStackTypes.remoteonly)
 			self.remotecommandstacks[source].add(command)

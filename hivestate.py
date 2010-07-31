@@ -22,7 +22,6 @@ from beetypes import *
 class HiveSessionState(BeeSessionState):
 	def __init__(self,master,width,height,type,maxundo):
 		BeeSessionState.__init__(self,master,width,height,type)
-		self.commandcaches={}
 		self.commandindexes={}
 		self.historysize=maxundo
 		self.master=master

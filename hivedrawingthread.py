@@ -90,11 +90,13 @@ class ServerDrawingThread(DrawingThread):
 			for command in self.commandcaches[oldowner]:
 				#print "found command for old owner"
 				if command.layer.key==layer.key:
+					#print "found command on layer that we're looking for"
 					# if the command is before the current index then decrement the index
 					if newcache.index(command)<self.commandindexes[oldowner]:
+						#print "found command that is before current history point"
 						self.commandindexes[oldowner]-=1
-					#print "DEBUG: processing command onto layer"
-					command.process()
+						command.process()
+
 					newcache.remove(command)
 
 			# update cache of old owner to not include references to that layer

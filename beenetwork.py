@@ -310,7 +310,7 @@ class HiveClientListener(qtcore.QThread):
 
 	def readyRead(self):
 		data=self.socket.read(readybytes)
-		print_debug("got animation data from socket: %s" % qtcore.QString(data))
+		#print_debug("got animation data from socket: %s" % qtcore.QString(data))
 		self.parser.xml.addData(data)
 		error=self.parser.read()
 
@@ -358,7 +358,7 @@ class HiveClientListener(qtcore.QThread):
 				print_debug("remote socket closed")
 				break
 
-			print_debug("got animation data from socket: %s" % qtcore.QString(data))
+			#print_debug("got animation data from socket: %s" % qtcore.QString(data))
 			self.parser.xml.addData(data)
 			error=self.parser.read()
 
@@ -419,7 +419,7 @@ class HiveClientWriter(qtcore.QThread):
 			self.xmlgenerator.logCommand(data)
 
 			datastr="%s" % qtcore.QString(self.buffer.data())
-			print_debug("client writer wrote to sending buffer: %s" % datastr)
+			#print_debug("client writer wrote to sending buffer: %s" % datastr)
 			self.socket.write(datastr)
 			self.buffer.buffer().resize(0)
 			self.buffer.seek(0)
