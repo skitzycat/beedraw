@@ -115,7 +115,7 @@ class ServerDrawingThread(DrawingThread):
 		owner=layer.owner
 		# if the layer is owned locally then no one should be able to change it since this is a server session
 		if owner==0:
-			print "ERROR: recieved layer command for unowned layer in server session:", command
+			print_debug("ERROR: recieved layer command for unowned layer in server session: %s" % str(command))
 			return
 
 		if subtype==LayerCommandTypes.alpha:
@@ -184,7 +184,7 @@ class ServerDrawingThread(DrawingThread):
 
 		else:
 			sendcommand=False
-			print "unknown processLayerCommand subtype:", subtype
+			print_debug("unknown processLayerCommand subtype: %d" % subtype)
 
 		if cachedcommand:
 			#print "found cached command, adding to cache"
@@ -227,13 +227,13 @@ class ServerDrawingThread(DrawingThread):
 				self.commandindexes[owner]-=1
 				self.master.routinginput.put((command,owner))
 			else:
-				print "Error, got undo but no more past history for client", owner
+				print_debug("Error, got undo but no more past history for client: %d" % owner)
 		elif subtype==HistoryCommandTypes.redo:
 			if self.commandindexes[owner]<len(self.commandcaches[owner]):
 				self.commandindexes[owner]+=1
 				self.master.routinginput.put((command,owner))
 			else:
-				print "Error, got redo but no more future history for client", owner
+				print_debug("Error, got redo but no more future history for client %d" % owner)
 
 	def processAllLayerCommand(self,command):
 		print_debug("server thread is processing all layer command")

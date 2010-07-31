@@ -662,4 +662,4 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		elif boxtype==BeeDisplayMessageTypes.error:
 			qtgui.QMessageBox.error(self,title,message)
 		else:
-			print "ERROR unknown box type in displayMessage"
+			print_debug("ERROR unknown box type in displayMessage")

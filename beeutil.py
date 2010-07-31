@@ -139,7 +139,7 @@ class BlendTranslations:
 	def nameToMode(name):
 		if name in BlendTranslations.map:
 			return BlendTranslations.map[name]
-		print "warning, couldn't find mode for name:", name
+		print_debug("warning, couldn't find mode for name: %s" % name)
 		return None
 
 	nameToMode=staticmethod(nameToMode)
@@ -148,7 +148,7 @@ class BlendTranslations:
 		for key in BlendTranslations.map.keys():
 			if BlendTranslations.map[key]==mode:
 				return key
-		print "warning, couldn't find name for mode:", mode
+		print_debug("warning, couldn't find name for mode: %s" % mode)
 		return None
 
 	modeToName=staticmethod(modeToName)
@@ -158,7 +158,7 @@ class BlendTranslations:
 			if BlendTranslations.map[key]==i:
 				return BlendTranslations.map[key]
 
-		print "warning, couldn't translate int to mode string:", i
+		print_debug("warning, couldn't translate int to mode string: %d" % i)
 		return None
 
 	intToMode=staticmethod(intToMode)

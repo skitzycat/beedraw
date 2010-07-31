@@ -97,7 +97,7 @@ class DrawingThread(qtcore.QThread):
 		elif subtype==HistoryCommandTypes.redo:
 			undotype=window.redo(command[2])
 		else:
-			print "unknown processHistoryCommand subtype:", subtype
+			print_debug("unknown processHistoryCommand subtype: %d" % subtype)
 
 		if undotype==UndoCommandTypes.remote or undotype==UndoCommandTypes.notinnetwork:
 			window.logCommand(command,self.type)
@@ -108,7 +108,7 @@ class DrawingThread(qtcore.QThread):
 		layerkey=command[2]
 		layer=window.getLayerForKey(layerkey)
 		if not layer:	
-			print "ERROR: Can't process Layer command:", command, "Layer not found"
+			print_debug("ERROR: Can't process Layer command: %s Layer not found" % str(command))
 			return
 
 		if subtype==LayerCommandTypes.alpha:
@@ -223,12 +223,11 @@ class DrawingThread(qtcore.QThread):
 			window.addCommandToHistory(historycommand,layer.owner)
 
 		else:
-			print "unknown processLayerCommand subtype:", subtype
+			print_debug("unknown processLayerCommand subtype: %d" % subtype)
 
 	def processAllLayerCommand(self,command):
 		window=self.master.getWindowById(self.windowid)
 		subtype=command[1]
-		print "processing all layer command"
 		if subtype==AllLayerCommandTypes.resize:
 			window.adjustCanvasSize(command[2],command[3],command[4],command[5])
 

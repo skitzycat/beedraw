@@ -293,7 +293,7 @@ class BeeSessionState:
 		# make sure layer doesn't exist already
 		oldlayer=self.getLayerForKey(key,lock=lock)
 		if oldlayer:
-			print "ERROR: tried to create layer with same key as existing layer"
+			print_debug("ERROR: tried to create layer with same key as existing layer")
 			return
 			
 		layer=BeeLayerState(self.id,type,key,image,opacity=opacity,visible=visible,compmode=compmode,owner=owner)
@@ -323,7 +323,7 @@ class BeeSessionState:
 
 	def queueCommand(self,command,source=ThreadTypes.user,owner=0):
 		""" This needs to be reimplemented in subclass """
-		print "ERROR: abstract call to queueCommand"
+		print_debug("ERROR: abstract call to queueCommand")
 
 	# central function for finding a layer with a given key, right now layers are stored in a list to preserve order, eventually there may need to be an addintional dictionary to index them and make this faster when lots of layers are in the list
 	def getLayerForKey(self,key,lock=None):
@@ -369,14 +369,12 @@ class BeeSessionState:
 		# lock for reading the size of the document
 		lock=qtcore.QReadLocker(self.docsizelock)
 		if width!=self.docwidth or height!=self.docheight:
-			#print "changing size from:", self.docwidth, self.docheight, "to size:", width, height
 			self.addAdjustCanvasSizeRequestToQueue(0,0,width-self.docwidth,height-self.docheight,source,owner)
 
 	def addAdjustCanvasSizeRequestToQueue(self,leftadj,topadj,rightadj,bottomadj,source=ThreadTypes.user,owner=0):
 		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.resize,leftadj,topadj,rightadj,bottomadj),source,owner)
 
 	def setCanvasSize(self,width,height):
-		#print "DEBUG: setting canvas size to:", width, height
 		sizelock=qtcore.QWriteLocker(self.docsizelock)
 		rightadj=width-self.docwidth
 		bottomadj=height-self.docheight
@@ -397,11 +395,9 @@ class BeeSessionState:
 	def addInsertLayerEventToQueue(self,index,key,image=None,source=ThreadTypes.user,owner=0):
 		# when the source is local like this the owner will always be me (id 0)
 		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.insertlayer,key,index,image,owner),source,owner)
-		print "adding insert layer to queue"
 		return key
 
 	def addLayer(self):
-		#print "calling nextLayerKey from beedrawingwindow addLayer"
 		key=self.nextLayerKey()
 		index=len(self.layers)
 		# when the source is local like this the owner will always be me (id 0)
@@ -503,7 +499,7 @@ class BeeSessionState:
 			if source in self.remotecommandstacks:
 				return self.remotecommandstacks[source].undo()
 			else:
-				print "ERROR: recieved undo for blank remote command stack:", source
+				print_debug("ERROR: recieved undo for blank remote command stack: %d" % source)
 		return UndoCommandTypes.none
 
 	# redo last event in stack for passed client id

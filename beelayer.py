@@ -489,7 +489,7 @@ class FloatingSelection(BeeGuiLayer):
 		self.parentItem().paste(image,x,y)
 
 	def anchor(self,layer):
-		print "WARNING: anchor called from child layer"
+		print_debug("WARNING: anchor called from child layer")
 
 	def mousePressEvent(self,event):
 		pass

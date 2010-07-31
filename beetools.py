@@ -73,7 +73,7 @@ class BeeToolBox:
 		for tool in self.toolslist:
 			if name==tool.name:
 				return tool
-		print "Error, toolbox couldn't find tool with name:", name
+		print_debug("Error, toolbox couldn't find tool with name: %s" % name)
 		return None
 
 # Base class for a class to describe all tools and spawn tool instances
@@ -249,8 +249,6 @@ class DrawingTool(AbstractTool):
 
 		exitpoint=None
 
-		#print "last two points:", p1,p2
-
 		dx=float(p2[0])-float(p1[0])
 		dy=float(p2[1])-float(p1[1])
 
@@ -309,10 +307,8 @@ class DrawingTool(AbstractTool):
 		
 		pointdistance=distance2d(p1[0],p1[1],p2[0],p2[1])
 		edgedistance=distance2d(p2[0],p2[1],exitpoint[0],exitpoint[1])
-		#print "distance between last two points:", pointdistance
-		#print "distance between last point and edge:", edgedistance
+
 		if edgedistance>2*pointdistance:
-			#print "going to backup case"
 			return self.calculateCloseEdgePoint(p1,p2)
 		return exitpoint
 
@@ -391,7 +387,6 @@ class DrawingTool(AbstractTool):
 	def updateBrushForPressure(self,pressure,subpixelx=0,subpixely=0):
 		# see if we need to update at all
 		if self.lastpressure==pressure:
-			#print "updateBrushForPressure returning with same pressure as last time"
 			return
  
 		self.lastpressure=pressure
@@ -400,14 +395,11 @@ class DrawingTool(AbstractTool):
 		if self.options["pressuresize"]==0 or pressure==1:
 			self.brushimage=self.fullsizedbrush
 			self.lastpressure=1
-			#print "updateBrushForPressure returning full sized brush"
 			return
  
 		# scaled size for brush
 		bdiameter=self.scaleForPressure(pressure)*self.options["maxdiameter"]
 		self.diameter=int(math.ceil(bdiameter))
-
-		#print "updateBrushForPressure calculated that brush size should be:", self.diameter
 
 		# make target size an odd number
 		if self.diameter%2==0:
@@ -459,7 +451,6 @@ class DrawingTool(AbstractTool):
 
 	# return how much to scale down the brush for the current pressure
 	def scaleForPressure(self,pressure):
-		#print "calculating scale for pressure:", pressure
 		return pressure
 		minsize=self.options["mindiameter"]
 		maxsize=self.options["maxdiameter"]
@@ -467,13 +458,10 @@ class DrawingTool(AbstractTool):
 
 		#unroundedscale=(((maxsize-minsize)/maxsize)*pressure) + ((minsize/maxsize) * pressure)
 		unroundedscale=((sizediff/maxsize)*pressure) + (minsize/maxsize)
-		#print "unrounded scale:", unroundedscale
 		#unroundedscale=pressure
 		#iscale=int(unroundedscale*BRUSH_SIZE_GRANULARITY)
 		#scale=float(iscale)/BRUSH_SIZE_GRANULARITY
 		scale=unroundedscale
-
-		#print "calculated that scale should be:", scale
 
 		return scale
 
@@ -526,12 +514,10 @@ class DrawingTool(AbstractTool):
 		self.continueLine(x,y,pressure)
 
 	def continueLine(self,x,y,pressure):
-		#print "pen motion point,pressure:", x, y, pressure
 		# if it hasn't moved just do nothing
 		if not self.movedFarEnough(x,y):
 			return
 
-		#print "-------------------"
 		#print "starting new line"
 		self.pointshistory.append((x,y,pressure))
  
@@ -575,8 +561,6 @@ class DrawingTool(AbstractTool):
 		lineimage=qtgui.QImage(width,height,qtgui.QImage.Format_ARGB32_Premultiplied)
 		lineimage.fill(0)
 
-		#print "line image size:", width, height
-
 		# put points in that image
 		painter=qtgui.QPainter()
 		painter.begin(lineimage)
@@ -590,12 +574,6 @@ class DrawingTool(AbstractTool):
 
 			pointx=point[0]
 			pointy=point[1]
-
-			#print "point:", pointx, pointy
-			#print "brush width:", self.brushimage.width()
-			#print "brush radius:", xradius
-			#print "left:", left
-			#print "top:", top
 
 			stampx=pointx-left-xradius
 			stampy=pointy-top-yradius
@@ -1277,11 +1255,6 @@ class SketchTool(DrawingTool):
 
 	# do special case calculations for brush of single pixel size
 	def scaleSinglePixelImage(self,scale,pixel,subpixelx,subpixely):
-		#print "calling scaleSinglePixelImage with subpixels:",subpixelx,subpixely
-		#print "calling scaleSinglePixelImage with scale",scale
-		#print "single pixel image:"
-		#printPILImage(pixel)
-
 		outputimage=scaleShiftPIL(pixel,subpixelx,subpixely,2,2,scale,scale,Image.AFFINE)
 
 		#print "Scaled single pixel brush:"
@@ -1292,14 +1265,14 @@ class SketchTool(DrawingTool):
 	# optimizied algorithm to interpoloate two images, this pushes the work into Qt functions and saves memory by altering the original images
 	def interpolate(self,image1,image2,t):
 		if not ( image1.size[0] == image2.size[0] and image1.size[1] == image2.size[1] ):
-			print "Error: interploate function passed non compatable images"
+			print_debug("Error: interploate function passed non compatable images")
 			return image1
 
 		if t < 0:
-			print "Error: interploate function passed bad t value:", t
+			print_debug("Error: interploate function passed bad t value: %f" % t)
 			return image2
 		elif t > 1:
-			print "Error: interploate function passed bad t value:", t
+			print_debug("Error: interploate function passed bad t value: %f" % t)
 			return image1
 
 		#print "t value:", t

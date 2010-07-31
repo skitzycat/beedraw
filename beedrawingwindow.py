@@ -218,10 +218,7 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 	def adjustCanvasSize(self,leftadj,topadj,rightadj,bottomadj,sizelock=None):
 		# lock the image so no updates can happen in the middle of this
 		if not sizelock:
-			print "attempting to get doc size lock"
 			sizelock=qtcore.QWriteLocker(self.docsizelock)
-
-		print "have doc size lock"
 
 		self.docwidth=self.docwidth+leftadj+rightadj
 		self.docheight=self.docheight+topadj+bottomadj
@@ -425,7 +422,7 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 				self.selection=newselect
 
 			else:
-				print "unrecognized selection modification type:", type
+				print_debug("unrecognized selection modification type: %d" % type)
 
 			self.updateClipPath(slock=slock)
 			self.requestUpdateSelectionDisplayPath(self.clippath)
@@ -519,7 +516,7 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 		# make sure layer doesn't exist already
 		oldlayer=self.getLayerForKey(key,lock=lock)
 		if oldlayer:
-			print "ERROR: tried to create layer with same key as existing layer"
+			print_debug("ERROR: tried to create layer with same key as existing layer")
 			return
 
 		layer=BeeGuiLayer(self.id,type,key,image,opacity=opacity,visible=visible,compmode=compmode,owner=owner)
@@ -832,13 +829,13 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 
 		self.localdrawingthread.addExitEventToQueue()
 		if not self.localdrawingthread.wait(10000):
-			print "WARNING: drawing thread did not terminate on time"
+			print_debug("WARNING: drawing thread did not terminate on time")
 
 		# if we started a remote drawing thread kill it
 		if self.remotedrawingthread:
 			self.remotedrawingthread.addExitEventToQueue()
 			if not self.remotedrawingthread.wait(20000):
-				print "WARNING: remote drawing thread did not terminate on time"
+				print_debug("WARNING: remote drawing thread did not terminate on time")
 
 		# this should be the last referece to the window
 		self.master.unregisterWindow(self)
@@ -903,9 +900,7 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 
 	# do what's needed to start up any network threads
 	def startNetworkThreads(self,socket):
-		print_debug("running startNetworkThreads")
 		self.listenerthread=NetworkListenerThread(self,socket)
-		print_debug("about to start thread")
 		self.listenerthread.start()
 
 	def switchAllLayersToLocal(self):
@@ -944,7 +939,6 @@ class NetworkClientDrawingWindow(BeeDrawingWindow):
 	""" Represents a window that the user can draw in with others in a network session
 	"""
 	def __init__(self,parent,socket,maxundo=50):
-		print_debug("initializing network window")
 		self.socket=socket
 		BeeDrawingWindow.__init__(self,parent,startlayer=False,type=WindowTypes.networkclient,maxundo=maxundo)
 
@@ -956,7 +950,7 @@ class NetworkClientDrawingWindow(BeeDrawingWindow):
 		self.ui.menuImage.setDisabled(True)
 		self.ui.menuNetwork.setEnabled(True)
 
-		# setup command stack with 0 size network history, this should get reset shortly during intialization
+		# setup command stack with 0 size network history, this should get reset during intialization
 		self.localcommandstack=CommandStack(self,CommandStackTypes.network,maxundo=maxundo)
 
 	def setDisconnectMessage(self,message):

@@ -85,7 +85,7 @@ class SketchLogWriter:
 			self.logToolEvent(layer,command[3])
 
 		else:
-			print "WARNING: don't know how to log layer command type:", subtype
+			print_debug("WARNING: don't know how to log layer command type: %d" % subtype)
 
 	def logAllLayerCommand(self,command):
 		subtype=command[1]

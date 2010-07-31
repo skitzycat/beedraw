@@ -30,8 +30,6 @@ class CommandStack:
 		self.changessincesave=0
 		self.type=type
 
-		print "creating command stack with type:", self.type
-
 		self.win=window
 
 		self.maxundo=maxundo-1

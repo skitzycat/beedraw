@@ -203,11 +203,11 @@ class BeeSocket:
 				retstring=self.socket.recv(size)
 
 			except socket.error, errmsg:
-				print "exception while trying to read data:", errmsg
+				print_debug("exception while trying to read data: %s" % errmsg)
 				self.connected=False
 				
 			except:
-				print "unknown error while trying to read data"
+				print_debug("unknown error while trying to read data")
 				self.connected=False
 				retstring=""
 
@@ -234,11 +234,11 @@ class BeeSocket:
 				self.socket.sendall(data)
 
 			except socket.error, errmsg:
-				print "exception while trying to send data:", errmsg
+				print_debug("exception while trying to send data: %s" % errmsg)
 				self.connected=False
 				
 			except:
-				print "unknown exception while trying to send data"
+				print_debug("unknown exception while trying to send data")
 				self.connected=False
 
 # thread to setup connection, authenticate and then
@@ -338,16 +338,13 @@ class HiveClientListener(qtcore.QThread):
 			self.socket.disconnect()
 			return
 
-		print_debug("registered")
 		self.parser=XmlToQueueEventsConverter(None,self.master.curwindow,0,type=ThreadTypes.server,id=self.id)
-		print_debug("created parser")
 
 		# pass initial data to client here
 		self.socket.write(qtcore.QByteArray("Success\nConnected To Server\n"))
 
 		# wait for client to respond so it doesn't get confused and mangle the setup data with the start of the XML file
 		data=self.socket.read(1024)
-		print_debug("got client response")
 
 		#qtcore.QObject.connect(self.socket, qtcore.SIGNAL("readyRead()"), self.readyRead)
 		#qtcore.QObject.connect(self.socket, qtcore.SIGNAL("disconnected()"), self.disconnected)
@@ -422,7 +419,7 @@ class HiveClientWriter(qtcore.QThread):
 			self.xmlgenerator.logCommand(data)
 
 			datastr="%s" % qtcore.QString(self.buffer.data())
-			print "client writer wrote to sending buffer: ", datastr
+			print_debug("client writer wrote to sending buffer: %s" % datastr)
 			self.socket.write(datastr)
 			self.buffer.buffer().resize(0)
 			self.buffer.seek(0)
