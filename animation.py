@@ -164,7 +164,6 @@ class XmlToQueueEventsConverter:
 			self.image=None
 
 		elif name == 'toolevent':
-			self.clippath=None
 			self.image=None
 			self.strokestart=False
 			toolname="%s" % attrs.value('name').toString()
@@ -313,7 +312,7 @@ class AnimationEventsConverter(XmlToQueueEventsConverter):
 		if key in self.keymap:
 			return self.keymap[key]
 		else:
-			print "WARNING: couldn't find layer in keymap with key:", key
+			print_debug("WARNING: couldn't find layer in keymap with key: %d" % key)
 			return None
 
 	def addKeyTranslation(self,key,dockey):
@@ -361,7 +360,6 @@ class NetworkListenerThread (qtcore.QThread):
 
 		sendingthread=NetworkWriterThread(self.window,self.socket)
 		self.window.sendingthread=sendingthread
-		print_debug("created thread, about to start sending thread")
 		sendingthread.start()
 
 		# enter read loop, read till socket closes
@@ -417,7 +415,7 @@ class NetworkWriterThread (qtcore.QThread):
 
 			#print_debug("attempting to get item from queue")
 			command=self.queue.get()
-			#print_debug("Network Writer Thread got command from queue: %s" % str(command))
+			print_debug("Network Writer Thread got command from queue: %s" % str(command))
 			if command[0]==DrawingCommandTypes.quit:
 				return
 
