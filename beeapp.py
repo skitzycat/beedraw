@@ -19,6 +19,7 @@ from beetypes import BeeAppType
 
 import PyQt4.QtCore as qtcore
 import PyQt4.QtGui as qtgui
+import os
 
 from beetypes import *
 
@@ -43,7 +44,10 @@ class BeeApp(object):
 
 	def __init__(self,argv,type=1):
 		self.debug_flags={}
-		self.debug_flags[DebugFlags.allon]=True
+		if os.path.isfile("beedebug"):
+			self.debug_flags[DebugFlags.allon]=True
+		else:
+			self.debug_flags[DebugFlags.allon]=False
 		self.master=None
 		self.type=type
 		self.app=BeeGuiApp(argv)
