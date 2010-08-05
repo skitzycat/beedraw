@@ -32,7 +32,7 @@ class CommandStack:
 
 		self.win=window
 
-		self.maxundo=maxundo-1
+		self.maxundo=maxundo
 		if self.maxundo<0:
 			self.maxundo=0
 
@@ -48,13 +48,13 @@ class CommandStack:
 		if self.type==CommandStackTypes.remoteonly:
 			self.setNetworkHistorySize(newsize)
 		else:
-			self.maxundo=newsize-1
+			self.maxundo=newsize
 			if self.maxundo<0:
 				self.maxundo=0
 			self.checkStackSize()
 
 	def setNetworkHistorySize(self,newsize):
-		self.networkmaxundo=newsize-1
+		self.networkmaxundo=newsize
 		if self.networkmaxundo<0:
 			self.networkmaxundo=0
 		self.checkStackSize()
@@ -83,11 +83,18 @@ class CommandStack:
 			if self.type==CommandStackTypes.network and self.commandstack[0].undotype==UndoCommandTypes.remote:
 				self.networkinhist-=1
 			self.commandstack=self.commandstack[1:]
+			self.index-=1
+
 
 	def add(self,command):
 		# if there are commands ahead of this one delete them
 		if self.index<len(self.commandstack):
-			self.commandstack=self.commandstack[0:self.index+1]
+			# if we need to then decrement the network in history numbers for the ones we remove
+			#if self.type==CommandStackTypes.network:
+			#	for cmd in self.commandstack[self.index+1:]:
+			#		if cmd.undotype==UndoCommandTypes.remote:
+			#			self.networkinhist-=1
+			self.commandstack=self.commandstack[:self.index]
 
 		if self.type==CommandStackTypes.network and command.undotype==UndoCommandTypes.remote:
 			self.networkinhist+=1

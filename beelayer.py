@@ -370,9 +370,10 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
       Draws the needed section of the layer image onto a temporary image """
 		drawrect=options.exposedRect
 		drawrect=drawrect.toAlignedRect()
-		self.scene().tmppainter.setCompositionMode(self.compmode)
-		self.scene().tmppainter.setOpacity(painter.opacity())
-		self.scene().tmppainter.drawImage(drawrect,self.image,drawrect)
+		if self.scene().tmppainter:
+			self.scene().tmppainter.setCompositionMode(self.compmode)
+			self.scene().tmppainter.setOpacity(painter.opacity())
+			self.scene().tmppainter.drawImage(drawrect,self.image,drawrect)
 
 	def getConfigWidget(self,winlock=None):
 		# can't do this in the constructor because that may occur in a thread other than the GUI thread, this function however should only occur in the GUI thread
