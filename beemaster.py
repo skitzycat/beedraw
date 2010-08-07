@@ -23,6 +23,8 @@ import os
 import PyQt4.QtGui as qtgui
 import PyQt4.QtCore as qtcore
 
+import os
+
 import cPickle as pickle
 
 from socket import socket as pysocket
@@ -60,8 +62,9 @@ class BeeWindowParent(qtgui.QMainWindow):
 
 class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 	def __init__(self):
-		# create a top level widget to be the parent for all windows so they will all be connected
-		self.topwinparent=BeeWindowParent(self)
+		# set the parent for all windows here, currently none
+		self.topwinparent=None
+
 		qtgui.QMainWindow.__init__(self,self.topwinparent)
 		AbstractBeeMaster.__init__(self)
 

@@ -18,10 +18,13 @@
 import PyQt4.QtCore as qtcore
 import PyQt4.QtGui as qtgui
 
+import os
+
 class AbstractBeeWindow(qtgui.QMainWindow):
 	""" Base class for every non-master displayed window in the bee application """
 	def __init__(self,master):
 		qtgui.QMainWindow.__init__(self,master.topwinparent)
+
 		self.master=master
 
 		self.setAttribute(qtcore.Qt.WA_QuitOnClose,False)
