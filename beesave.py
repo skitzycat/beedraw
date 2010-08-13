@@ -119,6 +119,19 @@ class BeeMasterConfigWriter:
 		self.out.writeAttribute('value',str(value))
 		self.out.writeEndElement()
 
+class BeeWindowPositionConfigWriter(BeeMasterConfigWriter):
+	def writeConfig(self,config):
+		self.startLog()
+		for key in config:
+			if key in ["toolx","tooly","toolw","toolh","palettex","palettey","palettew","paletteh","layerx","layery","layerw","layerh"]:
+				self.logIntValue(key,config[key])
+			elif key in ["toolshow","paletteshow","layershow"]:
+				if config[key]:
+					self.logBoolValue(key,"True")
+				else:
+					self.logBoolValue(key,"False")
+		self.endLog()
+
 class HiveMasterConfigWriter(BeeMasterConfigWriter):
 	def writeConfig(self,config):
 		self.startLog()

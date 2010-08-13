@@ -143,3 +143,20 @@ class HiveMasterConfigParser(BeeMasterConfigParser):
 				self.options[key]=True
 			else:
 				self.options[key]=False
+
+class BeeWindowPositionConfigParser(BeeMasterConfigParser):
+	def processStartElement(self):
+		name=self.xml.name()
+		attrs=self.xml.attributes()
+
+		if name in ["toolx","tooly","toolw","toolh","palettex","palettey","palettew","paletteh","layerx","layery","layerw","layerh"]:
+			key="%s" % name.toString()
+			(val,ok)=attrs.value("value").toString().toInt()
+			self.options[key]=val
+		elif name in ["toolshow","paletteshow","layershow"]:
+			key="%s" % name.toString()
+			val="%s" % attrs.value("value").toString()
+			if val=="True":
+				self.options[key]=True
+			else:
+				self.options[key]=False
