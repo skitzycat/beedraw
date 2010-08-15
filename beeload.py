@@ -149,7 +149,7 @@ class BeeWindowPositionConfigParser(BeeMasterConfigParser):
 		name=self.xml.name()
 		attrs=self.xml.attributes()
 
-		if name in ["toolx","tooly","toolw","toolh","palettex","palettey","palettew","paletteh","layerx","layery","layerw","layerh"]:
+		if name in ["toolx","tooly","toolw","toolh","palettex","palettey","palettew","paletteh","layerx","layery","layerw","layerh","masterx","mastery","masterw","masterh"]:
 			key="%s" % name.toString()
 			(val,ok)=attrs.value("value").toString().toInt()
 			self.options[key]=val

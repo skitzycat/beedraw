@@ -38,3 +38,9 @@ class AbstractBeeWindow(qtgui.QMainWindow):
 
 	def keyReleaseEvent(self,event):
 		self.master.keyEvent(event)
+
+	def event(self,event):
+		if event.type()==qtcore.QEvent.WindowActivate:
+			self.master.raiseAllWindows(self)
+
+		return qtgui.QMainWindow.event(self,event)

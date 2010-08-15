@@ -1,5 +1,6 @@
 designer/*.py
 designer/*.pyc
+designer/Makefile
 *.pyc
 *.png
 .*.swp

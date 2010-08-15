@@ -515,9 +515,6 @@ class BeeSessionState:
 	def refreshLayerThumb(self,window,id):
 		pass
 
-	def refreshLayersList(self):
-		pass
-
 	def displayMessage(self,type,title,message):
 		if type==BeeDisplayMessageTypes.warning:
 			print "WARNING:", title, message

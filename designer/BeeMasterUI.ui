@@ -196,9 +196,18 @@
     <property name="title" >
      <string>Window</string>
     </property>
+    <widget class="QMenu" name="menu_Window_Drawing_Windows" >
+     <property name="title" >
+      <string>Drawing Windows</string>
+     </property>
+     <addaction name="separator" />
+    </widget>
     <addaction name="Window_Layers" />
     <addaction name="Window_Palette" />
     <addaction name="Window_Tool_Options" />
+    <addaction name="menu_Window_Drawing_Windows" />
+    <addaction name="separator" />
+    <addaction name="action_Window_Save_Window_Positions" />
    </widget>
    <widget class="QMenu" name="menuEdit_2" >
     <property name="title" >
@@ -337,6 +346,11 @@
    </property>
    <property name="text" >
     <string>Tool Options</string>
+   </property>
+  </action>
+  <action name="action_Window_Save_Window_Positions" >
+   <property name="text" >
+    <string>Save Window Positions</string>
    </property>
   </action>
  </widget>

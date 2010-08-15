@@ -39,8 +39,8 @@ from ConnectionDialogUi import Ui_ConnectionInfoDialog
 from BeeDrawOptionsUi import Ui_BeeMasterOptions
 from beelayer import BeeLayersWindow
 from beeutil import *
-from beesave import PaletteXmlWriter,BeeToolConfigWriter,BeeMasterConfigWriter
-from beeload import PaletteParser,BeeToolConfigParser
+from beesave import BeeToolConfigWriter,BeeMasterConfigWriter,BeeWindowPositionConfigWriter
+from beeload import PaletteParser,BeeToolConfigParser,BeeWindowPositionConfigParser
 from beepalette import PaletteWindow
 from toolwindow import ToolWindow
 from beeload import BeeMasterConfigParser
@@ -154,7 +154,92 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		else:
 			colors=[]
 
-		self.raise_()
+		self.restore_default_window_positions()
+
+		self.winzlist=[self,self.tooloptionswindow,self.palettewindow,self.layerswindow]
+
+	def raiseAllWindows(self,curwin):
+		self.winzlist.remove(curwin)
+		self.winzlist.append(curwin)
+		for win in self.winzlist:
+			win.raise_()
+
+	def restore_default_window_positions(self):
+		configfilename=os.path.join("config","windowpos.xml")
+		configfile=qtcore.QFile(configfilename)
+		if configfile.exists() and configfile.open(qtcore.QIODevice.ReadOnly):
+			parser=BeeWindowPositionConfigParser(configfile)
+			winconfig=parser.loadOptions()
+
+			if "toolx" in winconfig and "tooly" in winconfig:
+				self.tooloptionswindow.move(winconfig["toolx"],winconfig["tooly"])
+
+			if "toolw" in winconfig and "toolh" in winconfig:
+				self.tooloptionswindow.resize(winconfig["toolw"],winconfig["toolh"])
+
+			if "toolshow" in winconfig and "toolh" in winconfig:
+				self.tooloptionswindow.setVisible(winconfig["toolshow"])
+
+			if "palettex" in winconfig and "palettey" in winconfig:
+				self.palettewindow.move(winconfig["palettex"],winconfig["palettey"])
+
+			if "palettew" in winconfig and "paletteh" in winconfig:
+				self.palettewindow.resize(winconfig["palettew"],winconfig["paletteh"])
+
+			if "paletteshow" in winconfig and "paletteh" in winconfig:
+				self.palettewindow.setVisible(winconfig["paletteshow"])
+
+			if "layerx" in winconfig and "layery" in winconfig:
+				self.layerswindow.move(winconfig["layerx"],winconfig["layery"])
+
+			if "layerw" in winconfig and "layerh" in winconfig:
+				self.layerswindow.resize(winconfig["layerw"],winconfig["layerh"])
+
+			if "layershow" in winconfig and "layerh" in winconfig:
+				self.layerswindow.setVisible(winconfig["layershow"])
+
+			if "masterx" in winconfig and "mastery" in winconfig:
+				self.move(winconfig["masterx"],winconfig["mastery"])
+
+			if "masterw" in winconfig and "masterh" in winconfig:
+				self.resize(winconfig["masterw"],winconfig["masterh"])
+
+
+	def on_action_Window_Save_Window_Positions_triggered(self,accept=True):
+		if not accept:
+			return
+
+		winconfig={}
+
+		winconfig["toolx"]=self.tooloptionswindow.pos().x()
+		winconfig["tooly"]=self.tooloptionswindow.pos().y()
+		winconfig["toolw"]=self.tooloptionswindow.size().width()
+		winconfig["toolh"]=self.tooloptionswindow.size().height()
+		winconfig["toolshow"]=self.tooloptionswindow.isVisible()
+
+		winconfig["palettex"]=self.palettewindow.pos().x()
+		winconfig["palettey"]=self.palettewindow.pos().y()
+		winconfig["palettew"]=self.palettewindow.size().width()
+		winconfig["paletteh"]=self.palettewindow.size().height()
+		winconfig["paletteshow"]=self.palettewindow.isVisible()
+
+		winconfig["layerx"]=self.layerswindow.pos().x()
+		winconfig["layery"]=self.layerswindow.pos().y()
+		winconfig["layerw"]=self.layerswindow.size().width()
+		winconfig["layerh"]=self.layerswindow.size().height()
+		winconfig["layershow"]=self.layerswindow.isVisible()
+
+		winconfig["masterx"]=self.pos().x()
+		winconfig["mastery"]=self.pos().y()
+		winconfig["masterw"]=self.size().width()
+		winconfig["masterh"]=self.size().height()
+
+		filename=os.path.join("config","windowpos.xml")
+		outfile=qtcore.QFile(filename,self)
+		outfile.open(qtcore.QIODevice.Truncate|qtcore.QIODevice.WriteOnly)
+		writer=BeeWindowPositionConfigWriter(outfile)
+		writer.writeConfig(winconfig)
+		outfile.close()
 
 	def keyEvent(self,event):
 		if event.key() in (qtcore.Qt.Key_Shift,qtcore.Qt.Key_Control,qtcore.Qt.Key_Alt,qtcore.Qt.Key_Meta):
@@ -166,9 +251,11 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 	def keyPressEvent(self,event):
 		self.keyEvent(event)
 
-	#def event(self,event):
+	def event(self,event):
 	#	print event.type()
-	#	return qtgui.QMainWindow.event(self,event)
+		if event.type()==qtcore.QEvent.WindowActivate:
+			self.raiseAllWindows(self)
+		return qtgui.QMainWindow.event(self,event)
 
 	def getCurWindow(self,lock=None):
 		if not lock:
@@ -220,9 +307,11 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		lock=qtcore.QWriteLocker(self.drawingwindowslock)
 		self.drawingwindows.append(window)
 		self.setCurWindow(window,lock)
+		self.winzlist.append(self)
 
 	def unregisterWindow(self,window):
 		lock=qtcore.QWriteLocker(self.drawingwindowslock)
+		self.winzlist.remove(self)
 		self.drawingwindows.remove(window)
 		# if the window we're deleting was the active window
 		if self.curwindow==window:

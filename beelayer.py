@@ -678,6 +678,9 @@ class BeeLayersWindow(AbstractBeeWindow):
 	def __init__(self,master):
 		AbstractBeeWindow.__init__(self,master)
 
+		# don't have a maximize button
+		self.setWindowFlags(qtcore.Qt.CustomizeWindowHint|qtcore.Qt.WindowMinimizeButtonHint|qtcore.Qt.WindowCloseButtonHint)
+
 		#setup ui
 		self.ui=Ui_LayersWindow()
 		self.ui.setupUi(self)
