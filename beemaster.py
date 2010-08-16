@@ -86,8 +86,8 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 				fileconfig=parser.loadOptions()
 				self.config.update(fileconfig)
 
+		self.winzlist=[]
 		self.winzlistlock=qtcore.QReadWriteLock()
-		lock=qtcore.QWriteLocker(self.winzlistlock)
 
 		# read tool options from file if needed
 		toolconfigfilename=os.path.join("config","tooloptions.xml")
@@ -158,6 +158,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 		self.restore_default_window_positions()
 
+		lock=qtcore.QWriteLocker(self.winzlistlock)
 		self.winzlist=[self,self.tooloptionswindow,self.palettewindow,self.layerswindow]
 
 	def raiseAllWindows(self,curwin):
