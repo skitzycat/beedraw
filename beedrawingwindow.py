@@ -121,14 +121,15 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 		# have window get destroyed when it gets a close event
 		self.setAttribute(qtcore.Qt.WA_DeleteOnClose)
 
-		self.changeWindowTitle("")
+		self.changeWindowTitle("Bee Canvas %d" % self.id)
 
 	# this is for debugging memory cleanup
 	#def __del__(self):
 	#	print "DESTRUCTOR: bee drawing window"
 
 	def changeWindowTitle(self,name):
-		self.setWindowTitle("Bee Canvas " + str(self.id) + " " + name)
+		self.setWindowTitle(name)
+		self.menufocusaction.setText(name)
 
 	def setFileName(self,filename):
 		self.filename=filename
@@ -578,7 +579,7 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 		elif event.type()==qtcore.QEvent.DeferredDelete:
 			self.cleanUp()
 
-		return qtgui.QMainWindow.event(self,event)
+		return AbstractBeeWindow.event(self,event)
 
 # get the current layer key
 	def getCurLayerKey(self,curlayerlock=None):

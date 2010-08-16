@@ -86,7 +86,9 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 				fileconfig=parser.loadOptions()
 				self.config.update(fileconfig)
 
-		BeeApp().debug_flags[DebugFlags.allon]=self.config['debug']
+		self.winzlistlock=qtcore.QReadWriteLock()
+		lock=qtcore.QWriteLocker(self.winzlistlock)
+
 		# read tool options from file if needed
 		toolconfigfilename=os.path.join("config","tooloptions.xml")
 		toolconfigfile=qtcore.QFile(toolconfigfilename)
@@ -159,10 +161,17 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		self.winzlist=[self,self.tooloptionswindow,self.palettewindow,self.layerswindow]
 
 	def raiseAllWindows(self,curwin):
-		self.winzlist.remove(curwin)
-		self.winzlist.append(curwin)
-		for win in self.winzlist:
-			win.raise_()
+		lock=qtcore.QWriteLocker(self.winzlistlock)
+
+		# attempt to unhide the window if it is hidden
+		#curwin.setWindowState(curwin.windowState() & ~qtcore.Qt.WindowMinimized | qtcore.Qt.WindowActive)
+		#curwin.show()
+
+		if curwin in self.winzlist:
+			self.winzlist.remove(curwin)
+			self.winzlist.append(curwin)
+			for win in self.winzlist:
+				win.raise_()
 
 	def restore_default_window_positions(self):
 		configfilename=os.path.join("config","windowpos.xml")
@@ -307,12 +316,21 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		lock=qtcore.QWriteLocker(self.drawingwindowslock)
 		self.drawingwindows.append(window)
 		self.setCurWindow(window,lock)
-		self.winzlist.append(self)
+
+		zlock=qtcore.QWriteLocker(self.winzlistlock)
+		self.winzlist.append(window)
+
+		action=WindowSelectionAction(self,self.ui.menu_Window_Drawing_Windows,window.id)
+		self.ui.menu_Window_Drawing_Windows.addAction(action)
+		window.menufocusaction=action
 
 	def unregisterWindow(self,window):
 		lock=qtcore.QWriteLocker(self.drawingwindowslock)
-		self.winzlist.remove(self)
+		zlock=qtcore.QWriteLocker(self.winzlistlock)
+		if window in self.winzlist:
+			self.winzlist.remove(window)
 		self.drawingwindows.remove(window)
+		self.ui.menu_Window_Drawing_Windows.removeAction(window.menufocusaction)
 		# if the window we're deleting was the active window
 		if self.curwindow==window:
 			# if there is at least one other window make that the current window
@@ -459,7 +477,8 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			self.playFile(filename)
 
 	def playFile(self,filename):
-		self.curwin=AnimationDrawingWindow(self,filename)
+		curwin=AnimationDrawingWindow(self,filename)
+		curwin.setFileName(filename)
 
 	def on_action_File_Open_triggered(self,accept=True):
 		if not accept:
@@ -755,3 +774,16 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			qtgui.QMessageBox.error(self,title,message)
 		else:
 			print_debug("ERROR unknown box type in displayMessage")
+
+class WindowSelectionAction(qtgui.QAction):
+	def __init__(self,master,parent,windowid):
+		qtgui.QAction.__init__(self,"Bee Canvas %d" % windowid,parent)
+		self.windowid=windowid
+		self.master=master
+		qtcore.QObject.connect(self, qtcore.SIGNAL("triggered()"), self.trigger)
+
+	def trigger(self):
+		win=self.master.getWindowById(self.windowid)
+		if win:
+			#win.showNormal()
+			win.activateWindow()
