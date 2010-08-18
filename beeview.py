@@ -86,20 +86,21 @@ class BeeCanvasView(qtgui.QGraphicsView):
 		return self.scene().getSceneRect()
 
 	def updateView(self,dirtyrect=qtcore.QRectF()):
-		#dirtyrect=qtcore.QRectF(dirtyrect)
+		dirtyrect=qtcore.QRectF(dirtyrect)
 
-		#dirtyrect=dirtyrect.toAlignedRect()
-		#dirtyrect=dirtyrect.adjusted(-1,-1,2,2)
+		dirtyrect=dirtyrect.toAlignedRect()
+		dirtyrect=dirtyrect.adjusted(-1,-1,2,2)
 
 		#vpoint=self.mapToScene(self.mapFromScene(qtcore.QPointF(dirtyrect.x(),dirtyrect.y())))
-		#dirtyrect=dirtyrect.adjusted(1-(vpoint.x()%1),1-(vpoint.y()%1),0,0)
+		#dirtyrect=dirtyrect.adjusted((vpoint.x()%1)-1,(vpoint.y()%1)-1,0,0)
 
 		#print "updating view with rect:", rectToTuple(dirtyrect)
 
 		#dirtyrect=self.mapToScene(self.viewport().visibleRegion().boundingRect()).boundingRect()
-		#self.updateScene([qtcore.QRectF(dirtyrect)])
+
+		self.updateScene([qtcore.QRectF(dirtyrect)])
 		# just update the whole thing, since it causes little graphics problems when I only update subregions
-		self.scene().update()
+		#self.scene().update()
 
 	def tabletEvent(self,event):
 		event.accept()
