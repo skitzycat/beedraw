@@ -164,10 +164,6 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 	def raiseAllWindows(self,curwin):
 		lock=qtcore.QWriteLocker(self.winzlistlock)
 
-		# attempt to unhide the window if it is hidden
-		#curwin.setWindowState(curwin.windowState() & ~qtcore.Qt.WindowMinimized | qtcore.Qt.WindowActive)
-		#curwin.show()
-
 		if curwin in self.winzlist:
 			self.winzlist.remove(curwin)
 			self.winzlist.append(curwin)
@@ -786,5 +782,8 @@ class WindowSelectionAction(qtgui.QAction):
 	def trigger(self):
 		win=self.master.getWindowById(self.windowid)
 		if win:
-			#win.showNormal()
+			#attempt to unhide the window if it is hidden and raise it to the top of other application windows
+			win.setWindowState(win.windowState() & ~qtcore.Qt.WindowMinimized | qtcore.Qt.WindowActive)
+			win.show()
 			win.activateWindow()
+
