@@ -139,22 +139,13 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		self.tooloptionswindow=ToolWindow(self)
 		self.tooloptionswindow.updateCurrentTool()
 
-		# setup window with colors
-		self.palettewindow=PaletteWindow(self)
-
 		self.initializedwindows=True
 
 		self.fgcolor=qtgui.QColor(0,0,0)
 		self.bgcolor=qtgui.QColor(255,255,255)
 
-		palfilename=os.path.join(BEE_CONFIG_DIR,"config/default.pal")
-		palfile=qtcore.QFile(palfilename)
-		if palfile.exists():
-			palfile.open(qtcore.QIODevice.ReadOnly)
-			reader=PaletteParser(palfile)
-			colors=reader.getColors()
-		else:
-			colors=[]
+		# setup window with colors
+		self.palettewindow=PaletteWindow(self)
 
 		self.restore_default_window_positions()
 
@@ -242,10 +233,10 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 		filename=os.path.join("config","windowpos.xml")
 		outfile=qtcore.QFile(filename,self)
-		outfile.open(qtcore.QIODevice.Truncate|qtcore.QIODevice.WriteOnly)
-		writer=BeeWindowPositionConfigWriter(outfile)
-		writer.writeConfig(winconfig)
-		outfile.close()
+		if outfile.open(qtcore.QIODevice.Truncate|qtcore.QIODevice.WriteOnly):
+			writer=BeeWindowPositionConfigWriter(outfile)
+			writer.writeConfig(winconfig)
+			outfile.close()
 
 	def keyEvent(self,event):
 		if event.key() in (qtcore.Qt.Key_Shift,qtcore.Qt.Key_Control,qtcore.Qt.Key_Alt,qtcore.Qt.Key_Meta):
@@ -450,13 +441,13 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 		filename=os.path.join("config","tooloptions.xml")
 		outfile=qtcore.QFile(filename,self)
-		outfile.open(qtcore.QIODevice.Truncate|qtcore.QIODevice.WriteOnly)
-		writer=BeeToolConfigWriter(outfile)
-		writer.startLog()
-		for tool in self.toolbox.toolslist:
-			writer.logToolConfig(tool.name,tool.options)
-		writer.endLog()
-		outfile.close()
+		if outfile.open(qtcore.QIODevice.Truncate|qtcore.QIODevice.WriteOnly):
+			writer=BeeToolConfigWriter(outfile)
+			writer.startLog()
+			for tool in self.toolbox.toolslist:
+				writer.logToolConfig(tool.name,tool.options)
+			writer.endLog()
+			outfile.close()
 
 	def on_backgroundbutton_pressed(self):
 		self.ui.BGSwatch.changeColorDialog()
@@ -573,10 +564,10 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		# write out everything to file
 		filename=os.path.join("config","beedrawoptions.xml")
 		outfile=qtcore.QFile(filename,self)
-		outfile.open(qtcore.QIODevice.Truncate|qtcore.QIODevice.WriteOnly)
-		writer=BeeMasterConfigWriter(outfile)
-		writer.writeConfig(self.config)
-		outfile.close()
+		if outfile.open(qtcore.QIODevice.Truncate|qtcore.QIODevice.WriteOnly):
+			writer=BeeMasterConfigWriter(outfile)
+			writer.writeConfig(self.config)
+			outfile.close()
 
 	def on_action_Help_About_triggered(self,accept=True):
 		if not accept:
@@ -786,4 +777,3 @@ class WindowSelectionAction(qtgui.QAction):
 			win.setWindowState(win.windowState() & ~qtcore.Qt.WindowMinimized | qtcore.Qt.WindowActive)
 			win.show()
 			win.activateWindow()
-

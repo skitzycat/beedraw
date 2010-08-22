@@ -48,7 +48,7 @@
         <property name="orientation" >
          <enum>Qt::Horizontal</enum>
         </property>
-        <property name="sizeHint" >
+        <property name="sizeHint" stdset="0" >
          <size>
           <width>40</width>
           <height>20</height>
@@ -60,6 +60,12 @@
     </item>
     <item>
      <widget class="QFrame" name="swatch_frame" >
+      <property name="sizePolicy" >
+       <sizepolicy vsizetype="MinimumExpanding" hsizetype="Preferred" >
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
       <property name="frameShape" >
        <enum>QFrame::StyledPanel</enum>
       </property>
@@ -84,32 +90,39 @@
     <property name="title" >
      <string>Palette</string>
     </property>
+    <addaction name="Palette_save_default" />
+    <addaction name="Palette_load_default" />
+    <addaction name="separator" />
     <addaction name="Palette_save" />
     <addaction name="Palette_load" />
     <addaction name="separator" />
-    <addaction name="actionSave_as" />
-    <addaction name="actionLoad_from_file" />
+    <addaction name="Change_number_of_colors" />
    </widget>
    <addaction name="menuPalette" />
   </widget>
-  <action name="Palette_save" >
+  <action name="Palette_save_default" >
    <property name="text" >
     <string>Save as Default</string>
    </property>
   </action>
-  <action name="Palette_load" >
+  <action name="Palette_load_default" >
    <property name="text" >
     <string>Load from Defaults</string>
    </property>
   </action>
-  <action name="actionSave_as" >
+  <action name="Palette_save" >
    <property name="text" >
     <string>Save as</string>
    </property>
   </action>
-  <action name="actionLoad_from_file" >
+  <action name="Palette_load" >
    <property name="text" >
     <string>Load from file</string>
+   </property>
+  </action>
+  <action name="Change_number_of_colors" >
+   <property name="text" >
+    <string>Color Palette Options</string>
    </property>
   </action>
  </widget>

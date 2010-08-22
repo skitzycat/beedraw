@@ -33,6 +33,8 @@ class PaletteParser:
 		self.xml.setNamespaceProcessing(False)
 
 		self.xml.setDevice(device)
+    
+		self.swatchsize=15
 		self.colors=[[]]
 
 	def getColors(self):
@@ -50,6 +52,8 @@ class PaletteParser:
 		if name == "beepalette":
 			(self.rows,ok)=attrs.value('rows').toString().toInt()
 			(self.columns,ok)=attrs.value('columns').toString().toInt()
+			if attrs.value('swatchsize'):
+				(self.swatchsize,ok)=attrs.value('swatchsize').toString().toInt()
 
 		elif name == "color":
 			(r,ok)=attrs.value('r').toString().toInt()

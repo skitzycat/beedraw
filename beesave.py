@@ -25,7 +25,12 @@ class PaletteXmlWriter:
 	def __init__(self, output):
 		self.out=QXmlStreamWriter(output)
 
-	def logPalette(self,palettelist):
+	def logSwatchSize(self,swatchsize):
+		self.out.writeStartElement('swatchsize')
+		self.out.writeAttribute('pixels',str(swatchsize))
+		self.out.writeEndElement()
+
+	def logPalette(self,palettelist,swatchsize):
 		if not palettelist:
 			print_debug("Error, can't find list of colors to write out")
 			return
@@ -36,6 +41,7 @@ class PaletteXmlWriter:
 		self.out.writeStartElement('beepalette')
 		self.out.writeAttribute('rows',str(rows))
 		self.out.writeAttribute('columns',str(columns))
+		self.out.writeAttribute('swatchsize',str(swatchsize))
 
 		for row in palettelist:
 			for swatch in row:
