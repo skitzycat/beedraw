@@ -132,23 +132,23 @@ class BeeSessionState:
 	def addExitEventToQueue(self,source=ThreadTypes.user):
 		self.queueCommand((DrawingCommandTypes.quit,),source)
 
-	def removeLayer(self,layer,history=0,lock=None):
+	def removeLayer(self,layer,history=True,listlock=None):
 		if layer:
-			if not lock:
-				lock=qtcore.QWriteLocker(self.layerslistlock)
+			if not listlock:
+				listlock=qtcore.QWriteLocker(self.layerslistlock)
 			if layer in self.layers:
 				index=self.layers.index(layer)
-				if history!=-1:
+				if history:
 					self.addCommandToHistory(DelLayerCommand(layer,index))
 				self.layers.pop(index)
 
-				self.requestLayerListRefresh(lock)
+				self.requestLayerListRefresh(listlock)
 				self.reCompositeImage()
 				return (layer,index)
 
 		return (None,None)
 
-	def removeLayerByKey(self,key,history=0,lock=None):
+	def removeLayerByKey(self,key,history=False,lock=None):
 		""" remove layer with key equal to passed value, each layer should have a unique key so there is no need to check for multiples
       The history argument is 0 if the event should be added to the undo/redo history and -1 if it shouldn't.  This is needed so when running an undo/redo command it doesn't get added again.
 		"""

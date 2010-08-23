@@ -85,7 +85,6 @@ class CommandStack:
 			self.commandstack=self.commandstack[1:]
 			self.index-=1
 
-
 	def add(self,command):
 		# if there are commands ahead of this one delete them
 		if self.index<len(self.commandstack):
@@ -161,12 +160,14 @@ class DrawingCommand(AbstractCommand):
 		if layer:
 			self.redoimage=layer.image.copy(self.location)
 			layer.compositeFromCorner(self.oldimage,self.location.x(),self.location.y(),qtgui.QPainter.CompositionMode_Source)
+			win.requestLayerListRefresh()
 
 	def redo(self,win):
 		print_debug("running redo in drawing command")
 		layer=win.getLayerForKey(self.layerkey)
 		if layer:
 			layer.compositeFromCorner(self.redoimage,self.location.x(),self.location.y(),qtgui.QPainter.CompositionMode_Source)
+			win.requestLayerListRefresh()
 
 class AnchorCommand(DrawingCommand):
 	undotype=UndoCommandTypes.remote
@@ -175,23 +176,23 @@ class AnchorCommand(DrawingCommand):
 		self.floating=floating
 
 	def undo(self,win):
-		DrawingCommand.undo(self,windowid)
+		DrawingCommand.undo(self,win)
 		layer=win.getLayerForKey(self.layerkey)
 		if layer:
 			lock=qtcore.QWriteLocker(win.layerslistlock)
 			layer.scene().addItem(self.floating)
 			self.floating.setParentItem(layer)
-			win.requestLayerListRefresh()
+			win.requestLayerListRefresh(lock)
 			BeeApp().master.updateLayerHighlight(win,self.floating.key)
 
 	def redo(self,win):
-		DrawingCommand.redo(self,windowid)
+		DrawingCommand.redo(self,win)
 		layer=win.getLayerForKey(self.layerkey)
 		if layer:
 			lock=qtcore.QWriteLocker(win.layerslistlock)
 			layer.scene().removeItem(self.floating)
 			win.setValidActiveLayer(listlock=lock)
-			win.requestLayerListRefresh()
+			win.requestLayerListRefresh(lock=lock)
 
 class AddLayerCommand(AbstractCommand):
 	undotype=UndoCommandTypes.notinnetwork
@@ -257,22 +258,6 @@ class CutCommand(DrawingCommand):
 		DrawingCommand.redo(self,win)
 		win.changeSelection(SelectionModTypes.clear,history=False)
 
-class PasteCommand(AddLayerCommand):
-	undotype=UndoCommandTypes.nolog
-	def __init__(self,layerkey,path):
-		AbstractCommand.__init__(self)
-		self.path=path
-
-	def undo(self,win):
-		AddLayerCommand.undo(self,win)
-		layer=getLayerForKey(self.layerkey)
-		self.layerparent=layer.parentItem()
-		win.changeSelection(SelectionModTypes.new,path,history=False)
-
-	def redo(self,win):
-		AddLayerCommand.redo(self,win)
-		win.changeSelection(SelectionModTypes.clear,history=False)
-
 class ChangeSelectionCommand(AbstractCommand):
 	undotype=UndoCommandTypes.localonly
 	def __init__(self,oldpath,newpath):
@@ -291,6 +276,24 @@ class ChangeSelectionCommand(AbstractCommand):
 			win.changeSelection(SelectionModTypes.setlist,self.newpath,history=False)
 		else:
 			win.changeSelection(SelectionModTypes.clear,history=False)
+
+class PasteCommand(ChangeSelectionCommand):
+	undotype=UndoCommandTypes.localonly
+	def __init__(self,layerkey,oldpath,newpath):
+		ChangeSelectionCommand.__init__(self,oldpath,newpath)
+		self.layerkey=layerkey
+
+	def undo(self,win):
+		ChangeSelectionCommand.undo(self,win)
+		layer=win.getLayerForKey(self.layerkey)
+		self.layerparent=layer.parentItem()
+		if layer:
+			self.oldlayer,self.index=win.removeLayer(layer,history=False)
+
+	def redo(self,win):
+		ChangeSelectionCommand.redo(self,win)
+		self.oldlayer.setParentItem(self.layerparent)
+		win.requestLayerListRefresh()
 
 class MoveSelectionCommand(AbstractCommand):
 	undotype=UndoCommandTypes.localonly

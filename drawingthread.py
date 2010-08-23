@@ -24,7 +24,7 @@ from Queue import Queue
 
 from beeutil import *
 
-from beeeventstack import DrawingCommand, AnchorCommand
+from beeeventstack import DrawingCommand, AnchorCommand, PasteCommand
 
 from beeapp import BeeApp
 
@@ -143,10 +143,14 @@ class DrawingThread(qtcore.QThread):
 
 		elif subtype==LayerCommandTypes.paste:
 			image=self.master.getClipBoardImage()
+			window=self.master.getWindowById(self.windowid)
 			if image:
 				x=command[3]
 				y=command[4]
-				layer.paste(image,x,y)
+				newkey=layer.paste(image,x,y)
+				oldpath,newpath=window.changeSelection(SelectionModTypes.clear,history=False)
+				historycommand=PasteCommand(newkey,oldpath,newpath)
+				window.addCommandToHistory(historycommand,layer.owner)
 
 		elif subtype==LayerCommandTypes.pendown:
 			x=command[3]

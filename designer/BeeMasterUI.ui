@@ -11,7 +11,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>326</width>
+    <width>331</width>
     <height>252</height>
    </rect>
   </property>
@@ -153,7 +153,7 @@
       <item row="3" column="0" >
        <widget class="QPushButton" name="move_selection_button" >
         <property name="text" >
-         <string>Move Selection</string>
+         <string>Move Floating Layer</string>
         </property>
         <property name="checkable" >
          <bool>true</bool>
@@ -172,7 +172,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>326</width>
+     <width>331</width>
      <height>35</height>
     </rect>
    </property>

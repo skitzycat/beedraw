@@ -332,8 +332,9 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 		if not slock:
 			slock=qtcore.QWriteLocker(self.selectionlock)
 
-		if history:
-			oldpath=self.selection[:]
+		oldpath=self.selection[:]
+
+		defaultreturn=oldpath,oldpath
 
 		dirtyregion=qtgui.QRegion()
 
@@ -341,7 +342,7 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 		if type==SelectionModTypes.clear:
 			# in this case there already is no selection so just ignore it
 			if not self.selection:
-				return
+				return defaultreturn
 			for s in self.selection:
 				dirtyregion=dirtyregion.united(qtgui.QRegion(s.boundingRect().toAlignedRect()))
 			self.selection=[]
@@ -362,7 +363,7 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 		else:
 			# new area argument can be implied to be the cursor overlay, but we need one or the other
 			if not self.cursoroverlay and not newarea:
-				return
+				return defaultreturn
 
 			else:
 				if not newarea:
@@ -438,6 +439,8 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 			command=ChangeSelectionCommand(oldpath,self.selection)
 			self.localcommandstack.add(command)
 
+		return oldpath,self.selection[:]
+
 	def queueCommand(self,command,source=ThreadTypes.user,owner=0):
 		if source==ThreadTypes.user:
 			#print "putting command in local queue"
@@ -482,13 +485,14 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 				lock=qtcore.QReadLocker(self.layerslistlock)
 				if parent in self.layers:
 					index=self.layers.index(parent)
+					index+=1
 					while index<len(self.layers):
-						index+=1
 						if self.ownedByMe(self.layers[index]):
 							layer.setParentItem(self.layers[index])
 							self.scene.update()
 							self.master.refreshLayersList(layerslock=lock)
 							break
+						index+=1
 			else:
 				self.addLayerUpToQueue(layer.key)
 
@@ -498,6 +502,7 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 			listlock=qtcore.QWriteLocker(self.layerslistlock)
 
 		if layer.type==LayerTypes.floating:
+			index=-1
 			self.scene.removeItem(layer)
 			self.scene.update()
 			self.setValidActiveLayer(True,listlock=listlock)

@@ -294,6 +294,7 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
 		newlayer=FloatingSelection(image,newkey,self)
 		newlayer.setPos(qtcore.QPointF(x,y))
 		BeeApp().master.requestLayerListRefresh()
+		return newkey
 
 	def adjustCanvasSize(self,leftadj,topadj,rightadj,bottomadj,lock=None):
 		if not lock:
