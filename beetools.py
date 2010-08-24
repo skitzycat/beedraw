@@ -1468,8 +1468,9 @@ class MoveSelectionTool(AbstractTool):
 		self.pendown=True
 		self.lastx=int(x)
 		self.lasty=int(y)
-		self.startx=self.layer.pos().x()
-		self.starty=self.layer.pos().y()
+
+		self.startpos=self.layer.pos()
+		self.endpos=self.layer.pos()
 
 	def moveLayer(self,x,y,modkeys):
 		x=int(x)
@@ -1500,10 +1501,18 @@ class MoveSelectionTool(AbstractTool):
 		self.lastx=x
 		self.lasty=y
 
+		self.endpos=self.layer.pos()
+
 	def guiLevelPenMotion(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
 		if self.pendown:
 			self.moveLayer(x,y,modkeys)
 
-	def guiLevelPenUp(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
-		self.layer=None
+	def penUp(self,x=None,y=None):
+		if self.pendown:
+			# make sure there was an actual net change
+			if self.startpos.x()!=self.endpos.x() or self.startpos.y()!=self.endpos.y():
+				command=MoveFloatingCommand(self.startpos.x(),self.startpos.y(),self.endpos.x(),self.endpos.y(),self.layer.key)
+				self.window.addCommandToHistory(command)
+
 		self.pendown=False
+		self.layer=None

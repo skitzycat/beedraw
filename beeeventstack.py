@@ -309,3 +309,23 @@ class MoveSelectionCommand(AbstractCommand):
 	def redo(self,win):
 		layer=win.getLayerForKey(self.layerkey)
 		layer.setPos(newpos)
+
+class MoveFloatingCommand(AbstractCommand):
+	undotype=UndoCommandTypes.localonly
+	def __init__(self,oldx,oldy,newx,newy,layerkey):
+		AbstractCommand.__init__(self)
+		self.oldx=oldx
+		self.oldy=oldy
+		self.newx=newx
+		self.newy=newy
+		self.layerkey=layerkey
+
+	def undo(self,win):
+		layer=win.getLayerForKey(self.layerkey)
+		if layer:
+			layer.setPos(self.oldx,self.oldy)
+
+	def redo(self,win):
+		layer=win.getLayerForKey(self.layerkey)
+		if layer:
+			layer.setPos(self.newx,self.newy)
