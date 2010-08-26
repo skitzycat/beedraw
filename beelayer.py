@@ -248,40 +248,6 @@ class BeeLayerState:
 
 		self.image=newimage
 
-	def copy(self,path,imagelock=None):
-		pass
-
-	# cut is the only operation I see potential for being used in network communication
-	def cut(self,path,imagelock=None):
-		pathrectf=path.boundingRect()
-		pathrect=pathrectf.toAlignedRect()
-
-		if not imagelock:
-			imagelock=qtcore.QWriteLocker(self.imagelock)
-
-		oldareaimage=self.getImageCopy(imagelock,pathrect)
-
-		win=BeeApp().master.getWindowById(self.windowid)
-		if win.ownedByMe(self.owner):
-			self.copy(path,imagelock)
-
-		# erase from image
-		painter=qtgui.QPainter()
-		painter.begin(self.image)
-		painter.setClipPath(path)
-		painter.setCompositionMode(qtgui.QPainter.CompositionMode_Clear)
-		painter.drawImage(self.image.rect(),self.image)
-		painter.end()
-
-		imagelock.unlock()
-
-		win.view.updateView(pathrectf)
-		BeeApp().master.refreshLayerThumb(self.windowid,self.key)
-
-		command=DrawingCommand(self.key,oldareaimage,pathrect)
-		win=BeeApp().master.getWindowById(self.windowid)
-		win.addCommandToHistory(command,self.owner)
-
 class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
 	def __init__(self,windowid,type,key,image=None,opacity=None,visible=None,compmode=None,owner=0,parent=None):
 		qtgui.QGraphicsItem.__init__(self,parent)
@@ -331,6 +297,36 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
 		tmpimage=tmpimage.copy(pathrect)
 
 		BeeApp().master.setClipBoardImage(tmpimage)
+
+	def cut(self,path,imagelock=None):
+		pathrectf=path.boundingRect()
+		pathrect=pathrectf.toAlignedRect()
+
+		if not imagelock:
+			imagelock=qtcore.QWriteLocker(self.imagelock)
+
+		oldareaimage=self.getImageCopy(imagelock,pathrect)
+
+		win=BeeApp().master.getWindowById(self.windowid)
+		if win.ownedByMe(self.owner):
+			self.copy(path,imagelock)
+
+		# erase from image
+		painter=qtgui.QPainter()
+		painter.begin(self.image)
+		painter.setClipPath(path)
+		painter.setCompositionMode(qtgui.QPainter.CompositionMode_Clear)
+		painter.drawImage(self.image.rect(),self.image)
+		painter.end()
+
+		imagelock.unlock()
+
+		win.view.updateView(pathrectf)
+		BeeApp().master.refreshLayerThumb(self.windowid,self.key)
+
+		command=CutCommand(self.key,oldareaimage,path)
+		win=BeeApp().master.getWindowById(self.windowid)
+		win.addCommandToHistory(command,self.owner)
 
 	def deleteChildren(self):
 		num_deleted=0

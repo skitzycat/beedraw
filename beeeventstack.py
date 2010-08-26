@@ -246,13 +246,14 @@ class LayerDownCommand(AbstractCommand):
 
 class CutCommand(DrawingCommand):
 	undotype=UndoCommandTypes.remote
-	def __init__(self,layerkey,oldimage,location,path):
-		DrawingCommand.__init__(self)
+	def __init__(self,layerkey,oldimage,path):
 		self.path=path
+		pathrect=path.boundingRect().toAlignedRect()
+		DrawingCommand.__init__(self,layerkey,oldimage,pathrect)
 
 	def undo(self,win):
 		DrawingCommand.undo(self,win)
-		win.changeSelection(SelectionModTypes.new,path,history=False)
+		win.changeSelection(SelectionModTypes.new,self.path,history=False)
 
 	def redo(self,win):
 		DrawingCommand.redo(self,win)

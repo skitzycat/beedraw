@@ -313,6 +313,7 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 		BeeApp().app.postEvent(self,event)
 
 	def updateSelectionDisplayPath(self,path=None):
+		#print "running updateSelectionDisplayPath from thread:", qtcore.QThread.currentThreadId()
 		if path and not path.isEmpty():
 			lock=qtcore.QReadLocker(self.layerslistlock)
 			if self.selectiondisplay:
