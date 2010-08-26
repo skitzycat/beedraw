@@ -260,6 +260,7 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
 		newlayer=FloatingSelection(image,newkey,self)
 		newlayer.setPos(qtcore.QPointF(x,y))
 		BeeApp().master.requestLayerListRefresh()
+		self.scene().update()
 		return newkey
 
 	def adjustCanvasSize(self,leftadj,topadj,rightadj,bottomadj,lock=None):
@@ -485,7 +486,7 @@ class FloatingSelection(BeeGuiLayer):
 	# don't allow pasting on other floating selections, go to parent layer instead
 	def paste(self,image,x,y):
 		win=BeeApp().master.getWindowById(self.windowid)
-		self.parentItem().paste(image,x,y)
+		return self.parentItem().paste(image,x,y)
 
 	def anchor(self,layer):
 		print_debug("WARNING: anchor called from child layer")

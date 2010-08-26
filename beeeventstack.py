@@ -283,13 +283,15 @@ class PasteCommand(ChangeSelectionCommand):
 	def __init__(self,layerkey,oldpath,newpath):
 		ChangeSelectionCommand.__init__(self,oldpath,newpath)
 		self.layerkey=layerkey
+		self.oldlayer=None
+	
 
 	def undo(self,win):
 		ChangeSelectionCommand.undo(self,win)
 		layer=win.getLayerForKey(self.layerkey)
-		self.scene=layer.scene()
-		self.layerparent=layer.parentItem()
 		if layer:
+			self.scene=layer.scene()
+			self.layerparent=layer.parentItem()
 			self.oldlayer,self.index=win.removeLayer(layer,history=False)
 
 	def redo(self,win):
