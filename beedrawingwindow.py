@@ -264,18 +264,20 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 	def penDown(self,x,y,pressure,modkeys,tool=None,source=ThreadTypes.user):
 		if not tool:
 			tool=self.master.getCurToolInst(self)
-			self.curtool=tool
+
+		self.curtool=tool
 
 		self.curtool.guiLevelPenDown(x,y,pressure,modkeys)
 
 		if not self.curtool.layerkey:
 			return
 
+
 		layer=self.getLayerForKey(self.curtool.layerkey)
 		if not layer:
 			return
 
-		if layer.type==LayerTypes.user:
+		if layer.type==LayerTypes.user or ( layer.type==LayerTypes.floating and self.curtool.allowedonfloating):
 			self.addPenDownToQueue(x,y,pressure,tool.layerkey,tool,source,modkeys=modkeys)
 
 	def penMotion(self,x,y,pressure,modkeys,source=ThreadTypes.user):
@@ -287,16 +289,19 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 			if not layer:
 				return
 
-			if layer.type==LayerTypes.user:
+			if layer.type==LayerTypes.user or ( layer.type==LayerTypes.floating and self.curtool.allowedonfloating):
 				self.addPenMotionToQueue(x,y,pressure,self.curtool.layerkey,source,modkeys=modkeys)
 
 	def penUp(self,x,y,modkeys,source=ThreadTypes.user):
 		if self.curtool:
 			self.curtool.guiLevelPenUp(x,y,modkeys)
+
 			layer=self.getLayerForKey(self.curtool.layerkey)
-			if layer:
-				if layer.type==LayerTypes.user:
-					self.addPenUpToQueue(x,y,self.curtool.layerkey,source,modkeys=modkeys)
+			if not layer:
+				return
+
+			if layer.type==LayerTypes.user or ( layer.type==LayerTypes.floating and self.curtool.allowedonfloating):
+				self.addPenUpToQueue(x,y,self.curtool.layerkey,source,modkeys=modkeys)
 
 			self.curtool=None
 

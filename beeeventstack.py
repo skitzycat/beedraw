@@ -286,14 +286,17 @@ class PasteCommand(ChangeSelectionCommand):
 	def undo(self,win):
 		ChangeSelectionCommand.undo(self,win)
 		layer=win.getLayerForKey(self.layerkey)
+		self.scene=layer.scene()
 		self.layerparent=layer.parentItem()
 		if layer:
 			self.oldlayer,self.index=win.removeLayer(layer,history=False)
 
 	def redo(self,win):
 		ChangeSelectionCommand.redo(self,win)
-		self.oldlayer.setParentItem(self.layerparent)
-		win.requestLayerListRefresh()
+		if self.oldlayer:
+			self.scene.addItem(self.oldlayer)
+			self.oldlayer.setParentItem(self.layerparent)
+			win.requestLayerListRefresh()
 
 class MoveSelectionCommand(AbstractCommand):
 	undotype=UndoCommandTypes.localonly

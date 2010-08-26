@@ -121,6 +121,7 @@ class AbstractToolDesc:
 # base class for all drawing tools
 class AbstractTool:
 	logtype=ToolLogTypes.unlogable
+	allowedonfloating=False
 	def __init__(self,options,window):
 		self.fgcolor=None
 		self.bgcolor=None
@@ -1445,7 +1446,8 @@ class MoveSelectionToolDesc(AbstractToolDesc):
 
 # selection move tool
 class MoveSelectionTool(AbstractTool):
-	logtype=ToolLogTypes.move
+	logtype=ToolLogTypes.unlogable
+	allowedonfloating=True
 	def __init__(self,options,window):
 		AbstractTool.__init__(self,options,window)
 		self.pendown=False

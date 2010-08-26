@@ -472,8 +472,9 @@ class SelectedAreaDisplay(qtgui.QGraphicsItem):
 class FloatingSelection(BeeGuiLayer):
 	def __init__(self,image,key,parentlayer):
 		BeeGuiLayer.__init__(self,parentlayer.windowid,LayerTypes.floating,key,image,parent=parentlayer)
-		self.setFlag(qtgui.QGraphicsItem.ItemIsMovable)
+		#self.setFlag(qtgui.QGraphicsItem.ItemIsMovable)
 		self.name="Floating selection (%d x %d)" % ( self.image.rect().width(), self.image.rect().height() )
+		#self.setAcceptedMouseButtons(qtcore.Qt.NoButton)
 
 	def paint(self,painter,options,widget=None):
 		drawrect=options.exposedRect
@@ -495,8 +496,10 @@ class FloatingSelection(BeeGuiLayer):
 
 	def mousePressEvent(self,event):
 		pass
+
 	def mouseMoveEvent(self,event):
 		pass
+
 	def mouseReleaseEvent(self,event):
 		pass
 
