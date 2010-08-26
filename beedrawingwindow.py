@@ -737,7 +737,7 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 				self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.cut,layerkey,self.getClipPathCopy()),ThreadTypes.user)
 
 		# deselect everything when we do this
-		self.changeSelection(SelectionModTypes.clear)
+		self.changeSelection(SelectionModTypes.clear,history=False)
 
 	def addAnchorToQueue(self,parentkey,floating):
 		pos=floating.pos()
