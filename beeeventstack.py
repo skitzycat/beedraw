@@ -327,8 +327,10 @@ class MoveFloatingCommand(AbstractCommand):
 		layer=win.getLayerForKey(self.layerkey)
 		if layer:
 			layer.setPos(self.oldx,self.oldy)
+			layer.scene().update()
 
 	def redo(self,win):
 		layer=win.getLayerForKey(self.layerkey)
 		if layer:
 			layer.setPos(self.newx,self.newy)
+			layer.scene().update()
