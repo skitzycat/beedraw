@@ -517,7 +517,7 @@ class LayerConfigWidget(qtgui.QWidget):
 		self.height=self.geometry().height()
 
 		# put options in combobox
-		for mode in BlendTranslations.getAllModeNames():
+		for mode in BlendTranslations.layerallowedmodes:
 			self.ui.blend_mode_box.addItem(mode)
 
 		# without this the frame background is transparent

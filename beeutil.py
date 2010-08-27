@@ -133,8 +133,17 @@ class BlendTranslations:
 	qtcore.QString("Lighten"):qtgui.QPainter.CompositionMode_Lighten,
 	qtcore.QString("Dodge"):qtgui.QPainter.CompositionMode_ColorDodge,
 	qtcore.QString("Burn"):qtgui.QPainter.CompositionMode_ColorBurn,
-	qtcore.QString("Difference"):qtgui.QPainter.CompositionMode_Difference
+	qtcore.QString("Difference"):qtgui.QPainter.CompositionMode_Difference,
+	qtcore.QString("Source"):qtgui.QPainter.CompositionMode_Source
 	}
+
+	layerallowedmodes=[qtcore.QString("Normal"),
+                     qtcore.QString("Multiply"),
+                     qtcore.QString("Darken"),
+                     qtcore.QString("Lighten"),
+                     qtcore.QString("Dodge"),
+                     qtcore.QString("Burn"),
+                     qtcore.QString("Difference") ]
 
 	def nameToMode(name):
 		if name in BlendTranslations.map:
@@ -162,14 +171,6 @@ class BlendTranslations:
 		return None
 
 	intToMode=staticmethod(intToMode)
-
-	def getAllModeNames():
-		l=[]
-		for key in BlendTranslations.map.keys():
-			l.append(key)
-		return l
-
-	getAllModeNames=staticmethod(getAllModeNames)
 
 def getBlankCursor():
 	image=qtgui.QPixmap(1,1)

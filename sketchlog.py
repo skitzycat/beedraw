@@ -79,7 +79,7 @@ class SketchLogWriter:
 			self.logLayerModeChange(layer,command[3])
 
 		elif subtype==LayerCommandTypes.rawevent or subtype==LayerCommandTypes.anchor:
-			self.logRawEvent(command[3],command[4],layer,command[5],command[6])
+			self.logRawEvent(command[3],command[4],layer,command[5],command[6],command[7])
 
 		elif subtype==LayerCommandTypes.tool:
 			self.logToolEvent(layer,command[3])
@@ -290,7 +290,7 @@ class SketchLogWriter:
 		# end createdoc event
 		self.log.writeEndElement()
 
-	def logRawEvent(self,x,y,layerkey,image,path=None):
+	def logRawEvent(self,x,y,layerkey,image,path,compmode):
 		# write out the image data
 		self.log.writeStartElement('image')
 		bytearray=qtcore.QByteArray()
@@ -331,6 +331,8 @@ class SketchLogWriter:
 		self.log.writeAttribute('x',x)
 		self.log.writeAttribute('y',y)
 		self.log.writeAttribute('layerkey',layerkey)
+		modename=BlendTranslations.modeToName(compmode)
+		self.log.writeAttribute('compmode',modename)
 
 		self.log.writeEndElement()
 

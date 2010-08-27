@@ -211,10 +211,18 @@ class XmlToQueueEventsConverter:
 			(self.x,ok)=xstr.toFloat()
 			(self.y,ok)=attrs.value('y').toString().toFloat()
 			(layerkey,ok)=attrs.value('layerkey').toString().toInt()
+
+			mode=qtgui.QPainter.CompositionMode_SourceOver
+			if attrs.value('compmode'):
+				modename=attrs.value('compmode')
+				mode=BlendTranslations.nameToMode(modename.toString())
+				if not mode:
+					mode=qtgui.QPainter.CompositionMode_SourceOver
+
 			self.layerkey=self.translateKey(layerkey)
 
 			if self.image:
-				self.window.addRawEventToQueue(self.layerkey,self.image,self.x,self.y,self.clippath,source=type)
+				self.window.addRawEventToQueue(self.layerkey,self.image,self.x,self.y,self.clippath,source=type,compmode=mode)
 
 		elif name == 'pointslist':
 			if self.strokestart==True:
