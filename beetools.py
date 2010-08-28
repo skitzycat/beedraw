@@ -1514,7 +1514,7 @@ class MoveSelectionTool(AbstractTool):
 			# make sure there was an actual net change
 			if self.startpos.x()!=self.endpos.x() or self.startpos.y()!=self.endpos.y():
 				command=MoveFloatingCommand(self.startpos.x(),self.startpos.y(),self.endpos.x(),self.endpos.y(),self.layer.key)
-				self.window.addCommandToHistory(command)
+				self.window.addCommandToHistory(command,-1)
 
 		self.pendown=False
 		self.layer=None

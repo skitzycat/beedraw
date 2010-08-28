@@ -24,7 +24,7 @@ from Queue import Queue
 
 from beeutil import *
 
-from beeeventstack import DrawingCommand, AnchorCommand, PasteCommand
+from beeeventstack import DrawingCommand, AnchorCommand, PasteCommand, FloatingChangeParentCommand
 
 from beeapp import BeeApp
 
@@ -79,14 +79,24 @@ class DrawingThread(qtcore.QThread):
 			elif type==DrawingCommandTypes.networkcontrol:
 				self.processNetworkCommand(command)
 
-			elif type==DrawingCommandTypes.selection:
-				self.processSelectionCommand(command)
+			elif type==DrawingCommandTypes.localonly:
+				self.processLocalOnlyCommand(command)
 
-	def processSelectionCommand(self,command):
-		selectionop=command[1]
-		newpath=command[2]
+	def processLocalOnlyCommand(self,command):
+		subtype=command[1]
 		window=self.master.getWindowById(self.windowid)
-		window.changeSelection(selectionop,newpath)
+
+		if subtype==LocalOnlyCommandTypes.selection:
+			selectionop=command[2]
+			newpath=command[3]
+			window.changeSelection(selectionop,newpath)
+
+		elif subtype==LocalOnlyCommandTypes.floatingmove:
+			layerkey=command[2]
+			oldparentkey=command[3]
+			newparentkey=command[4]
+			historycommand=FloatingChangeParentCommand(layerkey,oldparentkey,newparentkey)
+			window.addCommandToHistory(historycommand,-1)
 
 	def processHistoryCommand(self,command):
 		window=self.master.getWindowById(self.windowid)

@@ -98,7 +98,7 @@ class BeeSessionState:
 		return self.ownedByMe(layer.owner)
 
 	def ownedByMe(self,owner):
-		""" return True if the layer is under the control of this state keeper or False if it's under the control of something else (ie an animation process or a network client
+		""" return True if the layer is under the control of this state keeper or False if it's under the control of something else (ie an animation process or another network client or unowned by anyone in a network session)
 		"""
 		lock=qtcore.QReadLocker(self.remoteidlock)
 		if self.type==WindowTypes.networkclient or self.type==WindowTypes.standaloneserver or self.type==WindowTypes.integratedserver:

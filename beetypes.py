@@ -54,11 +54,15 @@ class BeeSocketTypes:
 
 # custom enumerated types
 class DrawingCommandTypes:
-	quit, history, layer, alllayer, networkcontrol, selection = range(6)
+	quit, history, layer, alllayer, networkcontrol, localonly = range(6)
 
 # events that may effect one or more layers
 class HistoryCommandTypes:
 	undo, redo = range(2)
+
+# localonly command types, commands that don't get seen by network clients
+class LocalOnlyCommandTypes:
+	selection, floatingmove = range(2)
 
 # events that effect only one layer
 class LayerCommandTypes:

@@ -272,7 +272,6 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 		if not self.curtool.layerkey:
 			return
 
-
 		layer=self.getLayerForKey(self.curtool.layerkey)
 		if not layer:
 			return
@@ -475,13 +474,17 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 					index=self.layers.index(parent)
 					while index>0:
 						index-=1
-						if self.ownedByMe(self.layers[index]):
+						if self.ownedByMe(self.layers[index].owner):
 							layer.setParentItem(self.layers[index])
 							self.scene.update()
 							self.master.refreshLayersList(layerslock=lock)
+							self.addFloatingLayerMoveToQueue(layer.key,parent.key,self.layers[index].key)
 							break
 			else:
 				self.addLayerDownToQueue(layer.key)
+
+	def addFloatingLayerMoveToQueue(self,layerkey,oldparentkey,newparentkey):
+		self.queueCommand((DrawingCommandTypes.localonly,LocalOnlyCommandTypes.floatingmove,layerkey,oldparentkey,newparentkey),ThreadTypes.user)
 
 	def layerUpPushed(self):
 		layer=self.getCurLayer()
@@ -493,10 +496,11 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 					index=self.layers.index(parent)
 					index+=1
 					while index<len(self.layers):
-						if self.ownedByMe(self.layers[index]):
+						if self.ownedByMe(self.layers[index].owner):
 							layer.setParentItem(self.layers[index])
 							self.scene.update()
 							self.master.refreshLayersList(layerslock=lock)
+							self.addFloatingLayerMoveToQueue(layer.key,parent.key,self.layers[index].key)
 							break
 						index+=1
 			else:
@@ -705,7 +709,7 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 				self.addAdjustCanvasSizeRequestToQueue(leftadj,topadj,rightadj,bottomadj)
 
 	def addSelectionChangeToQueue(self,selectionop,path):
-		self.queueCommand((DrawingCommandTypes.selection,selectionop,path),ThreadTypes.user)
+		self.queueCommand((DrawingCommandTypes.localonly,LocalOnlyCommandTypes.selection,selectionop,path),ThreadTypes.user)
 
 	def addPasteToQueue(self,x=0,y=0):
 		# It is only possible for this to happen from a local source so it's defined here instead of in the base state class.
@@ -715,9 +719,6 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 			# make sure layer is owned locally so it can be altered
 			if self.localLayer(layerkey):
 				self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.paste,layerkey,x,y),ThreadTypes.user)
-
-		# deselect everything when we do this
-		self.changeSelection(SelectionModTypes.clear)
 
 	def addCopyToQueue(self):
 		# It is only possible for this to happen from a local source so it's defined here instead of in the base state class.
@@ -1006,7 +1007,7 @@ class NetworkClientDrawingWindow(BeeDrawingWindow):
 	# add an event to the undo/redo history
 	def addCommandToHistory(self,command,source=0):
 		# if we don't get a source then assume that it's local
-		if self.ownedByMe(source):
+		if self.ownedByMe(source) or source<0:
 			self.localcommandstack.add(command)
 		# else add it to proper remote command stack, add stack if needed
 		elif source in self.remotecommandstacks:

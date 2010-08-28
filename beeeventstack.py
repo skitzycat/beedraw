@@ -220,6 +220,30 @@ class DelLayerCommand(AbstractCommand):
 	def redo(self,win):
 		win.removeLayerByKey(self.layer.key,history=-1)
 
+class FloatingChangeParentCommand(AbstractCommand):
+	undotype=UndoCommandTypes.localonly
+	def __init__(self,layerkey,oldparentkey,newparentkey):
+		AbstractCommand.__init__(self)
+		self.layerkey=layerkey
+		self.oldparentkey=oldparentkey
+		self.newparentkey=newparentkey
+
+	def undo(self,win):
+		parent=win.getLayerForKey(self.oldparentkey)
+		layer=win.getLayerForKey(self.layerkey)
+		if parent and layer:
+			layer.setParentItem(parent)
+			layer.scene().update()
+			win.master.requestLayerListRefresh()
+
+	def redo(self,win):
+		parent=win.getLayerForKey(self.newparentkey)
+		layer=win.getLayerForKey(self.layerkey)
+		if parent and layer:
+			layer.setParentItem(parent)
+			layer.scene().update()
+			win.master.requestLayerListRefresh()
+
 class LayerUpCommand(AbstractCommand):
 	undotype=UndoCommandTypes.notinnetwork
 	def __init__(self,layerkey):
