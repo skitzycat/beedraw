@@ -95,6 +95,7 @@ class DrawingThread(qtcore.QThread):
 			layerkey=command[2]
 			oldparentkey=command[3]
 			newparentkey=command[4]
+
 			historycommand=FloatingChangeParentCommand(layerkey,oldparentkey,newparentkey)
 			window.addCommandToHistory(historycommand,-1)
 

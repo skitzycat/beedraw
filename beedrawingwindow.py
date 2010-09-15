@@ -726,7 +726,8 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 		# don't do anything if there is no current layer
 		if layerkey:
 			path=self.getClipPathCopy()
-			self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.copy,layerkey,self.getClipPathCopy()),ThreadTypes.user)
+			if path and not path.isEmpty():
+				self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.copy,layerkey,path),ThreadTypes.user)
 
 	def addCutToQueue(self):
 		# It is only possible for this to happen from a local source so it's defined here instead of in the base state class.
@@ -736,10 +737,12 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 		if layerkey:
 			# make sure layer is owned locally so it can be altered
 			if self.localLayer(layerkey):
-				self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.cut,layerkey,self.getClipPathCopy()),ThreadTypes.user)
+				clippath=self.getClipPathCopy()
+				if clippath and not clippath.isEmpty():
+					self.queueCommand((DrawingCommandTypes.layer,LayerCommandTypes.cut,layerkey,clippath),ThreadTypes.user)
 
-		# deselect everything when we do this
-		self.changeSelection(SelectionModTypes.clear,history=False)
+					# deselect everything when we do this
+					self.changeSelection(SelectionModTypes.clear,history=False)
 
 	def addAnchorToQueue(self,parentkey,floating):
 		pos=floating.pos()
@@ -875,6 +878,16 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 					return child
 
 		print_debug("WARNING: could not find layer for key %d" % key )
+		return None
+
+	def findValidLayer(self,listlock=None):
+		if not listlock:
+			listlock=qtcore.QReadLocker(self.layerslistlock)
+
+		for curlayer in self.layers:
+			if self.ownedByMe(curlayer.getOwner()):
+				return curlayer
+
 		return None
 
 	def setValidActiveLayer(self,curlayerkeylock=None,listlock=None):

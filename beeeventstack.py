@@ -138,12 +138,16 @@ class CommandStack:
 class AbstractCommand:
 	undotype=UndoCommandTypes.localonly
 	def __init__(self):
-		self.layerkey=0
+		pass
+
 	def undo(self):
 		pass
 
 	def redo(self):
 		pass
+
+	def stillValid(self):
+		return True
 
 # this class is for any command that changes the image on a layer
 class DrawingCommand(AbstractCommand):
@@ -169,6 +173,12 @@ class DrawingCommand(AbstractCommand):
 			layer.compositeFromCorner(self.redoimage,self.location.x(),self.location.y(),qtgui.QPainter.CompositionMode_Source)
 			win.requestLayerListRefresh()
 
+	def stillValid(self,win):
+		if win.getLayerForKey(self.layerkey):
+			return True
+
+		return False
+
 class AnchorCommand(DrawingCommand):
 	undotype=UndoCommandTypes.remote
 	def __init__(self,layerkey,oldimage,location,floating):
@@ -178,6 +188,9 @@ class AnchorCommand(DrawingCommand):
 	def undo(self,win):
 		DrawingCommand.undo(self,win)
 		layer=win.getLayerForKey(self.layerkey)
+		if not layer:
+			layer=win.findValidLayer()
+
 		if layer:
 			lock=qtcore.QWriteLocker(win.layerslistlock)
 			layer.scene().addItem(self.floating)
@@ -308,7 +321,6 @@ class PasteCommand(ChangeSelectionCommand):
 		ChangeSelectionCommand.__init__(self,oldpath,newpath)
 		self.layerkey=layerkey
 		self.oldlayer=None
-	
 
 	def undo(self,win):
 		ChangeSelectionCommand.undo(self,win)
@@ -325,20 +337,21 @@ class PasteCommand(ChangeSelectionCommand):
 			self.oldlayer.setParentItem(self.layerparent)
 			win.requestLayerListRefresh()
 
-class MoveSelectionCommand(AbstractCommand):
-	undotype=UndoCommandTypes.localonly
-	def __init__(self,layerkey,oldpos,newpos):
-		AbstractCommand.__init__(self)
-		self.oldpos=oldpos
-		self.newpos=newpos
-
-	def undo(self,win):
-		layer=win.getLayerForKey(self.layerkey)
-		layer.setPos(oldpos)
-
-	def redo(self,win):
-		layer=win.getLayerForKey(self.layerkey)
-		layer.setPos(newpos)
+#class MoveSelectionCommand(AbstractCommand):
+#	undotype=UndoCommandTypes.localonly
+#	def __init__(self,layerkey,oldpos,newpos):
+#		AbstractCommand.__init__(self)
+#		self.oldpos=oldpos
+#		self.newpos=newpos
+#		self.layerkey=layerkey
+#
+#	def undo(self,win):
+#		layer=win.getLayerForKey(self.layerkey)
+#		layer.setPos(oldpos)
+#
+#	def redo(self,win):
+#		layer=win.getLayerForKey(self.layerkey)
+#		layer.setPos(newpos)
 
 class MoveFloatingCommand(AbstractCommand):
 	undotype=UndoCommandTypes.localonly
