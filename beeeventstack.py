@@ -59,14 +59,14 @@ class CommandStack:
 			self.networkmaxundo=0
 		self.checkStackSize()
 
-	def deleteLayerHistory(self,layerkey):
+	def cleanLayerHistory(self):
 		""" remove all references to given layer in history """
 		# make copy of stack so I can iterate through it correctly while deleting
 		newstack=self.commandstack[:]
 
 		for c in self.commandstack:
 			# if the currnet time involves the item in question
-			if c.layerkey==layerkey:
+			if not c.stillValid(self.win):
 				# if this is behind the current index (not undone)
 				if newstack.index(c)<self.index:
 					self.index-=1
@@ -146,7 +146,7 @@ class AbstractCommand:
 	def redo(self):
 		pass
 
-	def stillValid(self):
+	def stillValid(self,win):
 		return True
 
 # this class is for any command that changes the image on a layer
@@ -174,7 +174,8 @@ class DrawingCommand(AbstractCommand):
 			win.requestLayerListRefresh()
 
 	def stillValid(self,win):
-		if win.getLayerForKey(self.layerkey):
+		layer=win.getLayerForKey(self.layerkey)
+		if layer and win.ownedByMe(layer.getOwner()):
 			return True
 
 		return False

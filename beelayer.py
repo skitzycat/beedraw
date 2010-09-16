@@ -117,9 +117,8 @@ class BeeLayerState:
 	def changeOwner(self,owner):
 		win=self.getWindow()
 
-		win.deleteLayerHistory(self.key)
-
 		proplock=qtcore.QWriteLocker(self.propertieslock)
+		oldowner=self.owner
 		self.owner=owner
 
 		if win.type==WindowTypes.networkclient or win.type==WindowTypes.standaloneserver or win.type==WindowTypes.integratedserver:
@@ -132,12 +131,15 @@ class BeeLayerState:
 		else:
 			self.type=LayerTypes.user
 
+		if self.configwidget:
+			self.configwidget.updateValuesFromLayer(proplock=proplock)
+
 		proplock.unlock()
 
-		if self.configwidget:
-			self.configwidget.updateValuesFromLayer()
-
 		win.setValidActiveLayer()
+
+		win.deleteLayerHistory(oldowner)
+
 
 	# composite image onto layer from center coord
 	def compositeFromCenter(self,image,x,y,compmode,clippath=None):
@@ -543,7 +545,7 @@ class LayerConfigWidget(qtgui.QWidget):
 	getStandardGeometry=staticmethod(getStandardGeometry)
 
 	# update the gui to reflect the values of the layer
-	def updateValuesFromLayer(self,winlock=None):
+	def updateValuesFromLayer(self,winlock=None,proplock=None):
 		win=BeeApp().master.getWindowById(self.windowid,winlock)
 		layer=win.getLayerForKey(self.layerkey)
 
@@ -551,7 +553,8 @@ class LayerConfigWidget(qtgui.QWidget):
 			print_debug("WARNING: updateValueFromLayer could not find layer with key %s" % self.layerkey)
 			return
 
-		proplock=qtcore.QReadLocker(layer.propertieslock)
+		if not proplock:
+			proplock=qtcore.QReadLocker(layer.propertieslock)
 
 		# update visibility box
 		self.ui.visibility_box.setChecked(layer.isVisible())

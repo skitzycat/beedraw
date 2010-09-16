@@ -108,14 +108,11 @@ class BeeSessionState:
 			return True
 		return False
 
-	def deleteLayerHistory(self,key):
-		layer=self.getLayerForKey(key)
-		proplock=qtcore.QReadLocker(layer.propertieslock)
-
-		if self.ownedByMe(layer.owner):
-			self.localcommandstack.deleteLayerHistory(key)
-		elif layer.owner in self.remotecommandstacks:
-			self.remotecommandstacks[layer.owner].deleteLayerHistory(key)
+	def deleteLayerHistory(self,oldowner):
+		if self.ownedByMe(oldowner):
+			self.localcommandstack.cleanLayerHistory()
+		elif oldowner in self.remotecommandstacks:
+			self.remotecommandstacks[oldowner].cleanLayerHistory()
 
 	def addGiveUpLayerToQueue(self,key,id=0,source=ThreadTypes.user):
 		self.queueCommand((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.giveuplayer,id,key),source)
