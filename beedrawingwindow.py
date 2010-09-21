@@ -602,6 +602,16 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 			curlayerlock=qtcore.QMutexLocker(self.curlayerkeymutex)
 		return self.curlayerkey
 
+	def findValidLayer(self,layerslock=None):
+		if not layerslock:
+			layerslock=qtcore.QReadLocker(self.layerslistlock)
+
+		for layer in self.layers:
+			if self.ownedByMe(self.layer.owner):
+				return layer
+
+		return None
+
 	def getCurLayer(self):
 		if self.layers:
 			if self.getLayerForKey(self.curlayerkey):

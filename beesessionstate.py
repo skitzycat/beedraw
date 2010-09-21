@@ -108,11 +108,11 @@ class BeeSessionState:
 			return True
 		return False
 
-	def deleteLayerHistory(self,oldowner):
+	def deleteLayerHistory(self,oldowner,layerkey):
 		if self.ownedByMe(oldowner):
-			self.localcommandstack.cleanLayerHistory()
+			self.localcommandstack.cleanLocalLayerHistory()
 		elif oldowner in self.remotecommandstacks:
-			self.remotecommandstacks[oldowner].cleanLayerHistory()
+			self.remotecommandstacks[oldowner].cleanRemoteLayerHistory(layerkey)
 
 	def addGiveUpLayerToQueue(self,key,id=0,source=ThreadTypes.user):
 		self.queueCommand((DrawingCommandTypes.networkcontrol,NetworkControlCommandTypes.giveuplayer,id,key),source)

@@ -59,7 +59,7 @@ class CommandStack:
 			self.networkmaxundo=0
 		self.checkStackSize()
 
-	def cleanLayerHistory(self):
+	def cleanLocalLayerHistory(self):
 		""" remove all references to given layer in history """
 		# make copy of stack so I can iterate through it correctly while deleting
 		newstack=self.commandstack[:]
@@ -73,6 +73,22 @@ class CommandStack:
 					# if we care about which events are network events, then keep track
 					if self.type==CommandStackTypes.network:
 						self.networkinhist-=1
+				# remove the event from the history
+				newstack.remove(c)
+
+		self.commandstack=newstack
+
+	def cleanRemoteLayerHistory(self,layerkey):
+		""" remove all references to given layer in history """
+		# make copy of stack so I can iterate through it correctly while deleting
+		newstack=self.commandstack[:]
+
+		for c in self.commandstack:
+			# if the currnet time involves the item in question
+			if c.layerkey==layerkey:
+				# if this is behind the current index (not undone)
+				if newstack.index(c)<self.index:
+					self.index-=1
 				# remove the event from the history
 				newstack.remove(c)
 
@@ -136,9 +152,8 @@ class CommandStack:
 
 # parent class for all commands that get put in undo/redo stack
 class AbstractCommand:
-	undotype=UndoCommandTypes.localonly
 	def __init__(self):
-		pass
+		self.undotype=UndoCommandTypes.localonly
 
 	def undo(self):
 		pass
@@ -151,9 +166,9 @@ class AbstractCommand:
 
 # this class is for any command that changes the image on a layer
 class DrawingCommand(AbstractCommand):
-	undotype=UndoCommandTypes.remote
 	def __init__(self,layerkey,oldimage,location):
 		AbstractCommand.__init__(self)
+		self.undotype=UndoCommandTypes.remote
 		self.layerkey=layerkey
 		self.oldimage=oldimage
 		self.location=location
@@ -181,9 +196,9 @@ class DrawingCommand(AbstractCommand):
 		return False
 
 class AnchorCommand(DrawingCommand):
-	undotype=UndoCommandTypes.remote
 	def __init__(self,layerkey,oldimage,location,floating):
 		DrawingCommand.__init__(self,layerkey,oldimage,location)
+		self.undotype=UndoCommandTypes.remote
 		self.floating=floating
 
 	def undo(self,win):
@@ -209,9 +224,9 @@ class AnchorCommand(DrawingCommand):
 			win.requestLayerListRefresh(lock=lock)
 
 class AddLayerCommand(AbstractCommand):
-	undotype=UndoCommandTypes.notinnetwork
 	def __init__(self,layerkey):
 		AbstractCommand.__init__(self)
+		self.undotype=UndoCommandTypes.notinnetwork
 		self.layerkey=layerkey
 
 	def undo(self,win):
@@ -221,9 +236,9 @@ class AddLayerCommand(AbstractCommand):
 		win.insertRawLayer(self.oldlayer,self.index,history=-1)
 
 class DelLayerCommand(AbstractCommand):
-	undotype=UndoCommandTypes.notinnetwork
 	def __init__(self,layer,index):
 		AbstractCommand.__init__(self)
+		self.undotype=UndoCommandTypes.notinnetwork
 		self.layerkey=layer.key
 		self.layer=layer
 		self.index=index
@@ -235,9 +250,9 @@ class DelLayerCommand(AbstractCommand):
 		win.removeLayerByKey(self.layer.key,history=-1)
 
 class FloatingChangeParentCommand(AbstractCommand):
-	undotype=UndoCommandTypes.localonly
 	def __init__(self,layerkey,oldparentkey,newparentkey):
 		AbstractCommand.__init__(self)
+		self.undotype=UndoCommandTypes.localonly
 		self.layerkey=layerkey
 		self.oldparentkey=oldparentkey
 		self.newparentkey=newparentkey
@@ -245,7 +260,7 @@ class FloatingChangeParentCommand(AbstractCommand):
 	def undo(self,win):
 		parent=win.getLayerForKey(self.oldparentkey)
 		layer=win.getLayerForKey(self.layerkey)
-		if parent and layer:
+		if layer and parent and win.ownedByMe(layer.getOwner()) and win.ownedByMe(parent.getOwner()):
 			layer.setParentItem(parent)
 			layer.scene().update()
 			win.master.requestLayerListRefresh()
@@ -253,15 +268,23 @@ class FloatingChangeParentCommand(AbstractCommand):
 	def redo(self,win):
 		parent=win.getLayerForKey(self.newparentkey)
 		layer=win.getLayerForKey(self.layerkey)
-		if parent and layer:
+		if layer and parent and win.ownedByMe(layer.getOwner()) and win.ownedByMe(parent.getOwner()):
 			layer.setParentItem(parent)
 			layer.scene().update()
 			win.master.requestLayerListRefresh()
 
+	def stillValid(self,win):
+		parent=win.getLayerForKey(self.newparentkey)
+		layer=win.getLayerForKey(self.layerkey)
+		if layer and parent and win.ownedByMe(layer.getOwner()) and win.ownedByMe(parent.getOwner()):
+			return True
+
+		return False
+
 class LayerUpCommand(AbstractCommand):
-	undotype=UndoCommandTypes.notinnetwork
 	def __init__(self,layerkey):
 		AbstractCommand.__init__(self)
+		self.undotype=UndoCommandTypes.notinnetwork
 		self.layerkey=layerkey
 
 	def undo(self,win):
@@ -271,9 +294,9 @@ class LayerUpCommand(AbstractCommand):
 		win.layerUp(self.layerkey,history=False)
 
 class LayerDownCommand(AbstractCommand):
-	undotype=UndoCommandTypes.notinnetwork
 	def __init__(self,layerkey):
 		AbstractCommand.__init__(self)
+		self.undotype=UndoCommandTypes.notinnetwork
 		self.layerkey=layerkey
 
 	def undo(self,win):
@@ -283,24 +306,34 @@ class LayerDownCommand(AbstractCommand):
 		win.layerDown(self.layerkey,history=False)
 
 class CutCommand(DrawingCommand):
-	undotype=UndoCommandTypes.remote
 	def __init__(self,layerkey,oldimage,path):
 		self.path=path
 		pathrect=path.boundingRect().toAlignedRect()
 		DrawingCommand.__init__(self,layerkey,oldimage,pathrect)
+		self.undotype=UndoCommandTypes.remote
 
 	def undo(self,win):
-		DrawingCommand.undo(self,win)
+		if self.undotype==UndoCommandTypes.remote:
+			DrawingCommand.undo(self,win)
 		win.changeSelection(SelectionModTypes.new,self.path,history=False)
 
 	def redo(self,win):
-		DrawingCommand.redo(self,win)
+		if self.undotype==UndoCommandTypes.remote:
+			DrawingCommand.redo(self,win)
 		win.changeSelection(SelectionModTypes.clear,history=False)
 
+	def stillValid(self,win):
+		# somewhat odd situation here, the part of the command that actually alters the layer should only be done if it has always been valid, I don't want the drawing command coming back if a user gives up a layer and then later gains it, since the command will be gone from all other client histories
+		if self.undotype==UndoCommandTypes.remote:
+			if not DrawingCommand.stillValid(self,win):
+				self.undotype=UndoCommandTypes.localonly
+				return False
+		return True
+
 class ChangeSelectionCommand(AbstractCommand):
-	undotype=UndoCommandTypes.localonly
 	def __init__(self,oldpath,newpath):
 		AbstractCommand.__init__(self)
+		self.undotype=UndoCommandTypes.localonly
 		self.oldpath=oldpath
 		self.newpath=newpath
 
@@ -317,26 +350,36 @@ class ChangeSelectionCommand(AbstractCommand):
 			win.changeSelection(SelectionModTypes.clear,history=False)
 
 class PasteCommand(ChangeSelectionCommand):
-	undotype=UndoCommandTypes.localonly
 	def __init__(self,layerkey,oldpath,newpath):
 		ChangeSelectionCommand.__init__(self,oldpath,newpath)
+		self.undotype=UndoCommandTypes.localonly
 		self.layerkey=layerkey
 		self.oldlayer=None
+		self.layerparent=None
 
 	def undo(self,win):
 		ChangeSelectionCommand.undo(self,win)
 		layer=win.getLayerForKey(self.layerkey)
 		if layer:
 			self.scene=layer.scene()
-			self.layerparent=layer.parentItem()
+			self.layerparent=layer.parentItem().key
 			self.oldlayer,self.index=win.removeLayer(layer,history=False)
 
 	def redo(self,win):
 		ChangeSelectionCommand.redo(self,win)
 		if self.oldlayer:
-			self.scene.addItem(self.oldlayer)
-			self.oldlayer.setParentItem(self.layerparent)
-			win.requestLayerListRefresh()
+			parent=win.getLayerForKey(self.layerparent)
+			if parent and win.ownedByMe(parent.owner):
+				self.scene.addItem(self.oldlayer)
+				self.oldlayer.setParentItem(parent)
+				win.requestLayerListRefresh()
+
+	def stillValid(self,win):
+		parent=win.getLayerForKey(self.layerparent)
+		if parent and win.ownedByMe(parent.owner):
+			return True
+
+		return False
 
 #class MoveSelectionCommand(AbstractCommand):
 #	undotype=UndoCommandTypes.localonly
@@ -355,9 +398,9 @@ class PasteCommand(ChangeSelectionCommand):
 #		layer.setPos(newpos)
 
 class MoveFloatingCommand(AbstractCommand):
-	undotype=UndoCommandTypes.localonly
 	def __init__(self,oldx,oldy,newx,newy,layerkey):
 		AbstractCommand.__init__(self)
+		self.undotype=UndoCommandTypes.localonly
 		self.oldx=oldx
 		self.oldy=oldy
 		self.newx=newx

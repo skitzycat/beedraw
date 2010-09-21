@@ -138,8 +138,7 @@ class BeeLayerState:
 
 		win.setValidActiveLayer()
 
-		win.deleteLayerHistory(oldowner)
-
+		win.deleteLayerHistory(oldowner,self.key)
 
 	# composite image onto layer from center coord
 	def compositeFromCenter(self,image,x,y,compmode,clippath=None):

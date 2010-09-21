@@ -137,7 +137,7 @@ class BeeTCPServer(qtcore.QObject):
 			newlistener.start()
 
 class BeeSocket:
-	""" Socket interface to allow changing between different socket implementations to see if Qt socket or standard python sockets are better.  Also helps provide blocking interface to Qt sockets which are normally non-blocking. """
+	""" Socket interface to allow changing between different socket implementations (Qt socket or standard python sockets).  Qt sockets seem to be buggy under linux, while python sockets aren't as well implemented under windows.  Also helps provide blocking interface to Qt sockets which are normally non-blocking. """
 	def __init__(self,type,socket,connected=False):
 		self.type=type
 		self.socket=socket

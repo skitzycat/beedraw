@@ -169,7 +169,7 @@ class DrawingThread(qtcore.QThread):
 			pressure=command[5]
 			tool=command[6]
 			# make sure we can find the layer and either it's a locally owned layer or a source that can draw on non-local layers
-			if window.ownedByMe(layer.owner) or self.type!=ThreadTypes.user:
+			if window.ownedByMe(layer.owner) or self.type!=ThreadTypes.user or ( layer.type==LayerTypes.floating and layer.owner<0 and tool.allowedonfloating ):
 				self.inprocesstools[int(layerkey)]=tool
 				tool.penDown(x,y,pressure)
 			else:
@@ -186,7 +186,6 @@ class DrawingThread(qtcore.QThread):
 				tool.penMotion(x,y,pressure)
 
 		elif subtype==LayerCommandTypes.penup:
-			#print "Pen up event:", command
 			x=command[3]
 			y=command[4]
 			if int(layerkey) in self.inprocesstools:
