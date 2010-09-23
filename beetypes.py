@@ -151,5 +151,8 @@ class DebugFlags:
 class UndoCommandTypes:
 	none,localonly,remote,notinnetwork,nolog = range(5)
 
+class BucketFillTypes:
+	selection, layer, image = range(3)
+
 class CommandStackTypes:
 	singleuser, network, remoteonly = range(3)

@@ -6,7 +6,7 @@
     <x>0</x>
     <y>0</y>
     <width>311</width>
-    <height>87</height>
+    <height>172</height>
    </rect>
   </property>
   <property name="windowTitle" >
@@ -32,9 +32,33 @@
     </layout>
    </item>
    <item>
-    <widget class="QCheckBox" name="whole_selection_check" >
+    <widget class="QLabel" name="label" >
      <property name="text" >
-      <string>Use Whole Selection</string>
+      <string>Area to paint:</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QRadioButton" name="radio_whole_selection" >
+     <property name="text" >
+      <string>Whole Selection</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QRadioButton" name="radio_cur_layer" >
+     <property name="text" >
+      <string>Similar colors on current layer</string>
+     </property>
+     <property name="checked" >
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QRadioButton" name="radio_whole_image" >
+     <property name="text" >
+      <string>Similar colors on whole image</string>
      </property>
     </widget>
    </item>

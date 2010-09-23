@@ -1004,7 +1004,7 @@ class PaintBucketToolDesc(AbstractToolDesc):
 
 	def setDefaultOptions(self):
 		self.options["similarity"]=10
-		self.options["wholeselection"]=0
+		self.options["bucketfilltype"]=BucketFillTypes.layer
 
 	def getTool(self,window):
 		tool=PaintBucketTool(self.options,window)
@@ -1041,19 +1041,27 @@ class PaintBucketOptionsWidget(qtgui.QWidget):
 		self.ui.setupUi(self)
 
 	def updateDisplayFromOptions(self):
-		if self.tooldesc.options["wholeselection"]==1:
-			self.ui.whole_selection_check.setCheckState(qtcore.Qt.Checked)
-		else:
-			self.ui.whole_selection_check.setCheckState(qtcore.Qt.Unchecked)
+		if self.tooldesc.options["bucketfilltype"]==BucketFillTypes.selection:
+			self.ui.radio_whole_selection.setChecked(True)
+		elif self.tooldesc.options["bucketfilltype"]==BucketFillTypes.layer:
+			self.ui.radio_cur_layer.setChecked(True)
+		elif self.tooldesc.options["bucketfilltype"]==BucketFillTypes.image:
+			self.ui.radio_whole_image.setChecked(True)
+
 		self.ui.color_threshold_box.setValue(self.tooldesc.options["similarity"])
 
 	def on_color_threshold_box_valueChanged(self,value):
 		if type(value)==int:
 			self.tooldesc.options["similarity"]=value
 
-	def on_whole_selection_check_clicked(self,bool=None):
-		if bool!=None:
-			self.tooldesc.options["wholeselection"]=bool
+	def on_radio_whole_selection_clicked(self,bool=None):
+		self.tooldesc.options["bucketfilltype"]=BucketFillTypes.selection
+
+	def on_radio_cur_layer_clicked(self,bool=None):
+		self.tooldesc.options["bucketfilltype"]=BucketFillTypes.layer
+
+	def on_radio_whole_image_clicked(self,bool=None):
+		self.tooldesc.options["bucketfilltype"]=BucketFillTypes.image
 
 # paint bucket tool
 class PaintBucketTool(AbstractTool):
@@ -1064,8 +1072,13 @@ class PaintBucketTool(AbstractTool):
 		self.newpath=None
 
 	def guiLevelPenDown(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
-		if self.options['wholeselection']==0:
+		if self.options['bucketfilltype']==BucketFillTypes.image:
 			image=self.window.scene.getImageCopy()
+			self.newpath=getSimilarColorPath(image,x,y,self.options['similarity'])
+
+		elif self.options['bucketfilltype']==BucketFillTypes.layer:
+			layer=self.window.getLayerForKey(self.layerkey)
+			image=layer.getImageCopy()
 			self.newpath=getSimilarColorPath(image,x,y,self.options['similarity'])
 
 	def penDown(self,x,y,pressure):
