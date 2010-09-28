@@ -380,8 +380,9 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			self.toolbox.getCurToolDesc().pressToolButton()
 
 	def newModKeys(self,modkeys):
-		#print "master got new mod keys"
-		pass
+		tooldesc=self.toolbox.getCurToolDesc()
+		if tooldesc:
+			tooldesc.newModKeys(modkeys)
 
 	def pointerTypeCheck(self,pointertype):
 		if pointertype!=self.curpointertype:

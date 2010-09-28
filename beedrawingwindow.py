@@ -365,6 +365,13 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 			self.updateClipPath(slock=slock)
 			self.requestUpdateSelectionDisplayPath(self.clippath)
 
+		elif type==SelectionModTypes.invert:
+			pass
+		elif type==SelectionModTypes.grow:
+			pass
+		elif type==SelectionModTypes.shrink:
+			pass
+
 		else:
 			# new area argument can be implied to be the cursor overlay, but we need one or the other
 			if not self.cursoroverlay and not newarea:

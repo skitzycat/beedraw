@@ -5,8 +5,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>418</width>
-    <height>87</height>
+    <width>279</width>
+    <height>142</height>
    </rect>
   </property>
   <property name="windowTitle" >
@@ -32,9 +32,23 @@
     </layout>
    </item>
    <item>
-    <widget class="QCheckBox" name="current_layer_check" >
+    <widget class="QLabel" name="label" >
      <property name="text" >
-      <string>Look at current layer only</string>
+      <string>Area to select:</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QRadioButton" name="radio_cur_layer" >
+     <property name="text" >
+      <string>Similar colors on current layer</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QRadioButton" name="radio_whole_image" >
+     <property name="text" >
+      <string>Similar colors on whole image</string>
      </property>
     </widget>
    </item>

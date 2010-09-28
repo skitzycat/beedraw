@@ -28,6 +28,7 @@ from BrushOptionsWidgetUi import *
 from EraserOptionsWidgetUi import *
 from PaintBucketOptionsWidgetUi import *
 from FeatherSelectOptionsWidgetUi import *
+from SelectionModificationWidgetUi import *
 
 from beeapp import BeeApp
  
@@ -840,10 +841,29 @@ class SelectionTool(AbstractTool):
  
 	def updateOverlay(self,x,y):
 		# calculate rectangle defined by the start and current
-		left=min(x,self.startpoint[0])
-		top=min(y,self.startpoint[1])
-		width=max(x,self.startpoint[0])-left
-		height=max(y,self.startpoint[1])-top
+		if self.options["drawcenter"]==SelectionDrawTypes.fromcorner:
+			left=min(x,self.startpoint[0])
+			width=max(x,self.startpoint[0])-left
+			top=min(y,self.startpoint[1])
+			height=max(y,self.startpoint[1])-top
+
+			if self.options["fixedaspect"]==SelectionRatioTypes.fixed:
+				height=width
+
+		elif self.options["drawcenter"]==SelectionDrawTypes.fromcenter:
+			left=self.startpoint[0]-abs(x-self.startpoint[0])
+			width=abs(x-self.startpoint[0])*2
+			top=self.startpoint[1]-abs(y-self.startpoint[1])
+			height=abs(y-self.startpoint[1])*2
+
+			if self.options["fixedaspect"]==SelectionRatioTypes.fixed:
+				top=self.startpoint[1]-abs(x-self.startpoint[1])
+				height=abs(x-self.startpoint[1])*2
+
+
+		else:
+			print_debug("Unknown draw center type in SelectionTool.updateOverlay")
+			return
  
 		oldrect=self.window.tooloverlay.rect
 		newrect=qtcore.QRect(left,top,width,height)
@@ -868,7 +888,7 @@ class SelectionTool(AbstractTool):
  
 	def guiLevelPenUp(self,x,y,modkeys=qtcore.Qt.NoModifier):
 		self.pendown=False
-		selectionop=getCurSelectionModType(modkeys)
+		selectionop=self.options["modtype"]
 
 		if self.overlay:
 			path=qtgui.QPainterPath()
@@ -903,6 +923,11 @@ class RectSelectionToolDesc(AbstractToolDesc):
 		AbstractToolDesc.__init__(self,"rectselect")
 		self.displayname="Rectangle Selection"
 
+	def setDefaultOptions(self):
+		self.options["modtype"]=SelectionModTypes.new
+		self.options["drawcenter"]=SelectionDrawTypes.fromcorner
+		self.options["fixedaspect"]=SelectionRatioTypes.free
+
 	def setupTool(self,window,layerkey):
 		self.layerkey=layerkey
 		tool=self.getTool(window)
@@ -910,11 +935,100 @@ class RectSelectionToolDesc(AbstractToolDesc):
 
 	def pressToolButton(self):
 		BeeApp().master.ui.rectangle_select_button.setChecked(True)
+		self.oldmodkeys=BeeApp().app.keyboardModifiers()
  
 	def getTool(self,window):
 		tool=SelectionTool(self.options,window)
 		tool.name=self.name
 		return tool
+
+	def getOptionsWidget(self,parent):
+		if not self.optionswidget:
+			self.optionswidget=ShapeSelectionOptionsWidget(parent,self)
+			self.optionswidget.updateDisplayFromOptions()
+		return self.optionswidget
+
+	def newModKeys(self,modkeys):
+		if not self.optionswidget:
+			return
+
+		print "%08x" % modkeys
+
+		# check for what is currently held down
+		# not sure why the metakey is sometimes pushed down instead of alt, but this seems to make it work according to the way I expect it to
+		if modkeys & qtcore.Qt.ShiftModifier and (modkeys & qtcore.Qt.AltModifier or modkeys & qtcore.Qt.MetaModifier) and not (modkeys & qtcore.Qt.AltModifier and modkeys & qtcore.Qt.MetaModifier):
+			self.optionswidget.ui.intersect_selection_button.setChecked(True)
+		elif modkeys & qtcore.Qt.ShiftModifier:
+			self.optionswidget.ui.add_selection_button.setChecked(True)
+		elif modkeys & qtcore.Qt.AltModifier:
+			self.optionswidget.ui.subtract_selection_button.setChecked(True)
+		else:
+			self.optionswidget.ui.new_selection_button.setChecked(True)
+
+		# see what has toggled
+		if self.oldmodkeys & qtcore.Qt.ShiftModifier and not modkeys & qtcore.Qt.ShiftModifier:
+			self.optionswidget.ui.checkBox_fixed_aspect.toggle()
+
+		if self.oldmodkeys & qtcore.Qt.AltModifier and not modkeys & qtcore.Qt.AltModifier:
+			self.optionswidget.ui.checkBox_draw_center.toggle()
+
+		self.oldmodkeys=modkeys
+
+class ShapeSelectionOptionsWidget(qtgui.QWidget):
+	def __init__(self,parent,tooldesc):
+		qtgui.QWidget.__init__(self,parent)
+		self.tooldesc=tooldesc
+
+		self.ui=Ui_SelectionModificationWidget()
+		self.ui.setupUi(self)
+
+	def updateDisplayFromOptions(self):
+		if self.tooldesc.options["modtype"]==SelectionModTypes.new:
+			self.ui.new_selection_button.setChecked(True)
+		elif self.tooldesc.options["modtype"]==SelectionModTypes.add:
+			self.ui.add_selection_button.setChecked(True)
+		elif self.tooldesc.options["modtype"]==SelectionModTypes.subtract:
+			self.ui.subtract_selection_button.setChecked(True)
+		elif self.tooldesc.options["modtype"]==SelectionModTypes.intersect:
+			self.ui.intersect_selection_button.setChecked(True)
+
+		if self.tooldesc.options["drawcenter"]==SelectionDrawTypes.fromcorner:
+			self.ui.checkBox_draw_center.setChecked(False)
+		elif self.tooldesc.options["drawcenter"]==SelectionDrawTypes.fromcenter:
+			self.ui.checkBox_draw_center.setChecked(True)
+
+		if self.tooldesc.options["fixedaspect"]==SelectionRatioTypes.fixed:
+			self.ui.checkBox_fixed_aspect.setChecked(True)
+		elif self.tooldesc.options["fixedaspect"]==SelectionRatioTypes.free:
+			self.ui.checkBox_fixed_aspect.setChecked(False)
+
+	def on_new_selection_button_toggled(self,bool=None):
+		if bool:
+			self.tooldesc.options["modtype"]=SelectionModTypes.new
+
+	def on_add_selection_button_toggled(self,bool=None):
+		if bool:
+			self.tooldesc.options["modtype"]=SelectionModTypes.add
+
+	def on_subtract_selection_button_toggled(self,bool=None):
+		if bool:
+			self.tooldesc.options["modtype"]=SelectionModTypes.subtract
+
+	def on_intersect_selection_button_toggled(self,bool=None):
+		if bool:
+			self.tooldesc.options["modtype"]=SelectionModTypes.intersect
+
+	def on_checkBox_draw_center_toggled(self,bool=None):
+		if bool:
+			self.tooldesc.options["drawcenter"]=SelectionDrawTypes.fromcenter
+		else:
+			self.tooldesc.options["drawcenter"]=SelectionDrawTypes.fromcorner
+
+	def on_checkBox_fixed_aspect_toggled(self,bool=None):
+		if bool:
+			self.tooldesc.options["fixedaspect"]=SelectionRatioTypes.fixed
+		else:
+			self.tooldesc.options["fixedaspect"]=SelectionRatioTypes.free
 
 # fuzzy selection tool description
 class FeatherSelectToolDesc(AbstractToolDesc):
@@ -927,7 +1041,7 @@ class FeatherSelectToolDesc(AbstractToolDesc):
 
 	def setDefaultOptions(self):
 		self.options["similarity"]=10
-		self.options["currentlayeronly"]=0
+		self.options["selectiontype"]=BucketFillTypes.layer
 
 	def getTool(self,window):
 		tool=FeatherSelectTool(self.options,window)
@@ -957,19 +1071,22 @@ class FeatherSelectOptionsWidget(qtgui.QWidget):
 		self.ui.setupUi(self)
 
 	def updateDisplayFromOptions(self):
-		if self.tooldesc.options["currentlayeronly"]==1:
-			self.ui.current_layer_check.setCheckState(qtcore.Qt.Checked)
-		else:
-			self.ui.current_layer_check.setCheckState(qtcore.Qt.Unchecked)
+		if self.tooldesc.options["selectiontype"]==BucketFillTypes.layer:
+			self.ui.radio_cur_layer.setChecked(True)
+		elif self.tooldesc.options["selectiontype"]==BucketFillTypes.image:
+			self.ui.radio_whole_image.setChecked(True)
+
 		self.ui.color_threshold_box.setValue(self.tooldesc.options["similarity"])
 
 	def on_color_threshold_box_valueChanged(self,value):
 		if type(value)==int:
 			self.tooldesc.options["similarity"]=value
 
-	def on_current_layer_check_clicked(self,bool=None):
-		if bool!=None:
-			self.tooldesc.options["currentlayeronly"]=bool
+	def on_radio_whole_image_clicked(self,bool=None):
+		self.tooldesc.options["selectiontype"]=BucketFillTypes.selection
+
+	def on_radio_cur_layer_clicked(self,bool=None):
+		self.tooldesc.options["selectiontype"]=BucketFillTypes.layer
 
 # fuzzy selection tool
 class FeatherSelectTool(AbstractTool):
@@ -979,7 +1096,7 @@ class FeatherSelectTool(AbstractTool):
 
 	def guiLevelPenDown(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
 		self.selectionmod=getCurSelectionModType()
-		if self.options["currentlayeronly"]:
+		if self.options["selectiontype"]==BucketFillTypes.layer:
 			layer=self.window.getLayerForKey(self.layerkey)
 			if layer:
 				image=layer.getImageCopy()
@@ -1127,7 +1244,7 @@ class EllipseSelectionToolDesc(AbstractToolDesc):
 		return tool
  
 	def getTool(self,window):
-		return SelectionTool(self.options,window)
+		return SelectionTool(self,self.options,window)
 
 class SketchToolDesc(PencilToolDesc):
 	def __init__(self):

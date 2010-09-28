@@ -126,9 +126,17 @@ class ToolLogTypes:
 	"""
 	unlogable, regular, raw, selection, selectionraw, move = range(6)
 
-# types of ways to modify the current selection
+# ways to modify the current selection
 class SelectionModTypes:
-	clear, new, intersect, add, subtract, setlist = range(6)
+	clear, new, intersect, invert, add, subtract, grow, shrink, setlist = range(9)
+
+# ways to draw the current selection
+class SelectionDrawTypes:
+	fromcorner, fromcenter = range(2)
+
+# ways to handle ratio of selection drawing
+class SelectionRatioTypes:
+	free, fixed = range(2)
 
 # types of brush shapes
 class BrushShapes:

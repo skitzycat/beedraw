@@ -1,12 +1,12 @@
 <ui version="4.0" >
- <class>Form</class>
- <widget class="QWidget" name="Form" >
+ <class>SelectionModificationWidget</class>
+ <widget class="QWidget" name="SelectionModificationWidget" >
   <property name="geometry" >
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>292</width>
-    <height>180</height>
+    <width>432</width>
+    <height>292</height>
    </rect>
   </property>
   <property name="windowTitle" >
@@ -35,21 +35,44 @@
       <item>
        <widget class="QRadioButton" name="add_selection_button" >
         <property name="text" >
-         <string>Add to selection (Shift)</string>
+         <string>Add to selection (Hold Shift)</string>
         </property>
        </widget>
       </item>
       <item>
        <widget class="QRadioButton" name="subtract_selection_button" >
         <property name="text" >
-         <string>Subtract from selection (Alt)</string>
+         <string>Subtract from selection (Hold Alt)</string>
         </property>
        </widget>
       </item>
       <item>
        <widget class="QRadioButton" name="intersect_selection_button" >
         <property name="text" >
-         <string>Intersect selection (Shift+Alt)</string>
+         <string>Intersect with current selection (Hold Shift+Alt)</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupBox_2" >
+     <property name="title" >
+      <string>Selection Shape Options:</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_3" >
+      <item>
+       <widget class="QCheckBox" name="checkBox_draw_center" >
+        <property name="text" >
+         <string>Draw from center instead of corner (Press Alt)</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="checkBox_fixed_aspect" >
+        <property name="text" >
+         <string>Fixed Aspect Ratio (Press Shift)</string>
         </property>
        </widget>
       </item>
