@@ -836,10 +836,15 @@ class RectangleSelectionPickOverlay(qtgui.QGraphicsItem):
 # basic rectangle selection tool
 class SelectionTool(AbstractTool):
 	logtype=ToolLogTypes.selection
-	def __init__(self,options,window):
+	def __init__(self,desc,options,window):
 		AbstractTool.__init__(self,options,window)
+		self.desc=desc
  
-	def updateOverlay(self,x,y):
+	def updateOverlay(self,x=None,y=None):
+		if x==None:
+			x=self.lastpoint[0]
+			y=self.lastpoint[1]
+
 		# calculate rectangle defined by the start and current
 		if self.options["drawcenter"]==SelectionDrawTypes.fromcorner:
 			left=min(x,self.startpoint[0])
@@ -898,7 +903,9 @@ class SelectionTool(AbstractTool):
 
 		self.window.changeToolOverlay()
 		self.overlay=None
- 
+
+		self.desc.resetOptions()
+
 	# set overlay to display area that would be selected if user lifted up button
 	def guiLevelPenMotion(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
 		if not self.pendown:
@@ -922,6 +929,7 @@ class RectSelectionToolDesc(AbstractToolDesc):
 	def __init__(self):
 		AbstractToolDesc.__init__(self,"rectselect")
 		self.displayname="Rectangle Selection"
+		self.curtool=None
 
 	def setDefaultOptions(self):
 		self.options["modtype"]=SelectionModTypes.new
@@ -938,25 +946,24 @@ class RectSelectionToolDesc(AbstractToolDesc):
 		self.oldmodkeys=BeeApp().app.keyboardModifiers()
  
 	def getTool(self,window):
-		tool=SelectionTool(self.options,window)
-		tool.name=self.name
-		return tool
+		self.curtool=SelectionTool(self,self.options,window)
+		self.curtool.name=self.name
+		return self.curtool
 
 	def getOptionsWidget(self,parent):
 		if not self.optionswidget:
 			self.optionswidget=ShapeSelectionOptionsWidget(parent,self)
 			self.optionswidget.updateDisplayFromOptions()
+
 		return self.optionswidget
 
 	def newModKeys(self,modkeys):
 		if not self.optionswidget:
 			return
 
-		print "%08x" % modkeys
-
 		# check for what is currently held down
-		# not sure why the metakey is sometimes pushed down instead of alt, but this seems to make it work according to the way I expect it to
-		if modkeys & qtcore.Qt.ShiftModifier and (modkeys & qtcore.Qt.AltModifier or modkeys & qtcore.Qt.MetaModifier) and not (modkeys & qtcore.Qt.AltModifier and modkeys & qtcore.Qt.MetaModifier):
+		# under linux pressing the alt and shift key in the wrong order will cause it to look like the meta key is being used, but it seems to work fine under windows
+		if modkeys & qtcore.Qt.ShiftModifier and modkeys & qtcore.Qt.AltModifier:
 			self.optionswidget.ui.intersect_selection_button.setChecked(True)
 		elif modkeys & qtcore.Qt.ShiftModifier:
 			self.optionswidget.ui.add_selection_button.setChecked(True)
@@ -965,14 +972,21 @@ class RectSelectionToolDesc(AbstractToolDesc):
 		else:
 			self.optionswidget.ui.new_selection_button.setChecked(True)
 
-		# see what has toggled
-		if self.oldmodkeys & qtcore.Qt.ShiftModifier and not modkeys & qtcore.Qt.ShiftModifier:
-			self.optionswidget.ui.checkBox_fixed_aspect.toggle()
+		if self.curtool and self.curtool.pendown:
+			# see what has toggled if we are currently drawing something
+			if self.oldmodkeys & qtcore.Qt.ShiftModifier and not modkeys & qtcore.Qt.ShiftModifier:
+				self.optionswidget.ui.checkBox_fixed_aspect.toggle()
+				self.curtool.updateOverlay()
 
-		if self.oldmodkeys & qtcore.Qt.AltModifier and not modkeys & qtcore.Qt.AltModifier:
-			self.optionswidget.ui.checkBox_draw_center.toggle()
+			if self.oldmodkeys & qtcore.Qt.AltModifier and not modkeys & qtcore.Qt.AltModifier:
+				self.optionswidget.ui.checkBox_draw_center.toggle()
+				self.curtool.updateOverlay()
 
 		self.oldmodkeys=modkeys
+
+	def resetOptions(self):
+		self.optionswidget.ui.checkBox_fixed_aspect.setChecked(False)
+		self.optionswidget.ui.checkBox_draw_center.setChecked(False)
 
 class ShapeSelectionOptionsWidget(qtgui.QWidget):
 	def __init__(self,parent,tooldesc):
@@ -1038,8 +1052,10 @@ class FeatherSelectToolDesc(AbstractToolDesc):
 
 	def pressToolButton(self):
 		BeeApp().master.ui.feather_select_button.setChecked(True)
+		self.oldmodkeys=BeeApp().app.keyboardModifiers()
 
 	def setDefaultOptions(self):
+		self.options["modtype"]=SelectionModTypes.new
 		self.options["similarity"]=10
 		self.options["selectiontype"]=BucketFillTypes.layer
 
@@ -1062,6 +1078,21 @@ class FeatherSelectToolDesc(AbstractToolDesc):
 			self.optionswidget.updateDisplayFromOptions()
 		return self.optionswidget
 
+	def newModKeys(self,modkeys):
+		if not self.optionswidget:
+			return
+
+		# check for what is currently held down
+		# under linux pressing the alt and shift key in the wrong order will cause it to look like the meta key is being used, but it seems to work fine under windows
+		if modkeys & qtcore.Qt.ShiftModifier and modkeys & qtcore.Qt.AltModifier:
+			self.optionswidget.ui.intersect_selection_button.setChecked(True)
+		elif modkeys & qtcore.Qt.ShiftModifier:
+			self.optionswidget.ui.add_selection_button.setChecked(True)
+		elif modkeys & qtcore.Qt.AltModifier:
+			self.optionswidget.ui.subtract_selection_button.setChecked(True)
+		else:
+			self.optionswidget.ui.new_selection_button.setChecked(True)
+
 class FeatherSelectOptionsWidget(qtgui.QWidget):
 	def __init__(self,parent,tooldesc):
 		qtgui.QWidget.__init__(self,parent)
@@ -1071,6 +1102,15 @@ class FeatherSelectOptionsWidget(qtgui.QWidget):
 		self.ui.setupUi(self)
 
 	def updateDisplayFromOptions(self):
+		if self.tooldesc.options["modtype"]==SelectionModTypes.new:
+			self.ui.new_selection_button.setChecked(True)
+		elif self.tooldesc.options["modtype"]==SelectionModTypes.add:
+			self.ui.add_selection_button.setChecked(True)
+		elif self.tooldesc.options["modtype"]==SelectionModTypes.subtract:
+			self.ui.subtract_selection_button.setChecked(True)
+		elif self.tooldesc.options["modtype"]==SelectionModTypes.intersect:
+			self.ui.intersect_selection_button.setChecked(True)
+
 		if self.tooldesc.options["selectiontype"]==BucketFillTypes.layer:
 			self.ui.radio_cur_layer.setChecked(True)
 		elif self.tooldesc.options["selectiontype"]==BucketFillTypes.image:
@@ -1088,6 +1128,22 @@ class FeatherSelectOptionsWidget(qtgui.QWidget):
 	def on_radio_cur_layer_clicked(self,bool=None):
 		self.tooldesc.options["selectiontype"]=BucketFillTypes.layer
 
+	def on_new_selection_button_toggled(self,bool=None):
+		if bool:
+			self.tooldesc.options["modtype"]=SelectionModTypes.new
+
+	def on_add_selection_button_toggled(self,bool=None):
+		if bool:
+			self.tooldesc.options["modtype"]=SelectionModTypes.add
+
+	def on_subtract_selection_button_toggled(self,bool=None):
+		if bool:
+			self.tooldesc.options["modtype"]=SelectionModTypes.subtract
+
+	def on_intersect_selection_button_toggled(self,bool=None):
+		if bool:
+			self.tooldesc.options["modtype"]=SelectionModTypes.intersect
+
 # fuzzy selection tool
 class FeatherSelectTool(AbstractTool):
 	logtype=ToolLogTypes.selection
@@ -1095,7 +1151,8 @@ class FeatherSelectTool(AbstractTool):
 		AbstractTool.__init__(self,options,window)
 
 	def guiLevelPenDown(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
-		self.selectionmod=getCurSelectionModType()
+		selectionop=self.options["modtype"]
+
 		if self.options["selectiontype"]==BucketFillTypes.layer:
 			layer=self.window.getLayerForKey(self.layerkey)
 			if layer:
@@ -1108,7 +1165,7 @@ class FeatherSelectTool(AbstractTool):
 		self.newpath=getSimilarColorPath(image,x,y,self.options['similarity'])
 		if not self.newpath.isEmpty():
 			self.window.changeToolOverlay()
-			self.window.changeSelection(self.selectionmod,self.newpath)
+			self.window.changeSelection(selectionop,self.newpath)
 
 # paint bucket tool description
 class PaintBucketToolDesc(AbstractToolDesc):

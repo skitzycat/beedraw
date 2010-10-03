@@ -5,7 +5,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>432</width>
+    <width>549</width>
     <height>292</height>
    </rect>
   </property>
@@ -65,14 +65,14 @@
       <item>
        <widget class="QCheckBox" name="checkBox_draw_center" >
         <property name="text" >
-         <string>Draw from center instead of corner (Press Alt)</string>
+         <string>Draw from center instead of corner (Press Alt while selecting)</string>
         </property>
        </widget>
       </item>
       <item>
        <widget class="QCheckBox" name="checkBox_fixed_aspect" >
         <property name="text" >
-         <string>Fixed Aspect Ratio (Press Shift)</string>
+         <string>Fixed Aspect Ratio (Press Shift while selecting)</string>
         </property>
        </widget>
       </item>

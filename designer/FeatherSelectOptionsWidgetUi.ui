@@ -5,14 +5,14 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>279</width>
-    <height>142</height>
+    <width>432</width>
+    <height>335</height>
    </rect>
   </property>
   <property name="windowTitle" >
    <string>Form</string>
   </property>
-  <layout class="QVBoxLayout" >
+  <layout class="QVBoxLayout" name="verticalLayout_3" >
    <item>
     <layout class="QHBoxLayout" >
      <item>
@@ -32,24 +32,69 @@
     </layout>
    </item>
    <item>
-    <widget class="QLabel" name="label" >
-     <property name="text" >
+    <widget class="QGroupBox" name="groupBox" >
+     <property name="title" >
       <string>Area to select:</string>
      </property>
+     <layout class="QVBoxLayout" name="verticalLayout" >
+      <item>
+       <widget class="QRadioButton" name="radio_cur_layer" >
+        <property name="text" >
+         <string>Similar colors on current layer</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="radio_whole_image" >
+        <property name="text" >
+         <string>Similar colors on whole image</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </widget>
    </item>
    <item>
-    <widget class="QRadioButton" name="radio_cur_layer" >
-     <property name="text" >
-      <string>Similar colors on current layer</string>
+    <widget class="QGroupBox" name="groupBox_2" >
+     <property name="title" >
+      <string>Selection Modification Options</string>
      </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QRadioButton" name="radio_whole_image" >
-     <property name="text" >
-      <string>Similar colors on whole image</string>
+     <property name="checkable" >
+      <bool>false</bool>
      </property>
+     <layout class="QVBoxLayout" name="verticalLayout_2" >
+      <item>
+       <widget class="QRadioButton" name="new_selection_button" >
+        <property name="text" >
+         <string>New Selection</string>
+        </property>
+        <property name="checked" >
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="add_selection_button" >
+        <property name="text" >
+         <string>Add to selection (Hold Shift)</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="subtract_selection_button" >
+        <property name="text" >
+         <string>Subtract from selection (Hold Alt)</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="intersect_selection_button" >
+        <property name="text" >
+         <string>Intersect with current selection (Hold Shift+Alt)</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </widget>
    </item>
   </layout>

@@ -113,6 +113,8 @@
     </property>
     <addaction name="action_Select_None" />
     <addaction name="action_Select_Invert_Selection" />
+    <addaction name="action_Select_Grow_Selection" />
+    <addaction name="action_Select_Shrink_Selection" />
    </widget>
    <widget class="QMenu" name="menuNetwork" >
     <property name="enabled" >
@@ -320,6 +322,16 @@
   <action name="action_File_Connect" >
    <property name="text" >
     <string>Connect</string>
+   </property>
+  </action>
+  <action name="action_Select_Grow_Selection" >
+   <property name="text" >
+    <string>Grow Selection</string>
+   </property>
+  </action>
+  <action name="action_Select_Shrink_Selection" >
+   <property name="text" >
+    <string>Shrink Selection</string>
    </property>
   </action>
  </widget>

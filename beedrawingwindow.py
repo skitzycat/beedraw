@@ -37,6 +37,8 @@ from drawingthread import DrawingThread
 
 from DrawingWindowUI import Ui_DrawingWindowSpec
 from ImageScaleDialog import Ui_CanvasScaleDialog
+from GrowSelectionDialogUi import Ui_Grow_Selection_Dialog
+from ShrinkSelectionDialogUi import Ui_Shrink_Selection_Dialog
 
 from beesessionstate import BeeSessionState
 
@@ -77,7 +79,7 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 
 		self.tooloverlay=None
 
-		self.selection=[]
+		self.selection=None
 		self.selectionlock=qtcore.QReadWriteLock()
 		self.clippath=None
 		self.clippathlock=qtcore.QReadWriteLock()
@@ -257,9 +259,7 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 			self.clippath=None
 			return
 
-		self.clippath=qtgui.QPainterPath()
-		for select in self.selection:
-			self.clippath.addPath(select)
+		self.clippath=qtgui.QPainterPath(self.selection)
 
 	def penDown(self,x,y,pressure,modkeys,tool=None,source=ThreadTypes.user):
 		if not tool:
@@ -337,7 +337,10 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 		if not slock:
 			slock=qtcore.QWriteLocker(self.selectionlock)
 
-		oldpath=self.selection[:]
+		if self.selection:
+			oldpath=qtgui.QPainterPath(self.selection)
+		else:
+			oldpath=None
 
 		defaultreturn=oldpath,oldpath
 
@@ -348,32 +351,54 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 			# in this case there already is no selection so just ignore it
 			if not self.selection:
 				return defaultreturn
-			for s in self.selection:
-				dirtyregion=dirtyregion.united(qtgui.QRegion(s.boundingRect().toAlignedRect()))
-			self.selection=[]
+
+			if self.selection:
+				dirtyregion=dirtyregion.united(qtgui.QRegion(self.selection.boundingRect().toAlignedRect()))
+
+			self.selection=None
+
 			self.updateClipPath(slock=slock)
 			self.requestUpdateSelectionDisplayPath()
 
 		elif type==SelectionModTypes.setlist:
-			for s in self.selection:
-				dirtyregion=dirtyregion.united(qtgui.QRegion(s.boundingRect().toAlignedRect()))
+			if self.selection:
+				dirtyregion=dirtyregion.united(qtgui.QRegion(self.selection.boundingRect().toAlignedRect()))
 
 			self.selection=newarea
-			for s in self.selection:
-				dirtyregion=dirtyregion.united(qtgui.QRegion(s.boundingRect().toAlignedRect()))
+
+			if self.selection:
+				dirtyregion=dirtyregion.united(qtgui.QRegion(self.selection.boundingRect().toAlignedRect()))
 
 			self.updateClipPath(slock=slock)
 			self.requestUpdateSelectionDisplayPath(self.clippath)
 
+
 		elif type==SelectionModTypes.invert:
 			pass
-		elif type==SelectionModTypes.grow:
-			pass
-		elif type==SelectionModTypes.shrink:
-			pass
+
+		elif type==SelectionModTypes.shrink or type==SelectionModTypes.grow:
+
+			if self.selection:
+				stroker=qtgui.QPainterPathStroker()
+				stroker.setWidth(2*newarea)
+				stroker.setJoinStyle(qtcore.Qt.MiterJoin)
+				growpath=stroker.createStroke(self.selection)
+
+				if type==SelectionModTypes.grow:
+					self.selection=self.selection.united(growpath)
+					dirtyregion=dirtyregion.united(qtgui.QRegion(self.selection.boundingRect().toAlignedRect()))
+
+				elif type==SelectionModTypes.shrink:
+					dirtyregion=dirtyregion.united(qtgui.QRegion(self.selection.boundingRect().toAlignedRect()))
+					self.selection=self.selection.subtracted(growpath)
+					if self.selection.isEmpty():
+						self.selection=None
+
+				self.updateClipPath(slock=slock)
+				self.requestUpdateSelectionDisplayPath(self.clippath)
 
 		else:
-			# new area argument can be implied to be the cursor overlay, but we need one or the other
+			# in all thses cases the new area argument can be implied to be the cursor overlay, but we need one or the other
 			if not self.cursoroverlay and not newarea:
 				return defaultreturn
 
@@ -381,59 +406,57 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 				if not newarea:
 					newarea=qtgui.QPainterPath(self.cursoroverlay.path)
 
-			if type==SelectionModTypes.new or len(self.selection)==0:
+			if type==SelectionModTypes.new or not self.selection:
 				dirtyregion=dirtyregion.united(qtgui.QRegion(newarea.boundingRect().toAlignedRect()))
-				for s in self.selection:
-					dirtyregion=dirtyregion.united(qtgui.QRegion(s.boundingRect().toAlignedRect()))
-				self.selection=[newarea]
+
+				if self.selection:
+					dirtyregion=dirtyregion.united(qtgui.QRegion(self.selection.boundingRect().toAlignedRect()))
+
+				self.selection=newarea
 
 			elif type==SelectionModTypes.add:
-				newselect=[]
 				dirtyregion=dirtyregion.united(qtgui.QRegion(newarea.boundingRect().toAlignedRect()))
-				for select in self.selection:
-					# the new area completely contains this path so just ignore it
-					if newarea.contains(select):
-						pass
-					elif select.contains(newarea):
-						newarea=newarea.united(select)
-					# if they intersect union the areas
-					elif newarea.intersects(select):
-						newarea=newarea.united(select)
-					# otherwise they are completely disjoint so just add it separately
-					else:
-						newselect.append(select)
 
-				# finally add in new select and update selection
-				newselect.append(newarea)
-				self.selection=newselect
+				# the new area completely contains this path so just go with the new one
+				if newarea.contains(self.selection):
+					self.selection=newarea
+
+				# the new area is inside the old one so no change
+				elif self.selection.contains(newarea):
+					pass
+
+				# if they intersect union the areas
+				elif newarea.intersects(self.selection):
+					self.selection=newarea.united(self.selection)
+
+				# otherwise they are completely disjoint so just add it separately
+				else:
+					self.selection.addPath(newarea)
 
 			elif type==SelectionModTypes.subtract:
-				newselect=[]
 				dirtyregion=dirtyregion.united(qtgui.QRegion(newarea.boundingRect().toAlignedRect()))
-				for select in self.selection:
-					# the new area completely contains this path so just ignore it
-					if newarea.contains(select):
-						pass
-					# if they intersect subtract the areas and add to path
-					elif newarea.intersects(select) or select.contains(newarea):
-						select=select.subtracted(newarea)
-						newselect.append(select)
-					# otherwise they are completely disjoint so just add it separately
-					else:
-						newselect.append(select)
 
-				self.selection=newselect
+				# the new area completely contains the new path then deselect everything
+				if newarea.contains(self.selection):
+					self.selection=None
+
+				# if they intersect subtract the areas
+				elif newarea.intersects(self.selection) or self.selection.contains(newarea):
+					self.selection=self.selection.subtracted(newarea)
 
 			elif type==SelectionModTypes.intersect:
-				newselect=[]
 				dirtyregion=dirtyregion.united(qtgui.QRegion(newarea.boundingRect().toAlignedRect()))
-				for select in self.selection:
-					dirtyregion=dirtyregion.united(qtgui.QRegion(select.boundingRect().toAlignedRect()))
-					tmpselect=select.intersected(newarea)
-					if not tmpselect.isEmpty():
-						newselect.append(tmpselect)
 
-				self.selection=newselect
+				dirtyregion=dirtyregion.united(qtgui.QRegion(self.selection.boundingRect().toAlignedRect()))
+
+				if newarea.contains(self.selection):
+					pass
+
+				elif newarea.intersects(self.selection) or self.selection.contains(newarea):
+					self.selection=self.selection.intersected(newarea)
+
+				else:
+					self.selection=None
 
 			else:
 				print_debug("unrecognized selection modification type: %d" % type)
@@ -451,7 +474,7 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 			command=ChangeSelectionCommand(oldpath,self.selection)
 			self.localcommandstack.add(command)
 
-		return oldpath,self.selection[:]
+		return oldpath,self.selection
 
 	def queueCommand(self,command,source=ThreadTypes.user,owner=0):
 		if source==ThreadTypes.user:
@@ -670,7 +693,33 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 
 	def on_action_Select_None_triggered(self,accept=True):
 		if accept:
-			self.changeSelection(SelectionModTypes.clear)
+			self.addSelectionChangeToQueue(SelectionModTypes.clear,None)
+
+	def on_action_Select_Grow_Selection_triggered(self,accept=True):
+		if accept:
+			dialog=qtgui.QDialog(self)
+			dialog.ui=Ui_Grow_Selection_Dialog()
+			dialog.ui.setupUi(dialog)
+
+			dialog.exec_()
+
+			if dialog.result():
+				pixels=dialog.ui.SpinBox_grow.value()
+
+				self.addSelectionChangeToQueue(SelectionModTypes.grow,pixels)
+
+	def on_action_Select_Shrink_Selection_triggered(self,accept=True):
+		if accept:
+			dialog=qtgui.QDialog(self)
+			dialog.ui=Ui_Shrink_Selection_Dialog()
+			dialog.ui.setupUi(dialog)
+
+			dialog.exec_()
+
+			if dialog.result():
+				pixels=dialog.ui.SpinBox_shrink.value()
+
+				self.addSelectionChangeToQueue(SelectionModTypes.shrink,pixels)
 
 	def on_action_Zoom_In_triggered(self,accept=True):
 		if accept:
