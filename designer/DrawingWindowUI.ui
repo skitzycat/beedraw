@@ -263,7 +263,7 @@
   </action>
   <action name="action_Select_Invert_Selection" >
    <property name="enabled" >
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="text" >
     <string>Invert Selection</string>

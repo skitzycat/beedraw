@@ -374,7 +374,21 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 
 
 		elif type==SelectionModTypes.invert:
-			pass
+			sizelock=qtcore.QReadLocker(self.docsizelock)
+			width,height=self.getDocSize(sizelock)
+
+			rect=qtcore.QRectF(0,0,width,height)
+
+			newpath=qtgui.QPainterPath()
+			newpath.addRect(rect)
+
+			if self.selection:
+				newpath=newpath.subtracted(self.selection)
+
+			self.selection=newpath
+
+			self.updateClipPath(slock=slock)
+			self.requestUpdateSelectionDisplayPath(self.clippath)
 
 		elif type==SelectionModTypes.shrink or type==SelectionModTypes.grow:
 
@@ -694,6 +708,10 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 	def on_action_Select_None_triggered(self,accept=True):
 		if accept:
 			self.addSelectionChangeToQueue(SelectionModTypes.clear,None)
+
+	def on_action_Select_Invert_Selection_triggered(self,accept=True):
+		if accept:
+			self.addSelectionChangeToQueue(SelectionModTypes.invert,None)
 
 	def on_action_Select_Grow_Selection_triggered(self,accept=True):
 		if accept:

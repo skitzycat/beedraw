@@ -349,14 +349,18 @@ class BeeSessionState:
 	def addScaleCanvasToQueue(self,newwidth,newheight,source=ThreadTypes.user,owner=0):
 		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.scale,newwidth,newheight),source,owner)
 
+	def getDocSize(self,sizelock=None):
+		if not sizelock:
+			sizelock=qtcore.QReadLocker(self.docsizelock)
+
+		return (self.docwidth,self.docheight)
+
 	def scaleCanvas(self,newwidth,newheight,sizelock=None):
 		if not sizelock:
 			sizelock=qtcore.QWriteLocker(self.docsizelock)
 
 		self.docwidth=newwidth
 		self.docheight=newheight
-
-		sizelock.unlock()
 
 		layerlistlock=qtcore.QReadLocker(self.layerslistlock)
 		for layer in self.layers:
