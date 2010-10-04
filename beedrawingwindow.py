@@ -304,9 +304,6 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 
 			self.curtool=None
 
-	def growSelection(self,size):
-		slock=qtcore.QWriteLocker(self.selectionlock)
-
 	def requestUpdateSelectionDisplayPath(self,path=None):
 		event=SelectionDisplayUpdateEvent(path)
 		BeeApp().app.postEvent(self,event)
@@ -391,7 +388,6 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 			self.requestUpdateSelectionDisplayPath(self.clippath)
 
 		elif type==SelectionModTypes.shrink or type==SelectionModTypes.grow:
-
 			if self.selection:
 				stroker=qtgui.QPainterPathStroker()
 				stroker.setWidth(2*newarea)
@@ -400,6 +396,17 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 
 				if type==SelectionModTypes.grow:
 					self.selection=self.selection.united(growpath)
+
+					# make sure the selection hasn't grown larger than the full image
+					width,height=self.getDocSize()
+
+					rect=qtcore.QRectF(0,0,width,height)
+
+					fulldocpath=qtgui.QPainterPath()
+					fulldocpath.addRect(rect)
+
+					self.selection=self.selection.intersected(fulldocpath)
+
 					dirtyregion=dirtyregion.united(qtgui.QRegion(self.selection.boundingRect().toAlignedRect()))
 
 				elif type==SelectionModTypes.shrink:
