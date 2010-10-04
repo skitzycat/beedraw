@@ -37,7 +37,11 @@ class BeeCanvasView(qtgui.QGraphicsView):
 		self.setAttribute(qtcore.Qt.WA_PaintOnScreen)
 
 		# set scene view optimizations
-		#self.setOptimizationFlag(qtgui.QGraphicsView.DontAdjustForAntialiasing)
+		self.setOptimizationFlag(qtgui.QGraphicsView.DontAdjustForAntialiasing)
+
+		#self.setViewportUpdateMode(qtgui.QGraphicsView.FullViewportUpdate)
+		#self.setViewportUpdateMode(qtgui.QGraphicsView.MinimalViewportUpdate)
+		self.setViewportUpdateMode(qtgui.QGraphicsView.SmartViewportUpdate)
 
 		self.show()
 
@@ -45,6 +49,21 @@ class BeeCanvasView(qtgui.QGraphicsView):
 		window=BeeApp().master.getWindowById(self.windowid)
 		lock=qtcore.QReadLocker(window.layerslistlock)
 		#print "starting to handle paint event"
+
+		#attempt at resolving inconsistent subscaling
+		# if this is zoomed in
+		if self.curzoom>1:
+			oldrect=event.rect()
+			xadj=(oldrect.x()%self.curzoom)+(self.curzoom*2)
+			yadj=(oldrect.y()%self.curzoom)+(self.curzoom*2)
+			wadj=(oldrect.width()%self.curzoom)-(self.curzoom*4)
+			hadj=(oldrect.height()%self.curzoom)-(self.curzoom*4)
+			newrect=qtcore.QRect(oldrect.x()-xadj,oldrect.y()-yadj,oldrect.width()-wadj,oldrect.height()-hadj)
+			#print "current zoom:", self.curzoom
+			#print "old rect:", rectToTuple(oldrect)
+			#print "new rect:", rectToTuple(newrect)
+			event=qtgui.QPaintEvent(newrect)
+
 		qtgui.QGraphicsView.paintEvent(self,event)
 		#print "ending handle paint event"
 
@@ -86,15 +105,12 @@ class BeeCanvasView(qtgui.QGraphicsView):
 		return self.scene().getSceneRect()
 
 	def updateView(self,dirtyrect=qtcore.QRectF()):
-		dirtyrect=qtcore.QRectF(dirtyrect)
+		#dirtyrect=qtcore.QRectF(dirtyrect)
 
-		dirtyrect=dirtyrect.toAlignedRect()
-		dirtyrect=dirtyrect.adjusted(-1,-1,2,2)
+		#dirtyrect=dirtyrect.toAlignedRect()
+		#dirtyrect=dirtyrect.adjusted(-1,-1,2,2)
 
-		#vpoint=self.mapToScene(self.mapFromScene(qtcore.QPointF(dirtyrect.x(),dirtyrect.y())))
-		#dirtyrect=dirtyrect.adjusted((vpoint.x()%1)-1,(vpoint.y()%1)-1,0,0)
-
-		#print "updating view with rect:", rectToTuple(dirtyrect)
+		#vpoint=self.mapFromScene(qtcore.QPointF(dirtyrect.x(),dirtyrect.y()))
 
 		#dirtyrect=self.mapToScene(self.viewport().visibleRegion().boundingRect()).boundingRect()
 
