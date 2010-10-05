@@ -853,7 +853,11 @@ class SelectionTool(AbstractTool):
 			height=max(y,self.startpoint[1])-top
 
 			if self.options["fixedaspect"]==SelectionRatioTypes.fixed:
-				height=width
+				if y>self.startpoint[1]:
+					height=width
+				else:
+					height=width
+					top=self.startpoint[1]-width
 
 		elif self.options["drawcenter"]==SelectionDrawTypes.fromcenter:
 			left=self.startpoint[0]-abs(x-self.startpoint[0])
