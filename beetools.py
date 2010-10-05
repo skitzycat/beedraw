@@ -866,8 +866,8 @@ class SelectionTool(AbstractTool):
 			height=abs(y-self.startpoint[1])*2
 
 			if self.options["fixedaspect"]==SelectionRatioTypes.fixed:
-				top=self.startpoint[1]-abs(x-self.startpoint[1])
-				height=abs(x-self.startpoint[1])*2
+				top=self.startpoint[1]-(width/2)
+				height=width
 
 
 		else:
