@@ -134,6 +134,7 @@ class DrawingThread(qtcore.QThread):
 
 		elif subtype==LayerCommandTypes.mode:
 			layer.setOptions(compmode=command[3])
+			layer.update()
 			window.logCommand(command,self.type)
 
 		elif subtype==LayerCommandTypes.cut:
