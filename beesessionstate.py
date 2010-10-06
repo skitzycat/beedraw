@@ -355,16 +355,29 @@ class BeeSessionState:
 
 		return (self.docwidth,self.docheight)
 
-	def scaleCanvas(self,newwidth,newheight,sizelock=None):
+	def scaleCanvas(self,newwidth,newheight,sizelock=None,history=True):
 		if not sizelock:
 			sizelock=qtcore.QWriteLocker(self.docsizelock)
+
+		layerlistlock=qtcore.QReadLocker(self.layerslistlock)
+
+		layersimagelocks=[]
+
+		for layer in self.layers:
+			layersimagelocks.append(qtcore.QWriteLocker(layer.imagelock))
+
+		if history:
+			historycommand=ScaleImageCommand(self.docwidth,self.docheight,newwidth,newheight,self.layers)
+			self.addCommandToHistory(historycommand)
+
+		for layer in self.layers:
+			layer.scale(newwidth,newheight,True)
 
 		self.docwidth=newwidth
 		self.docheight=newheight
 
-		layerlistlock=qtcore.QReadLocker(self.layerslistlock)
-		for layer in self.layers:
-			layer.scale(newwidth,newheight)
+		self.scene.update()
+		self.master.refreshLayerThumb(self.id)
 
 	def addSetCanvasSizeRequestToQueue(self,width,height,source=ThreadTypes.user,owner=0):
 		# lock for reading the size of the document

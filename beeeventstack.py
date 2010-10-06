@@ -418,3 +418,29 @@ class MoveFloatingCommand(AbstractCommand):
 		if layer:
 			layer.setPos(self.newx,self.newy)
 			layer.scene().update()
+
+class ScaleImageCommand(AbstractCommand):
+	def __init__(self,oldwidth,oldheight,newwidth,newheight,layers):
+		self.undotype=UndoCommandTypes.notinnetwork
+		self.oldlayerimages={}
+		self.oldwidth=oldwidth
+		self.oldheight=oldheight
+		self.newwidth=newwidth
+		self.newheight=newheight
+
+		for layer in layers:
+			self.oldlayerimages[layer.key]=layer.getImageCopy(lock=True)
+
+	def undo(self,win):
+		win.scaleCanvas(self.oldwidth,self.oldheight,history=False)
+
+		layerlistlock=qtcore.QReadLocker(win.layerslistlock)
+
+		for layer in win.layers:
+			if layer.key in self.oldlayerimages:
+				layer.setImage(self.oldlayerimages[layer.key])
+			else:
+				print_debug("History Error: while processing undo for ScaleImageCommand can't find old layer image for layer with key: %d" % layer.key)
+
+	def redo(self,win):
+		win.scaleCanvas(self.newwidth,self.newheight,history=False)

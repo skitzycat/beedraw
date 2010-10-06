@@ -36,9 +36,9 @@ from Queue import Queue
 from drawingthread import DrawingThread
 
 from DrawingWindowUI import Ui_DrawingWindowSpec
-from ImageScaleDialog import Ui_CanvasScaleDialog
 from GrowSelectionDialogUi import Ui_Grow_Selection_Dialog
 from ShrinkSelectionDialogUi import Ui_Shrink_Selection_Dialog
+from beedialogs import BeeScaleImageDialog
 
 from beesessionstate import BeeSessionState
 
@@ -211,9 +211,9 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 			writer=qtgui.QImageWriter(filename)
 			writer.write(self.scene.getImageCopy())
 
-	def scaleCanvas(self,newwidth,newheight):
+	def scaleCanvas(self,newwidth,newheight,history=True):
 		sizelock=qtcore.QWriteLocker(self.docsizelock)
-		BeeSessionState.scaleCanvas(self,newwidth,newheight,sizelock)
+		BeeSessionState.scaleCanvas(self,newwidth,newheight,sizelock,history)
 
 		self.layerfinisher.resize(qtcore.QRectF(0,0,self.docwidth,self.docheight))
 		self.scene.setCanvasSize(newwidth,newheight)
@@ -765,12 +765,9 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 
 	def on_action_Image_Scale_Image_triggered(self,accept=True):
 		if accept:
-			dialog=qtgui.QDialog(self)
-			dialog.ui=Ui_CanvasScaleDialog()
-			dialog.ui.setupUi(dialog)
+			width,height=self.getDocSize()
 
-			dialog.ui.width_spin_box.setValue(self.docwidth)
-			dialog.ui.height_spin_box.setValue(self.docheight)
+			dialog=BeeScaleImageDialog(self,width,height)
 
 			dialog.exec_()
 

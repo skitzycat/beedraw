@@ -86,8 +86,9 @@ class BeeLayerState:
 	def getCompmode(self):
 		return self.compmode
 
-	def scale(self,newwidth,newheight):
-		lock=qtcore.QWriteLocker(self.imagelock)
+	def scale(self,newwidth,newheight,lock=None):
+		if not lock:
+			lock=qtcore.QWriteLocker(self.imagelock)
 		self.image=self.image.scaled(newwidth,newheight,qtcore.Qt.IgnoreAspectRatio,qtcore.Qt.SmoothTransformation)
 
 	def getImageRect(self):
@@ -264,6 +265,14 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
 		self.scene().update()
 		return newkey
 
+	def setImage(self,image,lock=None):
+		if not lock:
+			lock=qtcore.QWriteLocker(self.imagelock)
+		self.image=image.copy()
+
+		self.prepareGeometryChange()
+		self.update()
+
 	def adjustCanvasSize(self,leftadj,topadj,rightadj,bottomadj,lock=None):
 		if not lock:
 			lock=qtcore.QWriteLocker(self.imagelock)
@@ -359,8 +368,8 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
 		BeeLayerState.changeOpacity(self,opacity)
 		self.setOpacity(opacity)
 
-	def scale(self,newwidth,newheight):
-		BeeLayerState.scale(self,newwidth,newheight)
+	def scale(self,newwidth,newheight,lock=None):
+		BeeLayerState.scale(self,newwidth,newheight,lock)
 		self.prepareGeometryChange()
 
 	def paint(self,painter,options,widget=None):
