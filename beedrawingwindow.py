@@ -218,10 +218,14 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 		self.layerfinisher.resize(qtcore.QRectF(0,0,self.docwidth,self.docheight))
 		self.scene.setCanvasSize(newwidth,newheight)
 
-	def adjustCanvasSize(self,leftadj,topadj,rightadj,bottomadj,sizelock=None):
+	def adjustCanvasSize(self,leftadj,topadj,rightadj,bottomadj,sizelock=None,history=True):
 		# lock the image so no updates can happen in the middle of this
 		if not sizelock:
 			sizelock=qtcore.QWriteLocker(self.docsizelock)
+
+		if history:
+			historyevent=AdjustCanvasSizeCommand(self.docwidth,self.docheight,leftadj,topadj,rightadj,bottomadj,self.layers)
+			self.addCommandToHistory(historyevent)
 
 		self.docwidth=self.docwidth+leftadj+rightadj
 		self.docheight=self.docheight+topadj+bottomadj

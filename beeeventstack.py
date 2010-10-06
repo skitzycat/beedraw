@@ -444,3 +444,32 @@ class ScaleImageCommand(AbstractCommand):
 
 	def redo(self,win):
 		win.scaleCanvas(self.newwidth,self.newheight,history=False)
+
+class AdjustCanvasSizeCommand(AbstractCommand):
+	def __init__(self,oldwidth,oldheight,leftadj,topadj,rightadj,bottomadj,layers):
+		self.undotype=UndoCommandTypes.notinnetwork
+		self.oldlayerimages={}
+		self.oldwidth=oldwidth
+		self.oldheight=oldheight
+
+		self.leftadj=leftadj
+		self.topadj=topadj
+		self.rightadj=rightadj
+		self.bottomadj=bottomadj
+
+		for layer in layers:
+			self.oldlayerimages[layer.key]=layer.getImageCopy(lock=True)
+
+	def undo(self,win):
+		win.scaleCanvas(self.oldwidth,self.oldheight,history=False)
+
+		layerlistlock=qtcore.QReadLocker(win.layerslistlock)
+
+		for layer in win.layers:
+			if layer.key in self.oldlayerimages:
+				layer.setImage(self.oldlayerimages[layer.key])
+			else:
+				print_debug("History Error: while processing undo for AdjustCanvasSizeCommand can't find old layer image for layer with key: %d" % layer.key)
+
+	def redo(self,win):
+		win.adjustCanvasSize(self.leftadj,self.topadj,self.rightadj,self.bottomadj,history=False)
