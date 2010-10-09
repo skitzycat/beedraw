@@ -31,6 +31,8 @@ from FeatherSelectOptionsWidgetUi import *
 from SelectionModificationWidgetUi import *
 
 from beeapp import BeeApp
+
+from beelayer import BeeTemporaryLayer
  
 try:
 	import NumPy as numpy
@@ -220,6 +222,8 @@ class DrawingTool(AbstractTool):
 		self.layer=None
 		self.pendown=False
 
+		self.drawontmp=True
+
 		self.inside=True
 		self.returning=False
 
@@ -360,9 +364,10 @@ class DrawingTool(AbstractTool):
 		fgg=self.fgcolor.green()
 		fgb=self.fgcolor.blue()
 
-		opacity=int(self.options["opacity"]*255./100.)
+		#opacity=int(self.options["opacity"]*255./100.)
+		#colortuple=(fgr,fgg,fgb,opacity)
 
-		colortuple=(fgr,fgg,fgb,opacity)
+		colortuple=(fgr,fgg,fgb,255)
 
 		self.diameter=self.options["maxdiameter"]
 		width=self.diameter
@@ -439,9 +444,12 @@ class DrawingTool(AbstractTool):
 		self.inside=True
 		self.pendown=True
 
-		#print "pen down (x,y,pressure):", x, y, pressure
-		self.layer=self.window.getLayerForKey(self.layerkey)
-		self.oldlayerimage=self.layer.getImageCopy()
+		if self.drawontmp:
+			self.parentlayer=self.window.getLayerForKey(self.layerkey)
+			self.layer=BeeTemporaryLayer(self.parentlayer,self.options["opacity"]/100.,self.compmode)
+		else:
+			self.layer=self.window.getLayerForKey(self.layerkey)
+			self.oldlayerimage=self.layer.getImageCopy()
 
 		self.startLine(x,y,pressure)
 
@@ -626,11 +634,23 @@ class DrawingTool(AbstractTool):
 		self.layer.compositeFromCorner(self.brushimage,targetx,targety,self.compmode,self.clippath)
 
 	def penUp(self,x=None,y=None):
+		""" penUp for DrawingTool class """
+
 		#print "Got penUp"
 		self.pendown=False
 
 		if not self.pointshistory:
 			return
+
+		# get command for history
+
+		# clean up temporary layer if needed
+		if self.drawontmp:
+			self.oldlayerimage=self.parentlayer.getImageCopy()
+			painter=qtgui.QPainter()
+			self.parentlayer.compositeFromCorner(self.layer.getImageCopy(),0,0,self.layer.compmode,opacity=self.layer.getOpacity())
+			self.layer.setParentItem(None)
+			self.window.scene.removeItem(self.layer)
 
 		radius=int(math.ceil(self.options["maxdiameter"]))
  
@@ -751,6 +771,7 @@ class EraserToolDesc(AbstractToolDesc):
 		def __init__(self,options,window):
 			DrawingTool.__init__(self,options,window)
 			self.compmode=qtgui.QPainter.CompositionMode_DestinationOut
+			self.drawontmp=False
  
 		def getColorRGBA(self):
 			return 0xFFFFFFFF
@@ -868,7 +889,6 @@ class SelectionTool(AbstractTool):
 			if self.options["fixedaspect"]==SelectionRatioTypes.fixed:
 				top=self.startpoint[1]-(width/2)
 				height=width
-
 
 		else:
 			print_debug("Unknown draw center type in SelectionTool.updateOverlay")

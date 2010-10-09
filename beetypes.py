@@ -100,7 +100,7 @@ class LayerTypes:
         network: layer in a network session that the user cannot draw on
         floating: layer that is a floating selection used to paste something, this not shared in a network session until anchored to another layer
 	"""
-	user, animation, network, floating = range(4)
+	user, animation, network, floating, temporary = range(5)
 
 class WindowTypes:
 	""" Represents types of windows:

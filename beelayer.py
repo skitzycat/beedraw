@@ -142,17 +142,17 @@ class BeeLayerState:
 		win.deleteLayerHistory(oldowner,self.key)
 
 	# composite image onto layer from center coord
-	def compositeFromCenter(self,image,x,y,compmode,clippath=None):
+	def compositeFromCenter(self,image,x,y,compmode,clippath=None,refreshimage=True,opacity=1):
 		x=int(x)
 		y=int(y)
 		#print "calling compositeFromCenter with args:",x,y
 		width=image.size().width()
 		height=image.size().height()
 		#print "image dimensions:", width, height
-		self.compositeFromCorner(image,x-int((width)/2),y-int((height)/2),compmode,clippath)
+		self.compositeFromCorner(image,x-int((width)/2),y-int((height)/2),compmode,clippath,refreshimage=refreshimage,opacity=opacity)
 
 	# composite image onto layer from corner coord
-	def compositeFromCorner(self,image,x,y,compmode,clippath=None,lock=None):
+	def compositeFromCorner(self,image,x,y,compmode,clippath=None,lock=None,refreshimage=True,opacity=1):
 		x=int(x)
 		y=int(y)
 		#print "calling compositeFromCorner with args:",x,y
@@ -169,6 +169,7 @@ class BeeLayerState:
 			painter.setClipPath(clippath)
 		#print "inside compositeFromCorner"
 		painter.setCompositionMode(compmode)
+		painter.setOpacity(opacity)
 		#painter.setRenderHint(qtgui.QPainter.HighQualityAntialiasing)
 		painter.drawImage(rect,image)
 		painter.end()
@@ -180,9 +181,11 @@ class BeeLayerState:
 		# not every type of window actually has a full image representation so just calculate what the image rectangle would be
 		imagerect=qtcore.QRect(0,0,win.docwidth,win.docheight)
 
-		dirtyregion=dirtyregion.intersect(qtgui.QRegion(imagerect))
-		lock.unlock()
-		win.reCompositeImage(dirtyregion.boundingRect())
+		if refreshimage:
+			dirtyregion=dirtyregion.intersect(qtgui.QRegion(imagerect))
+			lock.unlock()
+
+			win.reCompositeImage(dirtyregion.boundingRect())
 
 	# get color of pixel at specified point, or average color in range
 	def getPixelColor(self,x,y,size):
@@ -249,6 +252,9 @@ class BeeLayerState:
 		painter.end()
 
 		self.image=newimage
+
+	def getType(self):
+		return self.type
 
 class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
 	def __init__(self,windowid,type,key,image=None,opacity=None,visible=None,compmode=None,owner=0,parent=None):
@@ -476,12 +482,21 @@ class SelectedAreaDisplay(qtgui.QGraphicsItem):
 		painter.setPen(pen)
 		painter.drawPath(self.path)
 
+class BeeTemporaryLayer(BeeGuiLayer):
+	def __init__(self,parent,opacity,compmode):
+		win=parent.getWindow()
+		BeeGuiLayer.__init__(self,parent.windowid,LayerTypes.temporary,win.nextFloatingLayerKey(),opacity=opacity,parent=parent,compmode=compmode)
+		# put below floating layers
+		self.setZValue(0)
+
 class FloatingSelection(BeeGuiLayer):
 	def __init__(self,image,key,parentlayer):
 		BeeGuiLayer.__init__(self,parentlayer.windowid,LayerTypes.floating,key,image,parent=parentlayer,owner=-1)
 		#self.setFlag(qtgui.QGraphicsItem.ItemIsMovable)
 		self.name="Floating selection (%d x %d)" % ( self.image.rect().width(), self.image.rect().height() )
 		#self.setAcceptedMouseButtons(qtcore.Qt.NoButton)
+		# put above temporary layers, exact order between floating layers isn't important
+		self.setZValue(1)
 
 	def paint(self,painter,options,widget=None):
 		drawrect=options.exposedRect
@@ -764,6 +779,9 @@ class BeeLayersWindow(AbstractBeeWindow):
 		# ask each layer for it's widget and add it
 		for layer in reversed(win.layers):
 			for floating in layer.childItems():
+				if layer.getType()==LayerTypes.temporary:
+					continue
+
 				newwidget=floating.getConfigWidget(winlock)
 				vbox.addWidget(newwidget)
 				newwidget.show()
