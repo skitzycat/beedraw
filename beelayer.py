@@ -40,16 +40,11 @@ class BeeLayerState:
 		self.key=key
 		self.owner=owner
 
-		# way to flag that the layer should be deleted later, currently only used for anchoring floating selection layers
-		self.shoulddelete=False
-		self.deletelock=qtcore.QReadWriteLock()
+		# this is a lock for locking access to the layer image when needed
+		self.imagelock=qtcore.QReadWriteLock()
 
 		win=BeeApp().master.getWindowById(windowid)
 
-		#print "creating layer with key:", key
-		#print "creating layer with owner:", owner
-		# this is a lock for locking access to the layer image when needed
-		self.imagelock=qtcore.QReadWriteLock()
 		self.propertieslock=qtcore.QReadWriteLock()
 
 		self.configwidget=None
@@ -384,10 +379,11 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
       Draws the needed section of the layer image onto a temporary image """
 		drawrect=options.exposedRect
 		drawrect=drawrect.toAlignedRect()
-		if self.scene().tmppainter:
-			self.scene().tmppainter.setCompositionMode(self.compmode)
-			self.scene().tmppainter.setOpacity(painter.opacity())
-			self.scene().tmppainter.drawImage(drawrect,self.image,drawrect)
+		scene=self.scene()
+		if scene and scene.tmppainter:
+			scene.tmppainter.setCompositionMode(self.compmode)
+			scene.tmppainter.setOpacity(painter.opacity())
+			scene.tmppainter.drawImage(drawrect,self.image,drawrect)
 
 	def getConfigWidget(self,winlock=None):
 		# can't do this in the constructor because that may occur in a thread other than the GUI thread, this function however should only occur in the GUI thread
