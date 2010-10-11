@@ -254,9 +254,11 @@ class BeeLayerState:
 class BeeGuiLayer(qtgui.QGraphicsItem,BeeLayerState):
 	def __init__(self,windowid,type,key,image=None,opacity=None,visible=None,compmode=None,owner=0,parent=None):
 		BeeLayerState.__init__(self,windowid,type,key,image,opacity,visible,compmode,owner)
-		qtgui.QGraphicsItem.__init__(self,parent)
+		qtgui.QGraphicsItem.__init__(self)
 		self.setOpacity(self.opacity_setting)
 		self.setFlag(qtgui.QGraphicsItem.ItemUsesExtendedStyleOption)
+		# setting the parent here instead of in the constructor seems to fix an occational error down in Qt about a pure virtual method being called
+		self.setParentItem(parent)
 
 	def paste(self,image,x,y):
 		win=BeeApp().master.getWindowById(self.windowid)
@@ -381,6 +383,7 @@ class BeeGuiLayer(qtgui.QGraphicsItem,BeeLayerState):
 		drawrect=options.exposedRect
 		drawrect=drawrect.toAlignedRect()
 		scene=self.scene()
+		lock=qtcore.QReadLocker(self.imagelock)
 		if scene and scene.tmppainter:
 			scene.tmppainter.setCompositionMode(self.getCompmode())
 			scene.tmppainter.setOpacity(painter.opacity())

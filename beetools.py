@@ -657,15 +657,19 @@ class DrawingTool(AbstractTool):
 		if not self.pointshistory:
 			return
 
-		# get command for history
-
 		# clean up temporary layer if needed
 		if self.drawontmp:
 			self.oldlayerimage=self.parentlayer.getImageCopy()
 			painter=qtgui.QPainter()
-			self.parentlayer.compositeFromCorner(self.layer.getImageCopy(),0,0,self.layer.compmode,opacity=self.layer.getOpacity())
+			parentimagelock=qtcore.QWriteLocker(self.parentlayer.imagelock)
+			tmplayerimage=self.layer.getImageCopy()
 			self.layer.setParentItem(None)
 			self.window.scene.removeItem(self.layer)
+			self.parentlayer.compositeFromCorner(tmplayerimage,0,0,self.layer.compmode,opacity=self.layer.getOpacity(),lock=parentimagelock)
+
+			parentimagelock.unlock()
+
+			self.window.scene.update()
 
 		radius=int(math.ceil(self.options["maxdiameter"]))
  
@@ -771,13 +775,13 @@ class DrawingToolOptionsWidget(qtgui.QWidget):
 		self.ui.brushdiameter.setValue(self.tooldesc.options["maxdiameter"])
 		self.ui.stepsize.setValue(self.tooldesc.options["step"])
 
-	def on_brushdiameter_sliderMoved(self,value):
+	def on_brushdiameter_valueChanged(self,value):
 		self.tooldesc.options["maxdiameter"]=value
 
-	def on_stepsize_sliderMoved(self,value):
+	def on_stepsize_valueChanged(self,value):
 		self.tooldesc.options["step"]=value
 
-	def on_opacity_sliderMoved(self,value):
+	def on_opacity_valueChanged(self,value):
 		self.tooldesc.options["opacity"]=value
  
 class EraserToolDesc(AbstractToolDesc):
@@ -841,10 +845,10 @@ class EraserOptionsWidget(qtgui.QWidget):
 		self.ui.eraserdiameter.setValue(self.tooldesc.options["maxdiameter"])
 		self.ui.stepsize.setValue(self.tooldesc.options["step"])
 
-	def on_eraserdiameter_sliderMoved(self,value):
+	def on_eraserdiameter_valueChanged(self,value):
 		self.tooldesc.options["maxdiameter"]=value
 
-	def on_stepsize_sliderMoved(self,value):
+	def on_stepsize_valueChanged(self,value):
 		self.tooldesc.options["step"]=value
 
 class RectangleSelectionPickOverlay(qtgui.QGraphicsItem):
@@ -1384,11 +1388,14 @@ class BrushOptionsWidget(qtgui.QWidget):
 		self.ui.brushdiameter.setValue(self.tooldesc.options["maxdiameter"])
 		self.ui.stepsize.setValue(self.tooldesc.options["step"])
 
-	def on_brushdiameter_sliderMoved(self,value):
+	def on_brushdiameter_valueChanged(self,value):
 		self.tooldesc.options["maxdiameter"]=value
 
-	def on_stepsize_sliderMoved(self,value):
+	def on_stepsize_valueChanged(self,value):
 		self.tooldesc.options["step"]=value
+
+	def on_opacity_slider_valueChanged(self,value):
+		self.tooldesc.options["opacity"]=value
 
 class SketchTool(DrawingTool):
 	def __init__(self,options,window):
