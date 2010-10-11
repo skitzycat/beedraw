@@ -65,7 +65,7 @@ class BeeLayerState:
 		if compmode==None:
 			compmode=qtgui.QPainter.CompositionMode_SourceOver
 
-		self.changeOpacity(opacity)
+		self.opacity_setting=opacity
 		self.visible=visible
 		self.compmode=compmode
 
@@ -251,10 +251,11 @@ class BeeLayerState:
 	def getType(self):
 		return self.type
 
-class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
+class BeeGuiLayer(qtgui.QGraphicsItem,BeeLayerState):
 	def __init__(self,windowid,type,key,image=None,opacity=None,visible=None,compmode=None,owner=0,parent=None):
-		qtgui.QGraphicsItem.__init__(self,parent)
 		BeeLayerState.__init__(self,windowid,type,key,image,opacity,visible,compmode,owner)
+		qtgui.QGraphicsItem.__init__(self,parent)
+		self.setOpacity(self.opacity_setting)
 		self.setFlag(qtgui.QGraphicsItem.ItemUsesExtendedStyleOption)
 
 	def paste(self,image,x,y):
@@ -381,7 +382,7 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
 		drawrect=drawrect.toAlignedRect()
 		scene=self.scene()
 		if scene and scene.tmppainter:
-			scene.tmppainter.setCompositionMode(self.compmode)
+			scene.tmppainter.setCompositionMode(self.getCompmode())
 			scene.tmppainter.setOpacity(painter.opacity())
 			scene.tmppainter.drawImage(drawrect,self.image,drawrect)
 
@@ -482,6 +483,7 @@ class BeeTemporaryLayer(BeeGuiLayer):
 	def __init__(self,parent,opacity,compmode):
 		win=parent.getWindow()
 		BeeGuiLayer.__init__(self,parent.windowid,LayerTypes.temporary,win.nextFloatingLayerKey(),opacity=opacity,parent=parent,compmode=compmode)
+
 		# put below floating layers
 		self.setZValue(0)
 

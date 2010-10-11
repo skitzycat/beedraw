@@ -219,6 +219,7 @@ class DrawingTool(AbstractTool):
 		self.name="pencil"
 		self.lastpressure=-1
 		self.compmode=qtgui.QPainter.CompositionMode_SourceOver
+		self.stampmode=qtgui.QPainter.CompositionMode_SourceOver
 		self.layer=None
 		self.pendown=False
 
@@ -231,6 +232,7 @@ class DrawingTool(AbstractTool):
 		self.logtype=ToolLogTypes.regular
 
 	def guiLevelPenDown(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
+		""" guiLevelPenDown method of DrawingTool, if control key is pressed then do a color pick operation and flag the tool as not in drawing mode """
 		if modkeys==qtcore.Qt.ControlModifier:
 			color=self.window.getImagePixelColor(x,y)
 			self.window.master.setFGColor(qtgui.QColor(color))
@@ -319,6 +321,7 @@ class DrawingTool(AbstractTool):
 		return exitpoint
 
 	def calculateEdgePressure(self,p1,p2,pexit):
+		""" method of DrawingTool """
 		last_distance=distance2d(p1[0],p1[1],p2[0],p2[1])
 		end_distance=distance2d(p2[0],p2[1],pexit[0],pexit[1])
 
@@ -334,6 +337,7 @@ class DrawingTool(AbstractTool):
 		return new_pressure
  
 	def penLeave(self):
+		""" method of DrawingTool """
 		#print "Got penLeave"
 		if self.pendown:
 			# the leave point can only be calculated if there are multiple points in the current history
@@ -349,6 +353,7 @@ class DrawingTool(AbstractTool):
 			self.returning=False
 
 	def penEnter(self):
+		""" method of DrawingTool """
 		if self.logtype==ToolLogTypes.unlogable:
 			return
 		#print "Got penEnter"
@@ -357,9 +362,11 @@ class DrawingTool(AbstractTool):
 			self.inside=True
 
 	def getColorRGBA(self):
+		""" method of DrawingTool """
 		return self.fgcolor.rgba()
  
 	def makeFullSizedBrush(self):
+		""" method of DrawingTool """
 		fgr=self.fgcolor.red()
 		fgg=self.fgcolor.green()
 		fgb=self.fgcolor.blue()
@@ -392,6 +399,7 @@ class DrawingTool(AbstractTool):
 		self.fullsizedbrush=PILtoQImage(self.fullsizedbrush)
 
 	def updateBrushForPressure(self,pressure,subpixelx=0,subpixely=0):
+		""" method of DrawingTool """
 		# see if we need to update at all
 		if self.lastpressure==pressure:
 			return
@@ -436,7 +444,7 @@ class DrawingTool(AbstractTool):
 		self.brushimage.setPixel(center,center,self.getColorRGBA())
  
 	def penDown(self,x,y,pressure):
-		""" penDown for DrawingTool class """
+		""" penDown method of DrawingTool """
 		if self.logtype==ToolLogTypes.unlogable:
 			return
 
@@ -455,12 +463,14 @@ class DrawingTool(AbstractTool):
 
 	# determine if it's moved far enough that we care
 	def movedFarEnough(self,x,y):
+		""" method of DrawingTool """
 		if int(x)==int(self.lastpoint[0]) and int(y)==int(self.lastpoint[1]):
 			return False
 		return True
 
 	# return how much to scale down the brush for the current pressure
 	def scaleForPressure(self,pressure):
+		""" method of DrawingTool """
 		return pressure
 		minsize=self.options["mindiameter"]
 		maxsize=self.options["maxdiameter"]
@@ -476,10 +486,12 @@ class DrawingTool(AbstractTool):
 		return scale
 
 	def getFullSizedBrushWidth(self):
+		""" method of DrawingTool """
 		return self.fullsizedbrush.width()
 
 	# since windows apparently won't catch return and leave events when the button is pressed down I'm forced to do this
 	def checkForPenBounds(self,x,y):
+		""" method of DrawingTool """
 		if not self.pendown:
 			return
 		# only needed if this is a local layer
@@ -495,6 +507,7 @@ class DrawingTool(AbstractTool):
 			self.penLeave()
 
 	def penMotion(self,x,y,pressure):
+		""" method of DrawingTool """
 		#print "penMotion:",x,y,pressure
 		self.checkForPenBounds(x,y)
 		if not self.pendown or not self.inside:
@@ -524,6 +537,7 @@ class DrawingTool(AbstractTool):
 		self.continueLine(x,y,pressure)
 
 	def continueLine(self,x,y,pressure):
+		""" method of DrawingTool """
 		# if it hasn't moved just do nothing
 		if not self.movedFarEnough(x,y):
 			return
@@ -612,6 +626,7 @@ class DrawingTool(AbstractTool):
 		self.lastpoint=(path[-1][0],path[-1][1])
  
 	def startLine(self,x,y,pressure):
+		""" method of DrawingTool """
 		if self.pointshistory:
 			self.prevpointshistory.append(self.pointshistory)
 
@@ -634,7 +649,7 @@ class DrawingTool(AbstractTool):
 		self.layer.compositeFromCorner(self.brushimage,targetx,targety,self.compmode,self.clippath)
 
 	def penUp(self,x=None,y=None):
-		""" penUp for DrawingTool class """
+		""" penUp method of DrawingTool class """
 
 		#print "Got penUp"
 		self.pendown=False
