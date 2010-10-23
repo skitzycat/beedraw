@@ -269,3 +269,6 @@ class BeeCanvasScene(qtgui.QGraphicsScene):
 
 		drawrect=rect.intersected(self.getSceneRect())
 		self.tmppainter.fillRect(drawrect,self.backdropcolor)
+		self.curlayerim=None
+		self.curlayercompmode=None
+		self.curlayeropacity=None

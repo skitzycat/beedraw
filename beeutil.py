@@ -326,9 +326,53 @@ def printPILImage(im):
 			print pix[i,j],
 		print
 
+def scaleClosestPIL(im,xscale,yscale):
+	newsizex=int(math.ceil(im.size[0]*xscale))
+	if newsizex%2==0:
+		newsizex+=1
+
+	newsizey=int(math.ceil(im.size[1]*yscale))
+	if newsizey%2==0:
+		newsizey+=1
+
+	# this will center the image even if it doesn't snap to exactly a pixel boundary
+
+	pixcenteradjx=((im.size[0]*xscale)%1)/2
+	pixcenteradjy=((im.size[1]*yscale)%1)/2
+
+	stampsizex=math.floor(im.size[0]*xscale)
+	stampsizey=math.floor(im.size[1]*yscale)
+
+	# adjustment to go from even to odd size or vise versa
+	eoadjx=int(stampsizex)%2
+	eoadjy=int(stampsizey)%2
+
+	#pixcenteradjx+=eoadjx
+	#pixcenteradjy+=eoadjy
+
+	# this will make the image centered even if it is more than a pixel smaller than the final area
+	#print "newsizex, stampsizex:", newsizex, stampsizex
+	stampcenteradjx=(newsizex-stampsizex)/2.
+	stampcenteradjy=(newsizey-stampsizey)/2.
+
+	pixcenteradjx-=stampcenteradjx
+	pixcenteradjy-=stampcenteradjy
+
+	#print "pix adjustments:", pixcenteradjx, pixcenteradjy
+
+	trans=(1/xscale,0,(.5+pixcenteradjx)*(1/xscale),0,1/yscale,(.5+pixcenteradjy)*(1/yscale))
+
+	#print "transform:", trans
+
+	newim=im.transform((newsizex,newsizey),Image.AFFINE,trans)
+
+	#print "producing image:"
+	#printPILImage(newim)
+	return newim
+
 # scale a PIL image, the dx and dy values should only be between 0 and 1
 # xscale and yscale should be between 1 and .5, because that is the only range in which billenar interpolation looks good
-def scaleShiftPIL(im,dx,dy,newsizex,newsizey,xscale,yscale,resample=Image.AFFINE):
+def scaleShiftPIL(im,dx,dy,newsizex,newsizey,xscale,yscale):
 	#print "calling scaleShiftPIL with args:", dx,dy,newsizex,newsizey,xscale,yscale
 	#print "on image:"
 	#printPILImage(im)
@@ -369,7 +413,7 @@ def scaleShiftPIL(im,dx,dy,newsizex,newsizey,xscale,yscale,resample=Image.AFFINE
 
 	#print "transform:", trans
 
-	newim=bordered_image.transform((newsizex,newsizey),resample,trans,Image.BILINEAR)
+	newim=bordered_image.transform((newsizex,newsizey),Image.AFFINE,trans,Image.BILINEAR)
 
 	#print "producing image:"
 	#printPILImage(newim)
@@ -427,14 +471,14 @@ def PILcomposite(baseim,newim,pos,comptype,mask=None):
 	if newim.size==baseim.size and pos==(0,0):
 		return compfunc(basim,newim)
 
-	topim=newim.copy()
-
 	if pos[0]<0 or pos[1]<0:
-		topim=topim.crop((abs(min(pos[0],0)),abs(min(pos[1],0)),topim.size[0],topim.size[1]))
+		topim=newim.crop((abs(min(pos[0],0)),abs(min(pos[1],0)),topim.size[0],topim.size[1]))
 		pos=((max(pos[0],0)),max(pos[1],0))
 
 	if topim.size[0]>baseim.size[0] or topim.size[1]>baseim.size[1]:
-		topim=topim.crop((0,0,min(topim.size[0],baseim.size[0]),min(topim.size[1],baseim.size[1])))
+		topim=newim.crop((0,0,min(topim.size[0],baseim.size[0]),min(topim.size[1],baseim.size[1])))
+
+	topim.load()
 
 	baseswatch=baseim.crop((pos[0],pos[1],newim.size[0]+pos[0],newim.size[1]+pos[1]))
 

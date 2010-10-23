@@ -56,6 +56,7 @@ class BeeLayerState:
 		else:
 			self.image=qtgui.QImage(win.docwidth,win.docheight,qtgui.QImage.Format_ARGB32_Premultiplied)
 			self.image.fill(0)
+			#self.image=Image.new("RGBA",(win.docwidth,win.docheight),(0,0,0,0))
 
 		# set default values for anything we didn't get an explicit value for
 		if opacity==None:
@@ -380,14 +381,22 @@ class BeeGuiLayer(qtgui.QGraphicsItem,BeeLayerState):
 		"""
     paint method of BeeGuiLayer:
       Draws the needed section of the layer image onto a temporary image """
+
+		scene=self.scene()
+
 		drawrect=options.exposedRect
 		drawrect=drawrect.toAlignedRect()
-		scene=self.scene()
+
+		# finish drawing previous layer
+		if scene and scene.tmppainter and scene.curlayerim:
+			scene.tmppainter.setCompositionMode(scene.curlayercompmode)
+			scene.tmppainter.setOpacity(scene.curlayeropacity)
+			scene.tmppainter.drawImage(drawrect,scene.curlayerim,drawrect)
+
 		lock=qtcore.QReadLocker(self.imagelock)
-		if scene and scene.tmppainter:
-			scene.tmppainter.setCompositionMode(self.getCompmode())
-			scene.tmppainter.setOpacity(painter.opacity())
-			scene.tmppainter.drawImage(drawrect,self.image,drawrect)
+		scene.curlayerim=self.getImageCopy(lock=lock)
+		scene.curlayercompmode=self.getCompmode()
+		scene.curlayeropacity=painter.opacity()
 
 	def getConfigWidget(self,winlock=None):
 		# can't do this in the constructor because that may occur in a thread other than the GUI thread, this function however should only occur in the GUI thread
@@ -414,7 +423,18 @@ class LayerFinisher(qtgui.QGraphicsItem):
 		return self.rect
 
 	def paint(self,painter,options,widget=None):
-		self.scene().stopTmpPainter(painter,options.exposedRect)
+		scene=self.scene()
+
+		# finish drawing last layer
+		if scene and scene.tmppainter and scene.curlayerim:
+			drawrect=options.exposedRect
+			drawrect=drawrect.toAlignedRect()
+
+			scene.tmppainter.setCompositionMode(scene.curlayercompmode)
+			scene.tmppainter.setOpacity(scene.curlayeropacity)
+			scene.tmppainter.drawImage(drawrect,scene.curlayerim,drawrect)
+
+		scene.stopTmpPainter(painter,options.exposedRect)
 
 class SelectedAreaAnimation(qtgui.QGraphicsItemAnimation):
 	def __init__(self,item,view,parent=None):
@@ -490,6 +510,20 @@ class BeeTemporaryLayer(BeeGuiLayer):
 		# put below floating layers
 		self.setZValue(0)
 
+	def paint(self,painter,options,widget=None):
+		scene=self.scene()
+
+		painter=qtgui.QPainter()
+		painter.begin(scene.curlayerim)
+
+		drawrect=options.exposedRect
+		drawrect=drawrect.toAlignedRect()
+
+		painter.translate(self.pos())
+		painter.setCompositionMode(self.compmode)
+		painter.setOpacity(painter.opacity())
+		painter.drawImage(drawrect,self.image,drawrect)
+
 class FloatingSelection(BeeGuiLayer):
 	def __init__(self,image,key,parentlayer):
 		BeeGuiLayer.__init__(self,parentlayer.windowid,LayerTypes.floating,key,image,parent=parentlayer,owner=-1)
@@ -500,14 +534,18 @@ class FloatingSelection(BeeGuiLayer):
 		self.setZValue(1)
 
 	def paint(self,painter,options,widget=None):
+		scene=self.scene()
+
+		painter=qtgui.QPainter()
+		painter.begin(scene.curlayerim)
+
 		drawrect=options.exposedRect
 		drawrect=drawrect.toAlignedRect()
-		self.scene().tmppainter.save()
-		self.scene().tmppainter.translate(self.pos())
-		self.scene().tmppainter.setCompositionMode(self.compmode)
-		self.scene().tmppainter.setOpacity(painter.opacity())
-		self.scene().tmppainter.drawImage(drawrect,self.image,drawrect)
-		self.scene().tmppainter.restore()
+
+		painter.translate(self.pos())
+		painter.setCompositionMode(self.compmode)
+		painter.setOpacity(painter.opacity())
+		painter.drawImage(drawrect,self.image,drawrect)
 
 	# don't allow pasting on other floating selections, go to parent layer instead
 	def paste(self,image,x,y):
