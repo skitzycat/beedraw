@@ -131,25 +131,33 @@ class BlendTranslations:
 	qtcore.QString("Multiply"):qtgui.QPainter.CompositionMode_Multiply,
 	qtcore.QString("Darken"):qtgui.QPainter.CompositionMode_Darken,
 	qtcore.QString("Lighten"):qtgui.QPainter.CompositionMode_Lighten,
-	qtcore.QString("Dodge"):qtgui.QPainter.CompositionMode_ColorDodge,
-	qtcore.QString("Burn"):qtgui.QPainter.CompositionMode_ColorBurn,
+	qtcore.QString("Color Dodge"):qtgui.QPainter.CompositionMode_ColorDodge,
+	qtcore.QString("Color Burn"):qtgui.QPainter.CompositionMode_ColorBurn,
 	qtcore.QString("Difference"):qtgui.QPainter.CompositionMode_Difference,
-	qtcore.QString("Source"):qtgui.QPainter.CompositionMode_Source
+	qtcore.QString("Source"):qtgui.QPainter.CompositionMode_Source,
+	qtcore.QString("Screen"):qtgui.QPainter.CompositionMode_Screen,
+	qtcore.QString("Overlay"):qtgui.QPainter.CompositionMode_Overlay,
+	qtcore.QString("Hard Light"):qtgui.QPainter.CompositionMode_HardLight,
+	qtcore.QString("Soft Light"):qtgui.QPainter.CompositionMode_SoftLight
 	}
 
 	layerallowedmodes=[qtcore.QString("Normal"),
                      qtcore.QString("Multiply"),
                      qtcore.QString("Darken"),
                      qtcore.QString("Lighten"),
-                     qtcore.QString("Dodge"),
-                     qtcore.QString("Burn"),
+                     qtcore.QString("Color Dodge"),
+                     qtcore.QString("Color Burn"),
+                     qtcore.QString("Hard Light"),
+                     qtcore.QString("Soft Light"),
+                     qtcore.QString("Overlay"),
+                     qtcore.QString("Screen"),
                      qtcore.QString("Difference") ]
 
 	def nameToMode(name):
 		if name in BlendTranslations.map:
 			return BlendTranslations.map[name]
 		print_debug("warning, couldn't find mode for name: %s" % name)
-		return None
+		return qtgui.QPainter.CompositionMode_SourceOver
 
 	nameToMode=staticmethod(nameToMode)
 
@@ -158,19 +166,9 @@ class BlendTranslations:
 			if BlendTranslations.map[key]==mode:
 				return key
 		print_debug("warning, couldn't find name for mode: %s" % mode)
-		return None
+		return qtcore.QString("Normal")
 
 	modeToName=staticmethod(modeToName)
-
-	def intToMode(i):
-		for key in BlendTranslations.map.keys():
-			if BlendTranslations.map[key]==i:
-				return BlendTranslations.map[key]
-
-		print_debug("warning, couldn't translate int to mode string: %d" % i)
-		return None
-
-	intToMode=staticmethod(intToMode)
 
 def getBlankCursor():
 	image=qtgui.QPixmap(1,1)

@@ -56,7 +56,6 @@ class BeeLayerState:
 		else:
 			self.image=qtgui.QImage(win.docwidth,win.docheight,qtgui.QImage.Format_ARGB32_Premultiplied)
 			self.image.fill(0)
-			#self.image=Image.new("RGBA",(win.docwidth,win.docheight),(0,0,0,0))
 
 		# set default values for anything we didn't get an explicit value for
 		if opacity==None:
@@ -502,13 +501,10 @@ class SelectedAreaDisplay(qtgui.QGraphicsItem):
 		painter.setPen(pen)
 		painter.drawPath(self.path)
 
-class BeeTemporaryLayer(BeeGuiLayer):
+class BeeTemporaryLayerPIL(qtgui.QGraphicsItem):
 	def __init__(self,parent,opacity,compmode):
 		win=parent.getWindow()
-		BeeGuiLayer.__init__(self,parent.windowid,LayerTypes.temporary,win.nextFloatingLayerKey(),opacity=opacity,parent=parent,compmode=compmode)
-
-		# put below floating layers
-		self.setZValue(0)
+		qtgui.QGraphicsItem.__init__(self,parent.windowid,LayerTypes.temporary,win.nextFloatingLayerKey(),opacity=opacity,parent=parent,compmode=compmode)
 
 	def paint(self,painter,options,widget=None):
 		scene=self.scene()
@@ -523,6 +519,28 @@ class BeeTemporaryLayer(BeeGuiLayer):
 		painter.setCompositionMode(self.compmode)
 		painter.setOpacity(painter.opacity())
 		painter.drawImage(drawrect,self.image,drawrect)
+
+class BeeTemporaryLayer(BeeGuiLayer):
+	def __init__(self,parent,opacity,compmode):
+		win=parent.getWindow()
+		BeeGuiLayer.__init__(self,parent.windowid,LayerTypes.temporary,win.nextFloatingLayerKey(),opacity=opacity,parent=parent,compmode=compmode)
+
+		# put below floating layers
+		self.setZValue(0)
+
+	def paint(self,painter,options,widget=None):
+		scene=self.scene()
+
+		localpainter=qtgui.QPainter()
+		localpainter.begin(scene.curlayerim)
+
+		drawrect=options.exposedRect
+		drawrect=drawrect.toAlignedRect()
+
+		localpainter.translate(self.pos())
+		localpainter.setCompositionMode(self.compmode)
+		localpainter.setOpacity(painter.opacity())
+		localpainter.drawImage(drawrect,self.image,drawrect)
 
 class FloatingSelection(BeeGuiLayer):
 	def __init__(self,image,key,parentlayer):
