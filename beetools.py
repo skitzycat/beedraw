@@ -1485,11 +1485,11 @@ class SketchTool(DrawingTool):
 				curfade=self.ellipseBrushFadeAt(i,j,radius,brushwidth,brushheight,0)
 				pix[i,j]=(int(round(curfade*255)))
 
-		return scaleShiftPIL(brushimage,subpixelx,subpixely,5,5,1,1,Image.AFFINE)
+		return scaleShiftPIL(brushimage,subpixelx,subpixely,5,5,1,1)
 
 	# do special case calculations for brush of single pixel size
 	def scaleSinglePixelImage(self,scale,pixel,subpixelx,subpixely):
-		outputimage=scaleShiftPIL(pixel,subpixelx,subpixely,2,2,scale,scale,Image.AFFINE)
+		outputimage=scaleShiftPIL(pixel,subpixelx,subpixely,2,2,scale,scale)
 
 		#print "Scaled single pixel brush:"
 		#printPILImage(outputimage)
@@ -1641,7 +1641,7 @@ class SketchTool(DrawingTool):
 		scale=targetscale/srcbrush[1]
 		#print "going from scale:", srcbrush[1], "to scale", targetscale
 		#print "calculated conversion:", scale
-		return scaleShiftPIL(srcbrush[0],subpixelx,subpixely,targetwidth,targetheight,scale,scale,Image.AFFINE)
+		return scaleShiftPIL(srcbrush[0],subpixelx,subpixely,targetwidth,targetheight,scale,scale)
 
 	def scaleImage(self,srcimage,width,height):
 		srcwidth,srcheight=srcimage.size
@@ -1652,7 +1652,7 @@ class SketchTool(DrawingTool):
 		xscale=width/float(srcwidth)
 		yscale=height/float(srcheight)
 
-		return scaleShiftPIL(srcimage,0,0,width,height,xscale,yscale,Image.AFFINE)
+		return scaleShiftPIL(srcimage,0,0,width,height,xscale,yscale)
 
 	def getFullSizedBrushWidth(self):
 		return self.fullsizedbrush.size[0]

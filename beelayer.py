@@ -378,8 +378,8 @@ class BeeGuiLayer(qtgui.QGraphicsItem,BeeLayerState):
 
 	def paint(self,painter,options,widget=None):
 		"""
-    paint method of BeeGuiLayer:
-      Draws the needed section of the layer image onto a temporary image """
+			paint method of BeeGuiLayer:
+			Draws the needed section of the layer image onto a temporary image """
 
 		scene=self.scene()
 
@@ -428,7 +428,6 @@ class LayerFinisher(qtgui.QGraphicsItem):
 		if scene and scene.tmppainter and scene.curlayerim:
 			drawrect=options.exposedRect
 			drawrect=drawrect.toAlignedRect()
-
 			scene.tmppainter.setCompositionMode(scene.curlayercompmode)
 			scene.tmppainter.setOpacity(scene.curlayeropacity)
 			scene.tmppainter.drawImage(drawrect,scene.curlayerim,drawrect)
@@ -501,13 +500,15 @@ class SelectedAreaDisplay(qtgui.QGraphicsItem):
 		painter.setPen(pen)
 		painter.drawPath(self.path)
 
-class BeeTemporaryLayerPIL(qtgui.QGraphicsItem):
+class BeeTemporaryLayerPIL(BeeGuiLayer):
 	def __init__(self,parent,opacity,compmode):
 		win=parent.getWindow()
-		qtgui.QGraphicsItem.__init__(self,parent.windowid,LayerTypes.temporary,win.nextFloatingLayerKey(),opacity=opacity,parent=parent,compmode=compmode)
+		BeeGuiLayer.__init__(self,parent.windowid,LayerTypes.temporary,win.nextFloatingLayerKey(),opacity=opacity,parent=parent,compmode=compmode)
 
 	def paint(self,painter,options,widget=None):
 		scene=self.scene()
+
+		lock=qtcore.QWriteLocker(self.imagelock)
 
 		painter=qtgui.QPainter()
 		painter.begin(scene.curlayerim)
@@ -515,10 +516,12 @@ class BeeTemporaryLayerPIL(qtgui.QGraphicsItem):
 		drawrect=options.exposedRect
 		drawrect=drawrect.toAlignedRect()
 
+		qimage=PILtoQImage(drawrect.x(),drawrect.y(),drawrect.x()+drawrect.width(),drawrect.y()+drawrect.height())
+
 		painter.translate(self.pos())
 		painter.setCompositionMode(self.compmode)
 		painter.setOpacity(painter.opacity())
-		painter.drawImage(drawrect,self.image,drawrect)
+		painter.drawImage(qtcore.QPoint(drawrect.x(),drawrect.y()),qimage)
 
 class BeeTemporaryLayer(BeeGuiLayer):
 	def __init__(self,parent,opacity,compmode):
@@ -530,6 +533,8 @@ class BeeTemporaryLayer(BeeGuiLayer):
 
 	def paint(self,painter,options,widget=None):
 		scene=self.scene()
+
+		lock=qtcore.QWriteLocker(self.imagelock)
 
 		localpainter=qtgui.QPainter()
 		localpainter.begin(scene.curlayerim)

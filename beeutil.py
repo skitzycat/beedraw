@@ -313,9 +313,12 @@ def print_debug(s):
 	if BeeApp().debug_flags.get(DebugFlags.allon):
 		print s
 
-# convert from PIL to QImage
-def PILtoQImage(im):
-	return ImageQt.ImageQt(im)
+# convert from PIL to QImage, optional argument for the area to convert as 4-tuple of sides, by default do the whole image
+def PILtoQImage(im,rect=None):
+  if rect:
+    return ImageQt.ImageQt(im.crop(rect))
+  else:
+	  return ImageQt.ImageQt(im)
 
 def printPILImage(im):
 	pix=im.load()
