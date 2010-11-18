@@ -503,25 +503,76 @@ class SelectedAreaDisplay(qtgui.QGraphicsItem):
 class BeeTemporaryLayerPIL(BeeGuiLayer):
 	def __init__(self,parent,opacity,compmode):
 		win=parent.getWindow()
+		width,height=win.getDocSize()
+		self.pilimage=Image.new("RGBA",(width,height),(0,0,0,0))
 		BeeGuiLayer.__init__(self,parent.windowid,LayerTypes.temporary,win.nextFloatingLayerKey(),opacity=opacity,parent=parent,compmode=compmode)
 
 	def paint(self,painter,options,widget=None):
 		scene=self.scene()
 
+		if not scene:
+			return
+
 		lock=qtcore.QWriteLocker(self.imagelock)
 
-		painter=qtgui.QPainter()
-		painter.begin(scene.curlayerim)
+		localpainter=qtgui.QPainter()
+		localpainter.begin(scene.curlayerim)
 
 		drawrect=options.exposedRect
 		drawrect=drawrect.toAlignedRect()
 
-		qimage=PILtoQImage(drawrect.x(),drawrect.y(),drawrect.x()+drawrect.width(),drawrect.y()+drawrect.height())
+		qimage=PILtoQImage(self.pilimage,(drawrect.x(),drawrect.y(),drawrect.x()+drawrect.width(),drawrect.y()+drawrect.height()))
 
-		painter.translate(self.pos())
-		painter.setCompositionMode(self.compmode)
-		painter.setOpacity(painter.opacity())
-		painter.drawImage(qtcore.QPoint(drawrect.x(),drawrect.y()),qimage)
+		localpainter.translate(self.pos())
+		#localpainter.setCompositionMode(self.compmode)
+		localpainter.setOpacity(painter.opacity())
+		localpainter.drawImage(drawrect,qimage)
+
+	# composite image onto layer from center coord
+	def compositeFromCenter(self,image,x,y,compmode,clippath=None,refreshimage=True,opacity=1):
+		x=int(x)
+		y=int(y)
+		#print "calling compositeFromCenter with args:",x,y
+		width=image.size[0]
+		height=image.size[0]
+		#print "image dimensions:", width, height
+		self.compositeFromCorner(image,x-int((width)/2),y-int((height)/2),compmode,clippath,refreshimage=refreshimage,opacity=opacity)
+
+	# composite image onto layer from corner coord
+	def compositeFromCorner(self,image,x,y,compmode,clippath=None,lock=None,refreshimage=True,opacity=1):
+		x=int(x)
+		y=int(y)
+
+		#print "compositing image onto pil temp layer:"
+		#printPILImage(image)
+		#print "calling compositeFromCorner with args:",x,y
+
+		if not lock:
+			lock=qtcore.QWriteLocker(self.imagelock)
+
+		width,height=image.size
+
+		rect=qtcore.QRect(x,y,width,height)
+
+		#self.pilimage.paste(image,box=(x,y),mask=image)
+		PILcomposite(self.pilimage,image,x,y,ImageCombineTypes.lightest)
+
+		#updatedsection=self.pilimage.crop((x,y,x+image.size[0],y+image.size[1]))
+		#print "new section looks like:", x,y,image.size
+		#printPILImage(updatedsection)
+
+		dirtyregion=qtgui.QRegion(rect)
+		win=BeeApp().master.getWindowById(self.windowid)
+
+		sizelock=qtcore.QReadLocker(win.docsizelock)
+		# not every type of window actually has a full image representation so just calculate what the image rectangle would be
+		imagerect=qtcore.QRect(0,0,win.docwidth,win.docheight)
+
+		if refreshimage:
+			dirtyregion=dirtyregion.intersect(qtgui.QRegion(imagerect))
+			lock.unlock()
+
+			win.reCompositeImage(dirtyregion.boundingRect())
 
 class BeeTemporaryLayer(BeeGuiLayer):
 	def __init__(self,parent,opacity,compmode):

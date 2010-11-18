@@ -18,6 +18,7 @@
 import PyQt4.QtGui as qtgui
 import PyQt4.QtCore as qtcore
 import math
+import ImageChops
 from beeutil import *
 from beetypes import *
 from beeeventstack import *
@@ -32,7 +33,7 @@ from SelectionModificationWidgetUi import *
 
 from beeapp import BeeApp
 
-from beelayer import BeeTemporaryLayer
+from beelayer import BeeTemporaryLayer, BeeTemporaryLayerPIL
  
 try:
 	import NumPy as numpy
@@ -230,6 +231,8 @@ class DrawingTool(AbstractTool):
 
 		self.returnpoint=None
 		self.logtype=ToolLogTypes.regular
+
+		self.brushimageformat=BrushImageFormats.qt
 
 	def guiLevelPenDown(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
 		""" guiLevelPenDown method of DrawingTool, if control key is pressed then do a color pick operation and flag the tool as not in drawing mode """
@@ -454,7 +457,10 @@ class DrawingTool(AbstractTool):
 
 		if self.drawontmp:
 			self.parentlayer=self.window.getLayerForKey(self.layerkey)
-			self.layer=BeeTemporaryLayer(self.parentlayer,self.options["opacity"]/100.,self.compmode)
+			if self.brushimageformat==BrushImageFormats.qt:
+				self.layer=BeeTemporaryLayer(self.parentlayer,self.options["opacity"]/100.,self.compmode)
+			else:
+				self.layer=BeeTemporaryLayerPIL(self.parentlayer,self.options["opacity"]/100.,self.compmode)
 		else:
 			self.layer=self.window.getLayerForKey(self.layerkey)
 			self.oldlayerimage=self.layer.getImageCopy()
@@ -581,49 +587,83 @@ class DrawingTool(AbstractTool):
 		width=right-left
 		height=bottom-top
  
-		# then make an image for that bounding rect
-		lineimage=qtgui.QImage(width,height,qtgui.QImage.Format_ARGB32_Premultiplied)
-		lineimage.fill(0)
+		if self.brushimageformat==BrushImageFormats.qt:
 
-		# put points in that image
-		painter=qtgui.QPainter()
-		painter.begin(lineimage)
-		#painter.setRenderHint(qtgui.QPainter.HighQualityAntialiasing)
+			# then make an image for that bounding rect
+			lineimage=qtgui.QImage(width,height,qtgui.QImage.Format_ARGB32_Premultiplied)
+			lineimage.fill(0)
+
+			# put points in that image
+			painter=qtgui.QPainter()
+			painter.begin(lineimage)
+			#painter.setRenderHint(qtgui.QPainter.HighQualityAntialiasing)
  
-		for point in path:
-			self.updateBrushForPressure(point[2],point[0]%1,point[1]%1)
+			for point in path:
+				self.updateBrushForPressure(point[2],point[0]%1,point[1]%1)
 
-			xradius=self.brushimage.width()/2
-			yradius=self.brushimage.height()/2
+				xradius=self.brushimage.width()/2
+				yradius=self.brushimage.height()/2
 
-			pointx=point[0]
-			pointy=point[1]
+				pointx=point[0]
+				pointy=point[1]
 
-			stampx=pointx-left-xradius
-			stampy=pointy-top-yradius
+				stampx=pointx-left-xradius
+				stampy=pointy-top-yradius
 
-			stampx=int(stampx)
-			stampy=int(stampy)
+				stampx=int(stampx)
+				stampy=int(stampy)
 
-			if self.brushimage.width()%2==0:
-				if pointx%1<.5:
-					stampx-=1
-				if pointy%1<.5:
-					stampy-=1
+				if self.brushimage.width()%2==0:
+					if pointx%1<.5:
+						stampx-=1
+					if pointy%1<.5:
+						stampy-=1
 
-			#print "stamping at point:", stampx, stampy
-			#printImage(self.brushimage)
+				#print "stamping at point:", stampx, stampy
+				#printImage(self.brushimage)
 
-			painter.drawImage(stampx,stampy,self.brushimage)
+				painter.drawImage(stampx,stampy,self.brushimage)
  
-		painter.end()
+			painter.end()
 
-		#print "stamping line image:"
-		#printImage(lineimage)
+			#print "stamping line image:"
+			#printImage(lineimage)
+
+		else:
+
+			for point in path:
+				self.updateBrushForPressure(point[2],point[0]%1,point[1]%1)
+
+				brushwidth=self.brushimage.size[0]
+				brushheight=self.brushimage.size[1]
+
+				xradius=brushwidth/2
+				yradius=brushheight/2
+
+				pointx=point[0]
+				pointy=point[1]
+
+				self.addImageToLayer(self.brushimage,pointx-xradius,pointy-yradius,refresh=False)
+
+		refresharea=qtcore.QRectF(left,top,width,height)
+		#self.layer.update(refresharea)
+		self.layer.scene().update(refresharea)
  
-		self.layer.compositeFromCorner(lineimage,left,top,self.compmode,self.clippath)
+		#self.layer.compositeFromCenter(lineimage,left,top,self.stampmode,self.clippath)
+		#self.addImageToLayer(lineimage,left,top)
  
 		self.lastpoint=(path[-1][0],path[-1][1])
+
+	def addImageToLayer(self,image,left,top,refresh=True):
+		if self.brushimageformat==BrushImageFormats.qt:
+			self.layer.compositeFromCorner(image,left,top,self.stampmode,self.clippath)
+		else:
+			self.layer.compositeFromCorner(image,left,top,self.stampmode,self.clippath, refreshimage=refresh)
+			#print "adding image to PIL layer:"
+			#printPILImage(image)
+
+			#lock=qtcore.QWriteLocker(self.layer.imagelock)
+			#self.layer.pilimage.paste(image,box=(left,top))
  
 	def startLine(self,x,y,pressure):
 		""" method of DrawingTool """
@@ -635,18 +675,26 @@ class DrawingTool(AbstractTool):
 		self.makeFullSizedBrush()
 		self.updateBrushForPressure(pressure,x%1,y%1)
 
-		targetx=int(x)-int(self.brushimage.width()/2)
-		targety=int(y)-int(self.brushimage.height()/2)
+		if self.brushimageformat==BrushImageFormats.qt:
+			brushwidth=self.brushimage.width()
+			brushheight=self.brushimage.height()
+		else:
+			brushwidth=self.brushimage.size[0]
+			brushheight=self.brushimage.size[1]
+
+		targetx=int(x)-int(brushwidth/2)
+		targety=int(y)-int(brushheight/2)
 
 		# if this is an even number then do adjustments for the center if needed
-		if self.brushimage.width()%2==0:
+		if brushwidth%2==0:
 			#print "this is an even sized brush:"
 			if x%1>.5:
 				targetx+=1
 			if y%1>.5:
 				targety+=1
 
-		self.layer.compositeFromCorner(self.brushimage,targetx,targety,self.compmode,self.clippath)
+		#self.layer.compositeFromCorner(self.brushimage,targetx,targety,self.stampmode,self.clippath)
+		self.addImageToLayer(self.brushimage,targetx,targety)
 
 	def penUp(self,x=None,y=None):
 		""" penUp method of DrawingTool class """
@@ -660,9 +708,16 @@ class DrawingTool(AbstractTool):
 		# clean up temporary layer if needed
 		if self.drawontmp:
 			self.oldlayerimage=self.parentlayer.getImageCopy()
+
+
 			painter=qtgui.QPainter()
 			parentimagelock=qtcore.QWriteLocker(self.parentlayer.imagelock)
-			tmplayerimage=self.layer.getImageCopy()
+
+			if self.brushimageformat==BrushImageFormats.qt:
+				tmplayerimage=self.layer.getImageCopy()
+			else:
+				tmplayerimage=PILtoQImage(self.layer.pilimage)
+
 			self.layer.setParentItem(None)
 			self.window.scene.removeItem(self.layer)
 			self.parentlayer.compositeFromCorner(tmplayerimage,0,0,self.layer.compmode,opacity=self.layer.getOpacity(),lock=parentimagelock)
@@ -735,7 +790,6 @@ class PencilToolDesc(AbstractToolDesc):
 		self.options["pressuresize"]=1
 		self.options["pressurebalance"]=100
 		self.options["opacity"]=100
-		self.options["stampmode"]=DrawingToolStampMode.darkest
 
 	def pressToolButton(self):
 		BeeApp().master.ui.pencil_button.setChecked(True)
@@ -790,7 +844,7 @@ class EraserToolDesc(AbstractToolDesc):
 		def __init__(self,options,window):
 			DrawingTool.__init__(self,options,window)
 			self.compmode=qtgui.QPainter.CompositionMode_DestinationOut
-			self.drawontmp=False
+			self.drawontmp=True
  
 		def getColorRGBA(self):
 			return 0xFFFFFFFF
@@ -1363,6 +1417,8 @@ class SketchToolDesc(PencilToolDesc):
 		self.options["pressurebalance"]=100
 		self.options["fade percent"]=0
 		self.options["opacity"]=100
+		self.options["pressuresize"]=1
+		self.options["pressureopacity"]=1
  
 	def getTool(self,window):
 		tool=SketchTool(self.options,window)
@@ -1404,6 +1460,7 @@ class SketchTool(DrawingTool):
 		self.compmode=qtgui.QPainter.CompositionMode_SourceOver
 		self.scaledbrushes=[]
 		self.brushshape=BrushShapes.ellipse
+		self.brushimageformat=BrushImageFormats.pil
 
 	def movedFarEnough(self,x,y):
 		if distance2d(self.lastpoint[0],self.lastpoint[1],x,y) < self.options["step"]:
@@ -1411,6 +1468,18 @@ class SketchTool(DrawingTool):
 		return True
 
 	def updateBrushForPressure(self,pressure,subpixelx=0,subpixely=0):
+		if self.options["pressuresize"]:
+			self.updateBrushSizeForPressure(pressure,subpixelx,subpixely)
+		if self.options["pressureopacity"]:
+			self.updateBrushOpacityForPressure(pressure)
+
+	def updateBrushOpacityForPressure(self,pressure):
+		fade=int(math.ceil(pressure * 255.))
+		fadeimage=Image.new("RGBA",self.brushimage.size,(255,255,255,fade))
+
+		self.brushimage=ImageChops.multiply(self.brushimage,fadeimage)
+
+	def updateBrushSizeForPressure(self,pressure,subpixelx=0,subpixely=0):
 		self.lastpressure=pressure
 		#print "updating brush for pressure/subpixels:", pressure, subpixelx, subpixely
 		scale=self.scaleForPressure(pressure)
@@ -1454,14 +1523,21 @@ class SketchTool(DrawingTool):
 		else:
 			outputimage=self.scaleShiftImage(abovebrush, scale, subpixelx-.5, subpixely-.5,targetwidth,targetheight)
 
-		outputimage=outputimage.convert("RGBA")
-		qalpha=ImageQt(outputimage)
+		self.brushimage=Image.new("RGBA",outputimage.size,(0,0,0,0))
 
-		qimage=qtgui.QImage(qalpha.width(),qalpha.height(),qtgui.QImage.Format_RGB32)
-		qimage.fill(self.getColorRGBA())
-		qimage.setAlphaChannel(qalpha)
+		red=self.fgcolor.red()
+		green=self.fgcolor.green()
+		blue=self.fgcolor.blue()
+		self.brushimage.paste((red,green,blue),box=(0,0),mask=outputimage)
 
-		self.brushimage=qimage
+		#outputimage=outputimage.convert("RGBA")
+		#qalpha=ImageQt(outputimage)
+
+		#qimage=qtgui.QImage(qalpha.width(),qalpha.height(),qtgui.QImage.Format_RGB32)
+		#qimage.fill(self.getColorRGBA())
+		#qimage.setAlphaChannel(qalpha)
+
+		#self.brushimage=qimage
 
 	# do special case calculations for brush of size smaller than full 3x3
 	def scaleSmallBrush(self,scale,subpixelx,subpixely):
@@ -1591,9 +1667,7 @@ class SketchTool(DrawingTool):
 			#printPILImage(brush[0])
 			
 	def makeEllipseBrush(self,width,height):
-		fgr=self.fgcolor.red()
-		fgg=self.fgcolor.green()
-		fgb=self.fgcolor.blue()
+		""" Make an ellipse brush to use, in order to save processing time the image is in gray scale here """
 
 		radius=width/2.
 		imgwidth=int(math.ceil(width))

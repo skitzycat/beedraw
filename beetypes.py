@@ -151,7 +151,10 @@ class BeeAppType:
 	server, daemon, client = range(3)
 
 class ImageCombineTypes:
-	composite, add, darkest = range(3)
+	composite, add, darkest, lightest = range(4)
+
+class BrushImageFormats:
+	qt, pil = range(2)
 
 class DebugFlags:
   alloff, allon = range(2)

@@ -948,7 +948,7 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 		# this should be the last referece to the window
 		self.master.unregisterWindow(self)
 
-		self.localcommandstack=None
+		#self.localcommandstack=None
 
 	# just in case someone lets up on the cursor when outside the drawing area this will make sure it's caught
 	def tabletEvent(self,event):

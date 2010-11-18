@@ -21,6 +21,8 @@ import PyQt4.QtNetwork as qtnet
 
 from Queue import Queue
 
+import ImageChops
+
 from beeapp import BeeApp
 from beetypes import *
 
@@ -468,27 +470,47 @@ def replaceWidget(oldwidget,newwidget):
 	parent.layout().insertWidget(index,newwidget)
 	newwidget.show()
 
-def PILcomposite(baseim,newim,pos,comptype,mask=None):
-	if newim.size==baseim.size and pos==(0,0):
-		return compfunc(basim,newim)
+def PILcomposite(baseim,stamp,x,y,comptype,mask=None):
+	""" composite an image with another image, we assume that the stamp image is smaller than the base image, return value is the stamp put on the base image at the specified point.  This function pays no attention to image locks. """
+	leftcorrection=0
+	rightcorrection=0
+	topcorrection=0
+	bottomcorrection=0
 
-	if pos[0]<0 or pos[1]<0:
-		topim=newim.crop((abs(min(pos[0],0)),abs(min(pos[1],0)),topim.size[0],topim.size[1]))
+	if x<0:
+		leftcorrection=0-x
+
+	if y<0:
+		topcorrection=0-y
+
+	if baseim.size[0]<x+stamp.size[0]:
+		rightcorrection=x+stamp.size[0]-baseim.size[0]
+
+	if baseim.size[1]<y+stamp.size[1]:
+		bottomcorrection=y+stamp.size[1]-baseim.size[1]
+
+	if leftcorrection or rightcorrection or topcorrection or bottomcorrection:
+		stamp=stamp.crop((leftcorrection,rightcorrection,stamp.size[0]-rightcorrection,stamp.size[1]-leftcorrection))
 		pos=((max(pos[0],0)),max(pos[1],0))
 
-	if topim.size[0]>baseim.size[0] or topim.size[1]>baseim.size[1]:
-		topim=newim.crop((0,0,min(topim.size[0],baseim.size[0]),min(topim.size[1],baseim.size[1])))
-
-	topim.load()
-
-	baseswatch=baseim.crop((pos[0],pos[1],newim.size[0]+pos[0],newim.size[1]+pos[1]))
+	baseswatch=baseim.crop((x,y,x+stamp.size[0],y+stamp.size[1]))
 
 	if comptype==ImageCombineTypes.composite:
-		newswatch=ImageChops.composite(baseswatch,topim,None)
-	elif newswatch==ImageCombineTypes.darkest:
-		newswatch=ImageChops.darker(baseswatch,topim)
+		newswatch=ImageChops.composite(baseswatch,stamp,None)
+	elif comptype==ImageCombineTypes.lightest:
+		newswatch=ImageChops.lighter(baseswatch,stamp)
+	else:
+		print "Unknown composite mode passed to PILcomposite"
+		return
 
-	baseim.paste(newswatch,box=pos,mask=mask)
+	#print "combined stamp:"
+	#print printPILImage(stamp)
+	#print "onto image:"
+	#print printPILImage(baseswatch)
+	#print "to produce:"
+	#print printPILImage(newswatch)
+
+	baseim.paste(newswatch,box=(x,y),mask=mask)
 
 def requestDisplayMessage(type,title,message,destination=None):
 	if not destination:
