@@ -224,8 +224,6 @@ class DrawingTool(AbstractTool):
 		self.layer=None
 		self.pendown=False
 
-		self.drawontmp=True
-
 		self.inside=True
 		self.returning=False
 
@@ -455,15 +453,11 @@ class DrawingTool(AbstractTool):
 		self.inside=True
 		self.pendown=True
 
-		if self.drawontmp:
-			self.parentlayer=self.window.getLayerForKey(self.layerkey)
-			if self.brushimageformat==BrushImageFormats.qt:
-				self.layer=BeeTemporaryLayer(self.parentlayer,self.options["opacity"]/100.,self.compmode)
-			else:
-				self.layer=BeeTemporaryLayerPIL(self.parentlayer,self.options["opacity"]/100.,self.compmode)
+		self.parentlayer=self.window.getLayerForKey(self.layerkey)
+		if self.brushimageformat==BrushImageFormats.qt:
+			self.layer=BeeTemporaryLayer(self.parentlayer,self.options["opacity"]/100.,self.compmode)
 		else:
-			self.layer=self.window.getLayerForKey(self.layerkey)
-			self.oldlayerimage=self.layer.getImageCopy()
+			self.layer=BeeTemporaryLayerPIL(self.parentlayer,self.options["opacity"]/100.,self.compmode)
 
 		self.startLine(x,y,pressure)
 
@@ -590,12 +584,12 @@ class DrawingTool(AbstractTool):
 		if self.brushimageformat==BrushImageFormats.qt:
 
 			# then make an image for that bounding rect
-			lineimage=qtgui.QImage(width,height,qtgui.QImage.Format_ARGB32_Premultiplied)
-			lineimage.fill(0)
+			#lineimage=qtgui.QImage(width,height,qtgui.QImage.Format_ARGB32_Premultiplied)
+			#lineimage.fill(0)
 
 			# put points in that image
-			painter=qtgui.QPainter()
-			painter.begin(lineimage)
+			#painter=qtgui.QPainter()
+			#painter.begin(lineimage)
 			#painter.setRenderHint(qtgui.QPainter.HighQualityAntialiasing)
  
 			for point in path:
@@ -622,9 +616,10 @@ class DrawingTool(AbstractTool):
 				#print "stamping at point:", stampx, stampy
 				#printImage(self.brushimage)
 
-				painter.drawImage(stampx,stampy,self.brushimage)
+				#painter.drawImage(stampx,stampy,self.brushimage)
+				self.addImageToLayer(self.brushimage,pointx-xradius,pointy-yradius,refresh=False)
  
-			painter.end()
+			#painter.end()
 
 			#print "stamping line image:"
 			#printImage(lineimage)
@@ -655,15 +650,7 @@ class DrawingTool(AbstractTool):
 		self.lastpoint=(path[-1][0],path[-1][1])
 
 	def addImageToLayer(self,image,left,top,refresh=True):
-		if self.brushimageformat==BrushImageFormats.qt:
-			self.layer.compositeFromCorner(image,left,top,self.stampmode,self.clippath)
-		else:
-			self.layer.compositeFromCorner(image,left,top,self.stampmode,self.clippath, refreshimage=refresh)
-			#print "adding image to PIL layer:"
-			#printPILImage(image)
-
-			#lock=qtcore.QWriteLocker(self.layer.imagelock)
-			#self.layer.pilimage.paste(image,box=(left,top))
+		self.layer.compositeFromCorner(image,left,top,self.stampmode,self.clippath, refreshimage=refresh)
  
 	def startLine(self,x,y,pressure):
 		""" method of DrawingTool """
@@ -705,26 +692,25 @@ class DrawingTool(AbstractTool):
 		if not self.pointshistory:
 			return
 
-		# clean up temporary layer if needed
-		if self.drawontmp:
-			self.oldlayerimage=self.parentlayer.getImageCopy()
+		# clean up temporary layer
+		self.oldlayerimage=self.parentlayer.getImageCopy()
 
 
-			painter=qtgui.QPainter()
-			parentimagelock=qtcore.QWriteLocker(self.parentlayer.imagelock)
+		painter=qtgui.QPainter()
+		parentimagelock=qtcore.QWriteLocker(self.parentlayer.imagelock)
 
-			if self.brushimageformat==BrushImageFormats.qt:
-				tmplayerimage=self.layer.getImageCopy()
-			else:
-				tmplayerimage=PILtoQImage(self.layer.pilimage)
+		if self.brushimageformat==BrushImageFormats.qt:
+			tmplayerimage=self.layer.getImageCopy()
+		else:
+			tmplayerimage=PILtoQImage(self.layer.pilimage)
 
-			self.layer.setParentItem(None)
-			self.window.scene.removeItem(self.layer)
-			self.parentlayer.compositeFromCorner(tmplayerimage,0,0,self.layer.compmode,opacity=self.layer.getOpacity(),lock=parentimagelock)
+		self.layer.setParentItem(None)
+		self.window.scene.removeItem(self.layer)
+		self.parentlayer.compositeFromCorner(tmplayerimage,0,0,self.layer.compmode,opacity=self.layer.getOpacity(),lock=parentimagelock)
 
-			parentimagelock.unlock()
+		parentimagelock.unlock()
 
-			self.window.scene.update()
+		self.window.scene.update()
 
 		radius=int(math.ceil(self.options["maxdiameter"]))
  
@@ -844,7 +830,6 @@ class EraserToolDesc(AbstractToolDesc):
 		def __init__(self,options,window):
 			DrawingTool.__init__(self,options,window)
 			self.compmode=qtgui.QPainter.CompositionMode_DestinationOut
-			self.drawontmp=True
  
 		def getColorRGBA(self):
 			return 0xFFFFFFFF

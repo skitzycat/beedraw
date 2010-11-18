@@ -584,6 +584,8 @@ class BeeTemporaryLayer(BeeGuiLayer):
 
 	def paint(self,painter,options,widget=None):
 		scene=self.scene()
+		if not scene or not scene.curlayerim:
+			return
 
 		lock=qtcore.QWriteLocker(self.imagelock)
 
