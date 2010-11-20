@@ -1,181 +1,182 @@
-<ui version="4.0" >
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
  <class>BrushOptionsWidget</class>
- <widget class="QWidget" name="BrushOptionsWidget" >
-  <property name="geometry" >
+ <widget class="QWidget" name="BrushOptionsWidget">
+  <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>368</width>
-    <height>202</height>
+    <width>358</width>
+    <height>292</height>
    </rect>
   </property>
-  <property name="windowTitle" >
+  <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QVBoxLayout" >
+  <layout class="QVBoxLayout">
    <item>
-    <layout class="QGridLayout" >
-     <item row="0" column="0" >
-      <widget class="QLabel" name="label" >
-       <property name="text" >
+    <layout class="QGridLayout">
+     <item row="0" column="0">
+      <widget class="QLabel" name="label">
+       <property name="text">
         <string>Brush Diameter:</string>
        </property>
       </widget>
      </item>
-     <item row="0" column="1" >
-      <widget class="QLabel" name="brushdiameterdisplay" >
-       <property name="text" >
+     <item row="0" column="1">
+      <widget class="QLabel" name="brushdiameterdisplay">
+       <property name="text">
         <string>10</string>
        </property>
       </widget>
      </item>
-     <item row="0" column="2" >
-      <widget class="QSlider" name="brushdiameter" >
-       <property name="minimum" >
+     <item row="0" column="2">
+      <widget class="QSlider" name="brushdiameter">
+       <property name="minimum">
         <number>1</number>
        </property>
-       <property name="singleStep" >
+       <property name="singleStep">
         <number>2</number>
        </property>
-       <property name="orientation" >
+       <property name="orientation">
         <enum>Qt::Horizontal</enum>
        </property>
-       <property name="tickPosition" >
+       <property name="tickPosition">
         <enum>QSlider::TicksAbove</enum>
        </property>
       </widget>
      </item>
-     <item row="1" column="0" >
-      <widget class="QLabel" name="label_2" >
-       <property name="text" >
+     <item row="1" column="0">
+      <widget class="QLabel" name="label_2">
+       <property name="text">
         <string>Pressure Balance:</string>
        </property>
       </widget>
      </item>
-     <item row="1" column="1" >
-      <widget class="QLabel" name="pressurebalancedisplay" >
-       <property name="text" >
+     <item row="1" column="1">
+      <widget class="QLabel" name="pressurebalancedisplay">
+       <property name="text">
         <string>100</string>
        </property>
       </widget>
      </item>
-     <item row="1" column="2" >
-      <widget class="QSlider" name="pressurebalance" >
-       <property name="enabled" >
+     <item row="1" column="2">
+      <widget class="QSlider" name="pressurebalance">
+       <property name="enabled">
         <bool>false</bool>
        </property>
-       <property name="minimum" >
+       <property name="minimum">
         <number>1</number>
        </property>
-       <property name="maximum" >
+       <property name="maximum">
         <number>200</number>
        </property>
-       <property name="value" >
+       <property name="value">
         <number>100</number>
        </property>
-       <property name="orientation" >
+       <property name="orientation">
         <enum>Qt::Horizontal</enum>
        </property>
-       <property name="tickPosition" >
+       <property name="tickPosition">
         <enum>QSlider::TicksAbove</enum>
        </property>
-       <property name="tickInterval" >
+       <property name="tickInterval">
         <number>20</number>
        </property>
       </widget>
      </item>
-     <item row="2" column="0" >
-      <widget class="QLabel" name="label_3" >
-       <property name="text" >
+     <item row="2" column="0">
+      <widget class="QLabel" name="label_3">
+       <property name="text">
         <string>Step Size:</string>
        </property>
       </widget>
      </item>
-     <item row="2" column="1" >
-      <widget class="QLabel" name="stepsizedisplay" >
-       <property name="text" >
+     <item row="2" column="1">
+      <widget class="QLabel" name="stepsizedisplay">
+       <property name="text">
         <string>1</string>
        </property>
       </widget>
      </item>
-     <item row="2" column="2" >
-      <widget class="QSlider" name="stepsize" >
-       <property name="minimum" >
+     <item row="2" column="2">
+      <widget class="QSlider" name="stepsize">
+       <property name="minimum">
         <number>1</number>
        </property>
-       <property name="orientation" >
+       <property name="orientation">
         <enum>Qt::Horizontal</enum>
        </property>
-       <property name="tickPosition" >
+       <property name="tickPosition">
         <enum>QSlider::TicksAbove</enum>
        </property>
       </widget>
      </item>
-     <item row="3" column="0" >
-      <widget class="QLabel" name="label_4" >
-       <property name="text" >
+     <item row="3" column="0">
+      <widget class="QLabel" name="label_4">
+       <property name="text">
         <string>Blur Percentage:</string>
        </property>
       </widget>
      </item>
-     <item row="3" column="1" >
-      <widget class="QLabel" name="blurdisplay" >
-       <property name="text" >
+     <item row="3" column="1">
+      <widget class="QLabel" name="blurdisplay">
+       <property name="text">
         <string>50</string>
        </property>
       </widget>
      </item>
-     <item row="3" column="2" >
-      <widget class="QSlider" name="blurslider" >
-       <property name="enabled" >
+     <item row="3" column="2">
+      <widget class="QSlider" name="blurslider">
+       <property name="enabled">
         <bool>false</bool>
        </property>
-       <property name="minimum" >
+       <property name="minimum">
         <number>1</number>
        </property>
-       <property name="maximum" >
+       <property name="maximum">
         <number>99</number>
        </property>
-       <property name="value" >
+       <property name="value">
         <number>50</number>
        </property>
-       <property name="orientation" >
+       <property name="orientation">
         <enum>Qt::Horizontal</enum>
        </property>
-       <property name="tickPosition" >
+       <property name="tickPosition">
         <enum>QSlider::TicksAbove</enum>
        </property>
       </widget>
      </item>
-     <item row="4" column="0" >
-      <widget class="QLabel" name="label_6" >
-       <property name="text" >
+     <item row="4" column="0">
+      <widget class="QLabel" name="label_6">
+       <property name="text">
         <string>Max Opacity %:</string>
        </property>
       </widget>
      </item>
-     <item row="4" column="1" >
-      <widget class="QLabel" name="opacity_display" >
-       <property name="text" >
+     <item row="4" column="1">
+      <widget class="QLabel" name="opacity_display">
+       <property name="text">
         <string>100</string>
        </property>
       </widget>
      </item>
-     <item row="4" column="2" >
-      <widget class="QSlider" name="opacity_slider" >
-       <property name="minimum" >
+     <item row="4" column="2">
+      <widget class="QSlider" name="opacity_slider">
+       <property name="minimum">
         <number>1</number>
        </property>
-       <property name="maximum" >
+       <property name="maximum">
         <number>100</number>
        </property>
-       <property name="value" >
+       <property name="value">
         <number>100</number>
        </property>
-       <property name="orientation" >
+       <property name="orientation">
         <enum>Qt::Horizontal</enum>
        </property>
-       <property name="tickPosition" >
+       <property name="tickPosition">
         <enum>QSlider::TicksAbove</enum>
        </property>
       </widget>
@@ -183,8 +184,34 @@
     </layout>
    </item>
    <item>
-    <widget class="QLabel" name="label_5" >
-     <property name="text" >
+    <widget class="QGroupBox" name="groupBox">
+     <property name="title">
+      <string>Tablet Pressure Changes:</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout">
+      <item>
+       <widget class="QCheckBox" name="pressure_size_box">
+        <property name="text">
+         <string>Size</string>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="pressure_opacity_box">
+        <property name="text">
+         <string>Opacity</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="label_5">
+     <property name="text">
       <string>Hold ctrl and click to set color as foreground</string>
      </property>
     </widget>
@@ -199,11 +226,11 @@
    <receiver>brushdiameterdisplay</receiver>
    <slot>setNum(int)</slot>
    <hints>
-    <hint type="sourcelabel" >
+    <hint type="sourcelabel">
      <x>274</x>
      <y>21</y>
     </hint>
-    <hint type="destinationlabel" >
+    <hint type="destinationlabel">
      <x>175</x>
      <y>21</y>
     </hint>
@@ -215,11 +242,11 @@
    <receiver>stepsizedisplay</receiver>
    <slot>setNum(int)</slot>
    <hints>
-    <hint type="sourcelabel" >
+    <hint type="sourcelabel">
      <x>274</x>
      <y>85</y>
     </hint>
-    <hint type="destinationlabel" >
+    <hint type="destinationlabel">
      <x>175</x>
      <y>85</y>
     </hint>
@@ -231,11 +258,11 @@
    <receiver>opacity_display</receiver>
    <slot>setNum(int)</slot>
    <hints>
-    <hint type="sourcelabel" >
+    <hint type="sourcelabel">
      <x>277</x>
      <y>150</y>
     </hint>
-    <hint type="destinationlabel" >
+    <hint type="destinationlabel">
      <x>176</x>
      <y>150</y>
     </hint>

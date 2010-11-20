@@ -491,7 +491,6 @@ def PILcomposite(baseim,stamp,x,y,comptype,mask=None):
 
 	if leftcorrection or rightcorrection or topcorrection or bottomcorrection:
 		stamp=stamp.crop((leftcorrection,rightcorrection,stamp.size[0]-rightcorrection,stamp.size[1]-leftcorrection))
-		pos=((max(pos[0],0)),max(pos[1],0))
 
 	baseswatch=baseim.crop((x,y,x+stamp.size[0],y+stamp.size[1]))
 

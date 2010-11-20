@@ -1403,7 +1403,7 @@ class SketchToolDesc(PencilToolDesc):
 		self.options["fade percent"]=0
 		self.options["opacity"]=100
 		self.options["pressuresize"]=1
-		self.options["pressureopacity"]=1
+		self.options["pressureopacity"]=0
  
 	def getTool(self,window):
 		tool=SketchTool(self.options,window)
@@ -1428,6 +1428,17 @@ class BrushOptionsWidget(qtgui.QWidget):
 	def updateDisplayFromOptions(self):
 		self.ui.brushdiameter.setValue(self.tooldesc.options["maxdiameter"])
 		self.ui.stepsize.setValue(self.tooldesc.options["step"])
+		self.ui.opacity_slider.setValue(self.tooldesc.options["opacity"])
+
+		if self.tooldesc.options["pressuresize"]:
+			self.ui.pressure_size_box.setChecked(True)
+		else:
+			self.ui.pressure_size_box.setChecked(False)
+
+		if self.tooldesc.options["pressureopacity"]:
+			self.ui.pressure_opacity_box.setChecked(True)
+		else:
+			self.ui.pressure_opacity_box.setChecked(False)
 
 	def on_brushdiameter_valueChanged(self,value):
 		self.tooldesc.options["maxdiameter"]=value
@@ -1437,6 +1448,18 @@ class BrushOptionsWidget(qtgui.QWidget):
 
 	def on_opacity_slider_valueChanged(self,value):
 		self.tooldesc.options["opacity"]=value
+
+	def on_pressure_size_box_stateChanged(self,value):
+		if value:
+			self.tooldesc.options["pressuresize"]=1
+		else:
+			self.tooldesc.options["pressuresize"]=0
+
+	def on_pressure_opacity_box_stateChanged(self,value):
+		if value:
+			self.tooldesc.options["pressureopacity"]=1
+		else:
+			self.tooldesc.options["pressureopacity"]=0
 
 class SketchTool(DrawingTool):
 	def __init__(self,options,window):
@@ -1453,8 +1476,8 @@ class SketchTool(DrawingTool):
 		return True
 
 	def updateBrushForPressure(self,pressure,subpixelx=0,subpixely=0):
-		if self.options["pressuresize"]:
-			self.updateBrushSizeForPressure(pressure,subpixelx,subpixely)
+		self.updateBrushSizeAndShiftForPressure(pressure,subpixelx,subpixely)
+
 		if self.options["pressureopacity"]:
 			self.updateBrushOpacityForPressure(pressure)
 
@@ -1464,65 +1487,57 @@ class SketchTool(DrawingTool):
 
 		self.brushimage=ImageChops.multiply(self.brushimage,fadeimage)
 
-	def updateBrushSizeForPressure(self,pressure,subpixelx=0,subpixely=0):
+	def updateBrushSizeAndShiftForPressure(self,pressure,subpixelx=0,subpixely=0):
 		self.lastpressure=pressure
 		#print "updating brush for pressure/subpixels:", pressure, subpixelx, subpixely
 		scale=self.scaleForPressure(pressure)
 		#print "brush scale:", scale
 
-		fullwidth,fullheight=self.fullsizedbrush.size
-		targetwidth=int(math.ceil(fullwidth*scale))+1
-		targetheight=int(math.ceil(fullheight*scale))+1
+		# adjust size for pressure
+		if self.options["pressuresize"] and scale<1:
+			fullwidth,fullheight=self.fullsizedbrush.size
+			targetwidth=int(math.ceil(fullwidth*scale))+1
+			targetheight=int(math.ceil(fullheight*scale))+1
 
-		# if the target size is an even number then make it odd
-		if targetwidth%2==0:
-			targetwidth+=1
-		if targetheight%2==0:
-			targetheight+=1
+			# if the target size is an even number then make it odd
+			if targetwidth%2==0:
+				targetwidth+=1
+			if targetheight%2==0:
+				targetheight+=1
 
-		# try to find exact or closest brushes to scale
-		abovebrush, belowbrush = self.findScaledBrushes(scale)
+			# try to find exact or closest brushes to scale
+			scaledbrush = self.findScaledBrushe(scale)
 
-		# didn't get an exact match so interpolate between two others
-		if belowbrush:
-			# shift both of the nearby brushes
-			scaledaboveimage=self.scaleShiftImage(abovebrush,scale,subpixelx-.5,subpixely-.5,targetwidth,targetheight)
+			# we're either exact on for scale or less than double what we need
+			if scaledbrush:
+				# scale down the image above
+				scaledaboveimage=self.scaleShiftImage(scaledbrush,scale,subpixelx-.5,subpixely-.5,targetwidth,targetheight)
 
-			# BEGIN: temporary change for testing speed and quality when taking out the dual scaling and interpolation
-			outputimage=scaledaboveimage
-			#scaledbelowimage=self.scaleShiftImage(belowbrush,scale,subpixelx-.5,subpixely-.5,targetwidth,targetheight)
+				outputimage=scaledaboveimage
 
-			#t = (scale-belowbrush[1])/(abovebrush[1]-belowbrush[1])
+			# if the scale is so small it should be at one pixel
+			else:
+				#s = scale * self.fullsizedbrush.size[0]
+				outputimage = self.scaleSmallBrush(scale, subpixelx-.5, subpixely-.5)
 
-			# interpolate between the results, but trust the one that was closer more
-			#outputimage = self.interpolate(scaledbelowimage,scaledaboveimage, t)
-			# END: temporary change for testing
-
-		# if the scale is so small it should be at one
-		elif abovebrush[1]!=scale or (abovebrush[0].size[0]==1 and abovebrush[0].size[1]==1):
-			s = scale/abovebrush[1]
-			outputimage = self.scaleSmallBrush(s, subpixelx-.5, subpixely-.5)
-			#outputimage = self.scaleSinglePixelImage(s, self.singlepixelbrush, subpixelx-.5, subpixely-.5)
-
-		# got an exact match, so just shift it according to sub-pixels
+		# else just shift the image
 		else:
-			outputimage=self.scaleShiftImage(abovebrush, scale, subpixelx-.5, subpixely-.5,targetwidth,targetheight)
+			fullwidth,fullheight=self.fullsizedbrush.size
+			targetwidth=fullwidth+1
+			targetheight=fullheight+1
+
+			# if ithe target size is an even number then make it odd
+			if targetwidth%2==0:
+				targetwidth+=1
+			if targetheight%2==0:
+				targetheight+=1
+
+			brush=(self.fullsizedbrush,1)
+			outputimage=self.scaleShiftImage(brush,1,subpixelx-.5,subpixely-.5,targetwidth,targetheight)
 
 		self.brushimage=Image.new("RGBA",outputimage.size,(0,0,0,0))
 
-		red=self.fgcolor.red()
-		green=self.fgcolor.green()
-		blue=self.fgcolor.blue()
-		self.brushimage.paste((red,green,blue),box=(0,0),mask=outputimage)
-
-		#outputimage=outputimage.convert("RGBA")
-		#qalpha=ImageQt(outputimage)
-
-		#qimage=qtgui.QImage(qalpha.width(),qalpha.height(),qtgui.QImage.Format_RGB32)
-		#qimage.fill(self.getColorRGBA())
-		#qimage.setAlphaChannel(qalpha)
-
-		#self.brushimage=qimage
+		self.brushimage.paste(self.colortuple,box=(0,0),mask=outputimage)
 
 	# do special case calculations for brush of size smaller than full 3x3
 	def scaleSmallBrush(self,scale,subpixelx,subpixely):
@@ -1530,7 +1545,7 @@ class SketchTool(DrawingTool):
 		radius=fullwidth*scale/2.
 
 		if radius>1.5:
-			"WARNING: small brush called on brush with radius:", radius
+			print "WARNING: small brush called on brush with radius:", radius
 			radius=1.5
 
 		#print "radius:", radius
@@ -1587,18 +1602,15 @@ class SketchTool(DrawingTool):
 		return im
 
 	# return single brush that matches scale passed or two brushes that are nearest to that scale
-	def findScaledBrushes(self,scale):
+	def findScaledBrushe(self,scale):
 		current=None
 		for i in range(len(self.scaledbrushes)):
 			current=self.scaledbrushes[i]
-			# if we get an exact match return just it
-			if current[1] == scale:
-				return (current,None)
-			# if we fall between two return both
-			elif current[1] < scale:
-				return (current,self.scaledbrushes[i-1])
-		# if we get to the end just return the last one
-		return (current,None)
+			# if we get an exact match or the next step above return it
+			if current[1] <= scale:
+				return self.scaledbrushes[i-1]
+		# if we get to the end return none, meaning that 
+		return None
 
 	# make full sized brush and list of pre-scaled brushes
 	def makeFullSizedBrush(self):
