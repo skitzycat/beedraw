@@ -1535,7 +1535,7 @@ class SketchTool(DrawingTool):
 			brush=(self.fullsizedbrush,1)
 			outputimage=self.scaleShiftImage(brush,1,subpixelx-.5,subpixely-.5,targetwidth,targetheight)
 
-		self.brushimage=Image.new("RGBA",outputimage.size,(0,0,0,0))
+		self.brushimage=Image.new("RGBA",outputimage.size,(self.colortuple[0],self.colortuple[1],self.colortuple[2],0))
 
 		self.brushimage.paste(self.colortuple,box=(0,0),mask=outputimage)
 

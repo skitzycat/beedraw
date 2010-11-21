@@ -323,11 +323,12 @@ def PILtoQImage(im,rect=None):
 	  return ImageQt.ImageQt(im)
 
 def printPILImage(im):
-	pix=im.load()
-	for i in range(im.size[0]):
-		for j in range(im.size[1]):
-			print pix[i,j],
-		print
+	printImage(PILtoQImage(im))
+	#pix=im.load()
+	#for i in range(im.size[0]):
+	#	for j in range(im.size[1]):
+	#		print pix[i,j],
+	#	print
 
 def scaleClosestPIL(im,xscale,yscale):
 	newsizex=int(math.ceil(im.size[0]*xscale))
