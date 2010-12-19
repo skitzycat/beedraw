@@ -77,7 +77,7 @@ class AllLayerCommandTypes:
 	""" formats for command types:
 				insertlayer : (layer key, index to insert at, image on layer, owner of layer)
 	"""
-	scale, resize, layerup, layerdown, deletelayer, insertlayer, deleteall, releaselayer, layerownership = range(9)
+	scale, resize, layerup, layerdown, deletelayer, insertlayer, deleteall, releaselayer, layerownership, flatten = range(10)
 
 # commands that are only used to communicate when in a network session
 class NetworkControlCommandTypes:

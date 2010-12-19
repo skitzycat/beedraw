@@ -258,6 +258,9 @@ class DrawingThread(qtcore.QThread):
 		elif subtype==AllLayerCommandTypes.deletelayer:
 			window.removeLayerByKey(command[2])
 
+		elif subtype==AllLayerCommandTypes.flatten:
+			window.flattenImage()
+
 		elif subtype==AllLayerCommandTypes.insertlayer:
 			# in this case we want to fill out the details ourselves
 			key = command[2]

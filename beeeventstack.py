@@ -230,10 +230,10 @@ class AddLayerCommand(AbstractCommand):
 		self.layerkey=layerkey
 
 	def undo(self,win):
-		(self.oldlayer,self.index)=win.removeLayerByKey(self.layerkey,history=-1)
+		(self.oldlayer,self.index)=win.removeLayerByKey(self.layerkey,history=False)
 
 	def redo(self,win):
-		win.insertRawLayer(self.oldlayer,self.index,history=-1)
+		win.insertRawLayer(self.oldlayer,self.index)
 
 class DelLayerCommand(AbstractCommand):
 	def __init__(self,layer,index):
@@ -244,10 +244,10 @@ class DelLayerCommand(AbstractCommand):
 		self.index=index
 
 	def undo(self,win):
-		win.insertRawLayer(self.layer,self.index,history=-1)
+		win.insertRawLayer(self.layer,self.index)
 
 	def redo(self,win):
-		win.removeLayerByKey(self.layer.key,history=-1)
+		win.removeLayerByKey(self.layer.key,history=False)
 
 class FloatingChangeParentCommand(AbstractCommand):
 	def __init__(self,layerkey,oldparentkey,newparentkey):
@@ -473,3 +473,20 @@ class AdjustCanvasSizeCommand(AbstractCommand):
 
 	def redo(self,win):
 		win.adjustCanvasSize(self.leftadj,self.topadj,self.rightadj,self.bottomadj,history=False)
+
+class FlattenImageCommand(AbstractCommand):
+	def __init__(self,oldlayers):
+		self.undotype=UndoCommandTypes.notinnetwork
+		self.oldlayers=oldlayers
+
+	def undo(self,win):
+		listlock=qtcore.QWriteLocker(win.layerslistlock)
+		win.removeLayer(win.layers[0],history=False,listlock=listlock)
+		index=0
+		for layer in oldlayers:
+			insertRawLayer(layer,index,listlock=listlock)
+			index+=1
+
+	def redo(self,win):
+		listlock=qtcore.QWriteLocker(win.layerslistlock)
+		win.flattenImage(history=False)

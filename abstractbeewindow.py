@@ -42,3 +42,37 @@ class AbstractBeeWindow(qtgui.QMainWindow):
 			self.master.raiseAllWindows(self)
 
 		return qtgui.QMainWindow.event(self,event)
+
+class AbstractBeeMdiWindow(qtgui.QDockWidget):
+	""" Base class for every non-master displayed window in the bee application """
+	def __init__(self,master):
+		qtgui.QMdiSubWindow.__init__(self,master)
+		self.master=master
+		self.setAttribute(qtcore.Qt.WA_QuitOnClose,False)
+
+#	def closeEvent(self,event):
+#		event.ignore()
+#		self.hide()
+
+	def keyPressEvent(self,event):
+		self.master.keyEvent(event)
+
+	def keyReleaseEvent(self,event):
+		self.master.keyEvent(event)
+
+class AbstractBeeDockWindow(qtgui.QDockWidget):
+	""" Base class for every non-master displayed window in the bee application """
+	def __init__(self,master):
+		qtgui.QDockWidget.__init__(self,master)
+		self.master=master
+		self.setAttribute(qtcore.Qt.WA_QuitOnClose,False)
+
+#	def closeEvent(self,event):
+#		event.ignore()
+#		self.hide()
+
+	def keyPressEvent(self,event):
+		self.master.keyEvent(event)
+
+	def keyReleaseEvent(self,event):
+		self.master.keyEvent(event)

@@ -52,6 +52,11 @@ class BeeApp(object):
 		self.type=type
 		self.app=BeeGuiApp(argv)
 
+		pixmap=qtgui.QPixmap()
+		if pixmap.load("beeicon.png"):
+			icon=qtgui.QIcon(pixmap)
+			qtgui.QApplication.setWindowIcon(icon)
+
 class BeeGuiApp(qtgui.QApplication):
 	def event(self,event):
 		if event.type()==qtcore.QEvent.TabletEnterProximity:

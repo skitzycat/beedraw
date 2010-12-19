@@ -6,7 +6,7 @@ import os
 from beeglobals import BEE_CONFIG_DIR
 from colorswatch import *
 
-from abstractbeewindow import AbstractBeeWindow
+from abstractbeewindow import AbstractBeeDockWindow
 from beeutil import *
 
 from beesave import PaletteXmlWriter,BeeToolConfigWriter,BeeMasterConfigWriter
@@ -15,6 +15,7 @@ from beeload import PaletteParser,BeeToolConfigParser
 from PaletteOptionsDialogUi import Ui_Pallete_Config_Dialog
 
 from BeePaletteUi import Ui_PaletteWindow
+from BeePaletteDockUi import Ui_BeePaletteDock
 
 class BeeSwatchScrollArea(qtgui.QScrollArea):
 	def __init__(self,master,colors,swatchsize=15):
@@ -91,12 +92,12 @@ class BeeSwatchScrollArea(qtgui.QScrollArea):
 		# readjust the whole palette widget to the right size
 		widget.adjustSize()
 
-class PaletteWindow(AbstractBeeWindow):
+class PaletteWindow(AbstractBeeDockWindow):
 	def __init__(self,master):
-		AbstractBeeWindow.__init__(self,master)
+		AbstractBeeDockWindow.__init__(self,master)
 		self.setAttribute(qtcore.Qt.WA_DeleteOnClose,False)
 
-		self.ui=Ui_PaletteWindow()
+		self.ui=Ui_BeePaletteDock()
 		self.ui.setupUi(self)
 		self.show()
 
@@ -157,7 +158,7 @@ class PaletteWindow(AbstractBeeWindow):
 			self.master.uncheckWindowPaletteBox()
 		return qtgui.QWidget.hideEvent(self,event)
 
-	def on_Change_number_of_colors_triggered(self,accept=True):
+	def on_Palette_Configure_triggered(self,accept=True):
 		if not accept:
 			return
 

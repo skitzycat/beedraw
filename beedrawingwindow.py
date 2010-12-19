@@ -35,7 +35,7 @@ from beelayer import BeeGuiLayer,SelectedAreaDisplay,SelectedAreaAnimation,Layer
 from Queue import Queue
 from drawingthread import DrawingThread
 
-from DrawingWindowUI import Ui_DrawingWindowSpec
+from DrawingWindowMdiUi import Ui_DrawingWindowMdi
 from GrowSelectionDialogUi import Ui_Grow_Selection_Dialog
 from ShrinkSelectionDialogUi import Ui_Shrink_Selection_Dialog
 from beedialogs import BeeScaleImageDialog
@@ -48,12 +48,14 @@ from abstractbeewindow import AbstractBeeWindow
 
 from canvasadjustpreview import CanvasAdjustDialog
 
-class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
+class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 	""" Represents a window that the user can draw in
 	"""
 	def __init__(self,master,width=600,height=400,startlayer=True,type=WindowTypes.singleuser,maxundo=40):
+
 		BeeSessionState.__init__(self,master,width,height,type)
-		AbstractBeeWindow.__init__(self,master)
+		#AbstractBeeWindow.__init__(self,master)
+		qtgui.QWidget.__init__(self)
 
 		self.localcommandstack=CommandStack(self,CommandStackTypes.singleuser,maxundo=maxundo)
 
@@ -61,8 +63,10 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 
 		# initialize values
 		self.zoom=1.0
-		self.ui=Ui_DrawingWindowSpec()
+
+		self.ui=Ui_DrawingWindowMdi()
 		self.ui.setupUi(self)
+
 		self.activated=False
 		self.backdrop=None
 
@@ -92,8 +96,6 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 		self.view=self.ui.PictureViewWidget
 		#self.resizeViewToWindow()
 		self.view.setCursor(master.getCurToolDesc().getCursor())
-
-		self.show()
 
 		self.scene.addItem(self.layerfinisher)
 
@@ -125,9 +127,81 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 
 		self.changeWindowTitle("Bee Canvas %d" % self.id)
 
+		self.setupMenu()
+
 	# this is for debugging memory cleanup
 	#def __del__(self):
 	#	print "DESTRUCTOR: bee drawing window"
+
+	def setupMenu(self):
+		menubar=qtgui.QMenuBar(self)
+		replaceWidget(self.ui.menu_widget,menubar)
+		self.ui.menu_widget=menubar
+
+		# File Menu
+		filemenu=menubar.addMenu("File")
+		curaction=filemenu.addAction("New",self.on_action_File_New_triggered)
+		curaction.setShortcut("Ctrl+N")
+		curaction=filemenu.addAction("Open",self.on_action_File_Open_triggered)
+		curaction.setShortcut("Ctrl+O")
+		curaction=filemenu.addAction("Play",self.on_action_File_Play_triggered)
+		curaction.setShortcut("Ctrl+P")
+		curaction=filemenu.addAction("Connect",self.on_action_File_Connect_triggered)
+		curaction.setShortcut("Ctrl+E")
+
+		filemenu.addSeparator()
+
+		curaction=filemenu.addAction("Save",self.on_action_File_Save_triggered)
+		curaction.setShortcut("Ctrl+S")
+		curaction=filemenu.addAction("Save As",self.on_action_File_Save_As_triggered)
+		curaction.setShortcut("Ctrl+A")
+
+		curaction=filemenu.addAction("Log")
+		curaction.setCheckable(True)
+		qtcore.QObject.connect(curaction,qtcore.SIGNAL("toggled(bool)"),self.on_action_File_Log_toggled)
+		curaction.setShortcut("Ctrl+L")
+
+		curaction=filemenu.addAction("Close",self.on_action_File_Close_triggered)
+
+		# Edit menu
+		editmenu=menubar.addMenu("Edit")
+
+		curaction=editmenu.addAction("Undo",self.on_action_Edit_Undo_triggered)
+		curaction.setShortcut("Ctrl+Z")
+		curaction=editmenu.addAction("Redo",self.on_action_Edit_Redo_triggered)
+		curaction.setShortcut("Ctrl+R")
+
+		editmenu.addSeparator()
+
+		curaction=editmenu.addAction("Cut",self.on_action_Edit_Cut_triggered)
+		curaction.setShortcut("Ctrl+X")
+		curaction=editmenu.addAction("Copy",self.on_action_Edit_Copy_triggered)
+		curaction.setShortcut("Ctrl+C")
+		curaction=editmenu.addAction("Paste",self.on_action_Edit_Paste_triggered)
+		curaction.setShortcut("Ctrl+V")
+
+		#View menu
+		viewmenu=menubar.addMenu("View")
+		curaction=viewmenu.addAction("Zoom In",self.on_action_View_Zoom_In_triggered)
+		curaction.setShortcut("+")
+
+		curaction=viewmenu.addAction("Zoom Out",self.on_action_View_Zoom_Out_triggered)
+		curaction.setShortcut("-")
+
+		curaction=viewmenu.addAction("Zoom 1:1",self.on_action_View_Zoom_1_1_triggered)
+		curaction.setShortcut("1")
+
+		#Image menu
+		imagemenu=menubar.addMenu("Image")
+		self.imagemenu=imagemenu
+
+		curaction=imagemenu.addAction("Canvas Size",self.on_action_Image_Canvas_Size_triggered)
+		curaction=imagemenu.addAction("Scale Image",self.on_action_Image_Scale_Image_triggered)
+
+		curaction=imagemenu.addAction("Flatten Image",self.on_action_Image_Flatten_Image_triggered)
+
+		#Select menu
+		#Network menu
 
 	def changeWindowTitle(self,name):
 		self.setWindowTitle(name)
@@ -562,7 +636,7 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 				self.addLayerUpToQueue(layer.key)
 
 	def removeLayer(self,layer,history=True,listlock=None):
-		index=-1
+		index=None
 		if not listlock:
 			listlock=qtcore.QWriteLocker(self.layerslistlock)
 
@@ -570,17 +644,36 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 			index=-1
 			self.scene.removeItem(layer)
 			self.scene.update()
-			self.setValidActiveLayer(True,listlock=listlock)
+			if checkvalid:
+				self.setValidActiveLayer(True,listlock=listlock)
 			self.requestLayerListRefresh(listlock)
 
 		else:
-			(layer,index)=BeeSessionState.removeLayer(self,layer,history,listlock)
+			(layer,index)=BeeSessionState.removeLayer(self,layer,history=history,listlock=listlock)
 			if layer:
 				self.scene.removeItem(layer)
+
 				self.scene.update()
 				self.setValidActiveLayer(True,listlock=listlock)
 
 		return layer,index
+
+	def insertRawLayer(self,layer,index,listlock=None):
+		if not listlock:
+			listlock=qtcore.QWriteLocker(self.layerslistlock)
+
+		try:
+			self.layers.insert(index,layer)
+		except:
+			self.layers.append(layer)
+
+		self.scene.addItem(layer)
+
+		listlock.unlock()
+
+		self.setValidActiveLayer()
+		self.requestLayerListRefresh()
+		self.reCompositeImage()
 
 	def insertLayer(self,key,index,type=LayerTypes.user,image=None,opacity=None,visible=None,compmode=None,owner=0,history=True):
 		lock=qtcore.QWriteLocker(self.layerslistlock)
@@ -592,7 +685,10 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 
 		layer=BeeGuiLayer(self.id,type,key,image,opacity=opacity,visible=visible,compmode=compmode,owner=owner)
 
-		self.layers.insert(index,layer)
+		try:
+			self.layers.insert(index,layer)
+		except:
+			self.layers.append(layer)
 
 		# only add command to history if we are in a local session
 		if self.type==WindowTypes.singleuser and history:
@@ -601,7 +697,7 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 		self.scene.addItem(layer)
 		lock.unlock()
 
-		self.setValidActiveLayer(None,True)
+		self.setValidActiveLayer()
 		self.requestLayerListRefresh()
 		self.reCompositeImage()
 
@@ -628,6 +724,10 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 	def startRemoteDrawingThreads(self):
 		pass
 
+	def mdiWinStateChange(self,oldstate,newstate):
+		if newstate & qtcore.Qt.WindowActive:
+			self.master.takeFocus(self)
+
 	# handle a few events that don't have easy function over loading front ends
 	def event(self,event):
 		# do the last part of setup when the window is done being created, this is so nothing starts drawing on the screen before it is ready
@@ -636,8 +736,6 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 				self.activated=True
 				self.reCompositeImage()
 				self.startRemoteDrawingThreads()
-
-			self.master.takeFocus(self)
 
 		elif event.type()==BeeCustomEventTypes.displaymessage:
 			self.displayMessage(event.boxtype,event.title,event.message)
@@ -649,7 +747,7 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 		elif event.type()==qtcore.QEvent.DeferredDelete:
 			self.cleanUp()
 
-		return AbstractBeeWindow.event(self,event)
+		return qtgui.QWidget.event(self,event)
 
 # get the current layer key
 	def getCurLayerKey(self,curlayerlock=None):
@@ -750,19 +848,19 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 
 				self.addSelectionChangeToQueue(SelectionModTypes.shrink,pixels)
 
-	def on_action_Zoom_In_triggered(self,accept=True):
+	def on_action_View_Zoom_In_triggered(self,accept=True):
 		if accept:
 			#self.zoom*=1.25
 			self.zoom*=2
 			self.view.newZoom(self.zoom)
 
-	def on_action_Zoom_Out_triggered(self,accept=True):
+	def on_action_View_Zoom_Out_triggered(self,accept=True):
 		if accept:
 			#self.zoom/=1.25
 			self.zoom/=2
 			self.view.newZoom(self.zoom)
 
-	def on_action_Zoom_1_1_triggered(self,accept=True):
+	def on_action_View_Zoom_1_1_triggered(self,accept=True):
 		if accept:
 			self.zoom=1.0
 			self.view.newZoom(self.zoom)
@@ -799,6 +897,41 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 				rightadj=dialog.rightadj
 				bottomadj=dialog.bottomadj
 				self.addAdjustCanvasSizeRequestToQueue(leftadj,topadj,rightadj,bottomadj)
+
+	def on_action_Image_Flatten_Image_triggered(self,accept=True):
+		if accept:
+			addFlattenImageToQueue()
+
+	def flattenImage(self,listlock=None,history=True):
+		# lock the list of layers and all the layer images
+		if not listlock:
+			listlock=qtcore.QWriteLocker(self.layerslistlock)
+
+		# we need at least two layers and the layer finisher layer to have this operation actually do something
+		if len(self.scene.items())<3:
+			return
+
+		layerlocks=[]
+		for l in self.layers:
+			layerlocks.append(qtcore.QReadLocker(l.imagelock))
+
+		sceneimage=self.scene.getImageCopy()
+
+		newkey=self.nextLayerKey()
+		newlayer=BeeGuiLayer(self.id,LayerTypes.user,newkey,sceneimage)
+
+		oldlayers=[]
+		for l in self.layers:
+			layer,index=self.removeLayer(l,history=False,listlock=listlock)
+			oldlayers.append(layer)
+
+		newlayer.image=sceneimage
+
+		self.scene.update()
+
+		if history:
+			historyevent=FlattenImageCommand(oldlayers)
+			self.addCommandToHistory(historyevent)
 
 	def addSelectionChangeToQueue(self,selectionop,path):
 		self.queueCommand((DrawingCommandTypes.localonly,LocalOnlyCommandTypes.selection,selectionop,path),ThreadTypes.user)
@@ -925,6 +1058,9 @@ class BeeDrawingWindow(AbstractBeeWindow,BeeSessionState):
 
 		self.setFileName(filename)
 
+	def on_action_File_Close_triggered(self,accept=True):
+		if accept:
+			self.close()
 
 	# this is here because the window doesn't seem to get deleted when it's closed
 	# the cleanUp function attempts to clean up as much memory as possible

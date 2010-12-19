@@ -194,7 +194,7 @@ class EyeDropperToolDesc(AbstractToolDesc):
 		return tool
 
 	def pressToolButton(self):
-		BeeApp().master.ui.eye_dropper_button.setChecked(True)
+		BeeApp().master.toolselectwindow.ui.eye_dropper_button.setChecked(True)
  
 	def setupTool(self,window,layerkey):
 		self.layerkey=layerkey
@@ -240,8 +240,14 @@ class DrawingTool(AbstractTool):
 			self.logtype=ToolLogTypes.unlogable
 
 	def calculateCloseEdgePoint(self,p1,p2):
-		""" Stub for now, eventually I'd like this algorithm to take over if the other one gets confused by drawing parrellel to the edge right before leaving. """
-		return None
+		""" Stub for now, eventually I'd like this algorithm to take over if the other one encounters data that looks bad """
+		return p2 
+
+	def curBrushSize(self):
+		if self.brushimageformat==BrushImageFormats.pil:
+			return self.brushimage.size
+		else:
+			return self.brushimage.width(),self.brushimage.height()
 
 	def calculateEdgePoint(self,p1,p2):
 		""" Calculate where a continuation of two points would have left the canvas, does this by simply creating a line out of the points and looking for where the line crosses the visable area of the canvas"""
@@ -250,11 +256,22 @@ class DrawingTool(AbstractTool):
 			return None
 
 		rect=self.window.view.getVisibleImageRect()
+
 		leftedge=rect.x()
 		topedge=rect.y()
 
 		rightedge=leftedge+rect.width()
 		bottomedge=topedge+rect.height()
+
+		# factor to go past the edge so the line seems to go all the way instead of stopping short
+		brushsize=self.curBrushSize()
+		edgefudge=brushsize[0]/2
+
+		leftedge-=edgefudge
+		topedge-=edgefudge
+
+		rightedge+=edgefudge
+		bottomedge+=edgefudge
 
 		exitpoint=None
 
@@ -265,60 +282,70 @@ class DrawingTool(AbstractTool):
 		if dx==0 and dy==0:
 			return None
 
-		# special case for going parallel to an axis
-		if dx==0:
+		# special case for going parallel to a side
+		if dx==0 or dy==0:
+			m=None
+			if dx==0:
+				if dy<0:
+					exitpoint=(p1[0],topedge)
+				else:
+					exitpoint=(p1[0],bottomedge)
+			if dy==0:
+				if dx<0:
+					exitpoint=(leftedge,p1[1])
+				else:
+					exitpoint=(rightedge,p1[1])
+
+		else:
+			# calculate slope
+			m=dy/dx
+
+			# calculate line offset
+			b=p1[1]-(m*p1[0])
+
+			sides_to_check=[]
+
 			if dy<0:
-				return(p1[0],topedge)
-			else:
-				return(p1[0],bottomedge)
-		if dy==0:
+				sides_to_check.append("top")
+			elif dy>0:
+				sides_to_check.append("bottom")
+	
 			if dx<0:
-				return(leftedge,p1[1])
-			else:
-				return(rightedge,p1[1])
-
-		# calculate slope
-		m=dy/dx
-
-		# calculate line offset
-		b=p1[1]-(m*p1[0])
-
-		sides_to_check=[]
-
-		if dy<0:
-			sides_to_check.append("top")
-		elif dy>0:
-			sides_to_check.append("bottom")
-
-		if dx<0:
-			sides_to_check.append("left")
-		elif dx>0:
-			sides_to_check.append("right")
-
-		for side in sides_to_check:
-			if side=="top":
-				x,y=findLineIntersection(-m,1,b,0,1,topedge)
-				if x>leftedge and x<rightedge:
-					exitpoint=(x,y)
-			elif side=="bottom":
-				x,y=findLineIntersection(-m,1,b,0,1,bottomedge)
-				if x>leftedge and x<rightedge:
-					exitpoint=(x,y)
-			elif side=="right":
-				x,y=findLineIntersection(-m,1,b,1,0,rightedge)
-				if y>topedge and y<bottomedge:
-					exitpoint=(x,y)
-			elif side=="left":
-				x,y=findLineIntersection(-m,1,b,1,0,leftedge)
-				if y>topedge and y<bottomedge:
-					exitpoint=(x,y)
+				sides_to_check.append("left")
+			elif dx>0:
+				sides_to_check.append("right")
+	
+			for side in sides_to_check:
+				if side=="top":
+					x,y=findLineIntersection(-m,1,b,0,1,topedge)
+					if x>leftedge and x<rightedge:
+						exitpoint=(x,y)
+				elif side=="bottom":
+					x,y=findLineIntersection(-m,1,b,0,1,bottomedge)
+					if x>leftedge and x<rightedge:
+						exitpoint=(x,y)
+				elif side=="right":
+					x,y=findLineIntersection(-m,1,b,1,0,rightedge)
+					if y>topedge and y<bottomedge:
+						exitpoint=(x,y)
+				elif side=="left":
+					x,y=findLineIntersection(-m,1,b,1,0,leftedge)
+					if y>topedge and y<bottomedge:
+						exitpoint=(x,y)
 
 		
 		pointdistance=distance2d(p1[0],p1[1],p2[0],p2[1])
 		edgedistance=distance2d(p2[0],p2[1],exitpoint[0],exitpoint[1])
 
-		if edgedistance>2*pointdistance:
-			return self.calculateCloseEdgePoint(p1,p2)
+		#print "last two points:", p1, p2
+		#print "calculating edge point:", exitpoint
+		#print "point distance, edge distance:", pointdistance, edgedistance
+
+		# figure out if the calculated end point looks bad
+		# right now the only easy to detect case is when the line is parallel to one edge
+		if not m:
+			exitpoint=self.calculateCloseEdgePoint(p1,p2)
+
 		return exitpoint
 
 	def calculateEdgePressure(self,p1,p2,pexit):
@@ -778,7 +805,7 @@ class PencilToolDesc(AbstractToolDesc):
 		self.options["opacity"]=100
 
 	def pressToolButton(self):
-		BeeApp().master.ui.pencil_button.setChecked(True)
+		BeeApp().master.toolselectwindow.ui.pencil_button.setChecked(True)
  
 	def getTool(self,window):
 		tool=DrawingTool(self.options,window)
@@ -841,7 +868,7 @@ class EraserToolDesc(AbstractToolDesc):
 		self.displayname="Eraser"
  
 	def pressToolButton(self):
-		BeeApp().master.ui.eraser_button.setChecked(True)
+		BeeApp().master.toolselectwindow.ui.eraser_button.setChecked(True)
  
 	def setDefaultOptions(self):
 		self.options["maxdiameter"]=21
@@ -1024,7 +1051,7 @@ class RectSelectionToolDesc(AbstractToolDesc):
 		return tool
 
 	def pressToolButton(self):
-		BeeApp().master.ui.rectangle_select_button.setChecked(True)
+		BeeApp().master.toolselectwindow.ui.rectangle_select_button.setChecked(True)
 		self.oldmodkeys=BeeApp().app.keyboardModifiers()
  
 	def getTool(self,window):
@@ -1133,7 +1160,7 @@ class FeatherSelectToolDesc(AbstractToolDesc):
 		self.displayname="Feather Selection"
 
 	def pressToolButton(self):
-		BeeApp().master.ui.feather_select_button.setChecked(True)
+		BeeApp().master.toolselectwindow.ui.feather_select_button.setChecked(True)
 		self.oldmodkeys=BeeApp().app.keyboardModifiers()
 
 	def setDefaultOptions(self):
@@ -1256,7 +1283,7 @@ class PaintBucketToolDesc(AbstractToolDesc):
 		self.displayname="Paint Bucket"
 
 	def pressToolButton(self):
-		BeeApp().master.ui.paint_bucket_button.setChecked(True)
+		BeeApp().master.toolselectwindow.ui.paint_bucket_button.setChecked(True)
 
 	def setDefaultOptions(self):
 		self.options["similarity"]=10
@@ -1391,7 +1418,7 @@ class SketchToolDesc(PencilToolDesc):
 		self.displayname="Brush"
 
 	def pressToolButton(self):
-		BeeApp().master.ui.brush_button.setChecked(True)
+		BeeApp().master.toolselectwindow.ui.brush_button.setChecked(True)
  
 	def setDefaultOptions(self):
 		PencilToolDesc.setDefaultOptions(self)
@@ -1734,7 +1761,7 @@ class MoveSelectionToolDesc(AbstractToolDesc):
 		self.displayname="Move Selection"
 
 	def pressToolButton(self):
-		BeeApp().master.ui.move_selection_button.setChecked(True)
+		BeeApp().master.toolselectwindow.ui.move_selection_button.setChecked(True)
 
 	def getTool(self,window):
 		tool=MoveSelectionTool(self.options,window)

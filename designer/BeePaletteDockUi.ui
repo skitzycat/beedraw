@@ -1,33 +1,39 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>PaletteWindow</class>
- <widget class="QMainWindow" name="PaletteWindow">
+ <class>BeePaletteDock</class>
+ <widget class="QDockWidget" name="BeePaletteDock">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>268</width>
-    <height>593</height>
+    <width>187</width>
+    <height>536</height>
    </rect>
   </property>
-  <property name="windowTitle">
-   <string>BeePalette</string>
+  <property name="features">
+   <set>QDockWidget::AllDockWidgetFeatures</set>
   </property>
-  <widget class="QWidget" name="centralwidget">
-   <layout class="QVBoxLayout">
+  <property name="allowedAreas">
+   <set>Qt::LeftDockWidgetArea|Qt::RightDockWidgetArea</set>
+  </property>
+  <property name="windowTitle">
+   <string>Palette</string>
+  </property>
+  <widget class="QWidget" name="dockWidgetContents">
+   <layout class="QVBoxLayout" name="verticalLayout">
     <item>
      <layout class="QGridLayout">
       <item row="0" column="0">
        <widget class="QPushButton" name="foreground_button">
         <property name="text">
-         <string>Foreground Color:</string>
+         <string>Foreground:</string>
         </property>
        </widget>
       </item>
       <item row="1" column="0">
        <widget class="QPushButton" name="background_button">
         <property name="text">
-         <string>Background Color:</string>
+         <string>Background:</string>
         </property>
        </widget>
       </item>
@@ -77,55 +83,6 @@
     </item>
    </layout>
   </widget>
-  <widget class="QStatusBar" name="statusbar"/>
-  <widget class="QMenuBar" name="menubar">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>0</y>
-     <width>268</width>
-     <height>27</height>
-    </rect>
-   </property>
-   <widget class="QMenu" name="menuPalette">
-    <property name="title">
-     <string>Palette</string>
-    </property>
-    <addaction name="Palette_save_default"/>
-    <addaction name="Palette_load_default"/>
-    <addaction name="separator"/>
-    <addaction name="Palette_save"/>
-    <addaction name="Palette_load"/>
-    <addaction name="separator"/>
-    <addaction name="Change_number_of_colors"/>
-   </widget>
-   <addaction name="menuPalette"/>
-  </widget>
-  <action name="Palette_save_default">
-   <property name="text">
-    <string>Save as Default</string>
-   </property>
-  </action>
-  <action name="Palette_load_default">
-   <property name="text">
-    <string>Load from Defaults</string>
-   </property>
-  </action>
-  <action name="Palette_save">
-   <property name="text">
-    <string>Save as</string>
-   </property>
-  </action>
-  <action name="Palette_load">
-   <property name="text">
-    <string>Load from file</string>
-   </property>
-  </action>
-  <action name="Change_number_of_colors">
-   <property name="text">
-    <string>Color Palette Options</string>
-   </property>
-  </action>
  </widget>
  <resources/>
  <connections/>

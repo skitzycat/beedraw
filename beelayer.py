@@ -27,12 +27,14 @@ import PyQt4.QtGui as qtgui
 from beeutil import *
 
 from LayerWidgetUi import Ui_LayerConfigWidget
-from LayersWindowUi import Ui_LayersWindow
+#from LayersWindowUi import Ui_LayersWindow
+from LayersWindowDockUi import Ui_LayersWindow
 
 from beeapp import BeeApp
 from beeeventstack import *
 
 from abstractbeewindow import AbstractBeeWindow
+from abstractbeewindow import AbstractBeeDockWindow
 
 class BeeLayerState:
 	def __init__(self,windowid,type,key,image=None,opacity=None,visible=None,compmode=None,owner=0):
@@ -195,7 +197,7 @@ class BeeLayerState:
 		return retimage
 
 	# composite section of layer onto paint object passed
-	def compositeLayerOn(self,painter,dirtyrect):
+	def compositeLayerOn(self,painter,dirtyrect,imglock=None):
 		# if layer is not visible just return
 		if not self.visible:
 			return
@@ -205,7 +207,8 @@ class BeeLayerState:
 		painter.setOpacity(self.opacity())
 		painter.setCompositionMode(self.compmode)
 
-		lock=qtcore.QWriteLocker(self.imagelock)
+		if not imglock:
+			imglock=qtcore.QWriteLocker(self.imagelock)
 
 		painter.drawImage(dirtyrect,self.image,dirtyrect)
 
@@ -816,9 +819,9 @@ class LayerConfigWidget(qtgui.QWidget):
 			#else:
 			#	win.setActiveLayer(layer.key)
 
-class BeeLayersWindow(AbstractBeeWindow):
+class BeeLayersWindow(AbstractBeeDockWindow):
 	def __init__(self,master):
-		AbstractBeeWindow.__init__(self,master)
+		AbstractBeeDockWindow.__init__(self,master)
 
 		# don't have a maximize button
 		self.setWindowFlags(qtcore.Qt.CustomizeWindowHint|qtcore.Qt.WindowMinimizeButtonHint|qtcore.Qt.WindowCloseButtonHint)
@@ -868,7 +871,7 @@ class BeeLayersWindow(AbstractBeeWindow):
 
 	# rebuild layers window by removing all the layers widgets and then adding them back in order
 	def refreshLayersList(self,win,curlayerkey,winlock=None):
-		""" Update the list of layers displayed in the layers display window, if passed none for the layers arguement, the list of layers is cleared
+		""" Update the list of layers displayed in the layers display window
 		"""
 		if not winlock:
 			winlock=qtcore.QReadLocker(self.master.drawingwindowslock)
@@ -882,6 +885,7 @@ class BeeLayersWindow(AbstractBeeWindow):
 			# skip items of wrong type
 			if not type(widget) is LayerConfigWidget:
 				continue
+			widget.hide()
 			widget.setParent(None)
 			vbox.removeWidget(widget)
 

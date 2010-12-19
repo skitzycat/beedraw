@@ -25,14 +25,12 @@ import PyQt4.QtCore as qtcore
 
 import os
 
-import cPickle as pickle
-
 from socket import socket as pysocket
 
 from beenetwork import BeeSocket
 from beeglobals import *
 from beetypes import *
-from BeeMasterUI import Ui_BeeMasterSpec
+from BeeMasterMdi import Ui_BeeMasterMdiSpec
 from AboutDisplayDialogUi import Ui_About_Dialog
 from PickNewCanvasSizeDialogUi import Ui_canvas_size_dialog
 from ConnectionDialogUi import Ui_ConnectionInfoDialog
@@ -42,7 +40,7 @@ from beeutil import *
 from beesave import BeeToolConfigWriter,BeeMasterConfigWriter,BeeWindowPositionConfigWriter
 from beeload import PaletteParser,BeeToolConfigParser,BeeWindowPositionConfigParser
 from beepalette import PaletteWindow
-from toolwindow import ToolWindow
+from toolwindow import *
 from beeload import BeeMasterConfigParser
 
 from beeapp import BeeApp
@@ -65,7 +63,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		# set the parent for all windows here, currently none
 		self.topwinparent=None
 
-		qtgui.QMainWindow.__init__(self,self.topwinparent)
+		qtgui.QMainWindow.__init__(self)
 		AbstractBeeMaster.__init__(self)
 
 		# set default config values
@@ -98,12 +96,9 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 				parser.loadToToolBox(self.toolbox)
 
 		# setup interface according to designer code
-		self.ui=Ui_BeeMasterSpec()
+		self.ui=Ui_BeeMasterMdiSpec()
 		self.ui.setupUi(self)
 		self.show()
-
-		# set height to always be the minimum possible
-		self.setMaximumHeight(0)
 
 		# list to hold drawing windows and lock for it
 		self.curwindow=None
@@ -122,7 +117,6 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		self.pointertoolmap[3]="eraser"
 
 		# setup foreground and background swatches
-		# default foreground to black and background to white
 		#self.ui.FGSwatch=FGSwatch(self,replacingwidget=self.ui.FGSwatch)
 		#self.setFGColor(qtgui.QColor(0,0,0))
 
@@ -136,21 +130,63 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		self.nextwindowid=0
 
 		# setup window with tool options
-		self.tooloptionswindow=ToolWindow(self)
+		self.tooloptionswindow=ToolOptionsWindow(self)
 		self.tooloptionswindow.updateCurrentTool()
 
 		self.initializedwindows=True
 
+		# default foreground color to black and background color to white
 		self.fgcolor=qtgui.QColor(0,0,0)
 		self.bgcolor=qtgui.QColor(255,255,255)
 
 		# setup window with colors
 		self.palettewindow=PaletteWindow(self)
 
-		self.restore_default_window_positions()
+
+		#self.restore_default_window_positions()
 
 		lock=qtcore.QWriteLocker(self.winzlistlock)
 		self.winzlist=[self,self.tooloptionswindow,self.palettewindow,self.layerswindow]
+
+		self.toolselectwindow=ToolSelectionWindow(self)
+
+		self.setCorner(qtcore.Qt.TopLeftCorner,qtcore.Qt.LeftDockWidgetArea)
+		self.setCorner(qtcore.Qt.TopRightCorner,qtcore.Qt.RightDockWidgetArea)
+		self.setCorner(qtcore.Qt.BottomLeftCorner,qtcore.Qt.LeftDockWidgetArea)
+		self.setCorner(qtcore.Qt.BottomRightCorner,qtcore.Qt.RightDockWidgetArea)
+
+		# by default have the windows docked in the main window
+		self.addDockWidget(qtcore.Qt.LeftDockWidgetArea,self.toolselectwindow)
+		self.addDockWidget(qtcore.Qt.LeftDockWidgetArea,self.palettewindow)
+		self.addDockWidget(qtcore.Qt.RightDockWidgetArea,self.tooloptionswindow)
+		self.addDockWidget(qtcore.Qt.RightDockWidgetArea,self.layerswindow)
+
+		# restore settings
+		settings=qtcore.QSettings("BeeDraw","BeeDraw")
+		self.restoreGeometry(settings.value("geometry").toByteArray())
+		self.restoreState(settings.value("windowState").toByteArray())
+
+		# set menu settings according to the new restored settings
+		if not self.layerswindow.isVisible():
+			self.uncheckWindowLayerBox()
+		else:
+			self.checkWindowLayerBox()
+
+		if not self.palettewindow.isVisible():
+			self.uncheckWindowPaletteBox()
+		else:
+			self.checkWindowPaletteBox()
+
+		if not self.toolselectwindow.isVisible():
+			self.uncheckWindowToolSelectBox()
+		else:
+			self.checkWindowToolSelectBox()
+
+		if not self.tooloptionswindow.isVisible():
+			self.uncheckWindowToolOptionsBox()
+		else:
+			self.checkWindowToolOptionsBox()
+
 
 	def raiseAllWindows(self,curwin):
 		lock=qtcore.QWriteLocker(self.winzlistlock)
@@ -201,6 +237,36 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			if "masterw" in winconfig and "masterh" in winconfig:
 				self.resize(winconfig["masterw"],winconfig["masterh"])
 
+	# Palette Menu Actions:
+	def on_Palette_Configure_triggered(self,accept=True):
+		if not accept:
+			return
+
+		self.palettewindow.on_Palette_Configure_triggered()
+
+	def on_Palette_save_triggered(self,accept=True):
+		if not accept:
+			return
+
+		self.palettewindow.on_Palette_save_triggered()
+
+	def on_Palette_save_default_triggered(self,accept=True):
+		if not accept:
+			return
+
+		self.palettewindow.on_Palette_save_default_triggered()
+
+	def on_Palette_load_default_triggered(self,accept=True):
+		if not accept:
+			return
+
+		self.palettewindow.on_Palette_load_default_triggered()
+
+	def on_Palette_load_triggered(self,accept=True):
+		if not accept:
+			return
+
+		self.palettewindow.on_Palette_load_triggered
 
 	def on_action_Window_Save_Window_Positions_triggered(self,accept=True):
 		if not accept:
@@ -242,6 +308,10 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		if event.key() in (qtcore.Qt.Key_Shift,qtcore.Qt.Key_Control,qtcore.Qt.Key_Alt,qtcore.Qt.Key_Meta):
 			self.newModKeys(event.modifiers())
 
+		#curwin=self.getCurWindow()
+		#if curwin:
+		#	curwin.keyPressEvent(event)
+
 	def keyReleaseEvent(self,event):
 		self.keyEvent(event)
 
@@ -252,6 +322,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 	#	print event.type()
 		if event.type()==qtcore.QEvent.WindowActivate:
 			self.raiseAllWindows(self)
+
 		return qtgui.QMainWindow.event(self,event)
 
 	def getCurWindow(self,lock=None):
@@ -497,9 +568,10 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			reader=qtgui.QImageReader(filename)
 			image=reader.read()
 
-			newwindow=BeeDrawingWindow(self,image.width(),image.height(),False,maxundo=self.config["maxundo"])
+			newwindow=self.ui.mdiArea.addSubWindow(BeeDrawingWindow(self,image.width(),image.height(),False,maxundo=self.config["maxundo"]))
 			newwindow.loadLayer(image)
 			newwindow.setFileName(filename)
+			newwindow.show()
 
 	def on_action_File_New_triggered(self,accept=True):
 		if not accept:
@@ -512,7 +584,11 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		if dialog.result():
 			width=dialogui.width_box.value()
 			height=dialogui.height_box.value()
-			window=BeeDrawingWindow(self,width=width,height=height,maxundo=self.config["maxundo"])
+
+			widget=BeeDrawingWindow(self,width=width,height=height,maxundo=self.config["maxundo"])
+			window=self.ui.mdiArea.addSubWindow(widget)
+			result=qtcore.QObject.connect(window,qtcore.SIGNAL("windowStateChanged(Qt::WindowStates,Qt::WindowStates)"),widget.mdiWinStateChange)
+			window.show()
 
 	def on_action_Edit_Configure_triggered(self,accept=True):
 		if not accept:
@@ -667,6 +743,9 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 	def uncheckWindowLayerBox(self):
 		self.ui.Window_Layers.setChecked(False)
 
+	def checkWindowLayerBox(self):
+		self.ui.Window_Layers.setChecked(True)
+
 	def on_Window_Layers_triggered(self,state=None):
 		if state==None:
 			return
@@ -679,6 +758,9 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 	def uncheckWindowPaletteBox(self):
 		self.ui.Window_Palette.setChecked(False)
 
+	def checkWindowPaletteBox(self):
+		self.ui.Window_Palette.setChecked(True)
+
 	def on_Window_Palette_triggered(self,state=None):
 		if state==None:
 			return
@@ -690,6 +772,9 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 	def uncheckWindowToolOptionsBox(self):
 		self.ui.Window_Tool_Options.setChecked(False)
 
+	def checkWindowToolOptionsBox(self):
+		self.ui.Window_Tool_Options.setChecked(True)
+
 	def on_Window_Tool_Options_triggered(self,state=None):
 		if state==None:
 			return
@@ -697,6 +782,20 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			self.tooloptionswindow.show()
 		else:
 			self.tooloptionswindow.hide()
+
+	def uncheckWindowToolSelectBox(self):
+		self.ui.Window_Tool_Selection.setChecked(False)
+
+	def checkWindowToolSelectBox(self):
+		self.ui.Window_Tool_Selection.setChecked(True)
+
+	def on_Window_Tool_Selection_triggered(self,state=None):
+		if state==None:
+			return
+		if state:
+			self.toolselectwindow.show()
+		else:
+			self.toolselectwindow.hide()
 
 	# destroy all subwindows
 	def cleanUp(self):
@@ -720,6 +819,9 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 	def closeEvent(self,event):
 		result=qtgui.QMessageBox.question(self,"Ready to Quit?","Are you sure you'd like to exit the whole application?\nAll unsaved changes will be lost.",qtgui.QMessageBox.Ok,qtgui.QMessageBox.Cancel)
 		if result==qtgui.QMessageBox.Ok:
+			settings=qtcore.QSettings("BeeDraw","BeeDraw")
+			settings.setValue("geometry",self.saveGeometry())
+			settings.setValue("windowState",self.saveState())
 			self.cleanUp()
 			qtgui.QMainWindow.closeEvent(self,event)
 		else:

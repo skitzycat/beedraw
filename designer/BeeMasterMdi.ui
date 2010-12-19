@@ -1,0 +1,332 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>BeeMasterMdiSpec</class>
+ <widget class="QMainWindow" name="BeeMasterMdiSpec">
+  <property name="windowModality">
+   <enum>Qt::NonModal</enum>
+  </property>
+  <property name="enabled">
+   <bool>true</bool>
+  </property>
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>848</width>
+    <height>781</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>400</width>
+    <height>200</height>
+   </size>
+  </property>
+  <property name="baseSize">
+   <size>
+    <width>242</width>
+    <height>103</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>BeeDraw</string>
+  </property>
+  <property name="dockNestingEnabled">
+   <bool>false</bool>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Ignored" vsizetype="Ignored">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <property name="contextMenuPolicy">
+    <enum>Qt::PreventContextMenu</enum>
+   </property>
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <widget class="QMdiArea" name="mdiArea">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Ignored" vsizetype="Ignored">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>848</width>
+     <height>27</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="action_Help_About"/>
+   </widget>
+   <widget class="QMenu" name="menuEdit">
+    <property name="title">
+     <string>Edit</string>
+    </property>
+    <addaction name="action_Edit_Configure"/>
+   </widget>
+   <widget class="QMenu" name="menuPalette">
+    <property name="title">
+     <string>Palette</string>
+    </property>
+    <addaction name="Palette_save_default"/>
+    <addaction name="Palette_load_default"/>
+    <addaction name="separator"/>
+    <addaction name="actionSave_as"/>
+    <addaction name="Palette_load"/>
+    <addaction name="separator"/>
+    <addaction name="Palette_Configure"/>
+   </widget>
+   <widget class="QMenu" name="menuTool">
+    <property name="title">
+     <string>Tools</string>
+    </property>
+    <addaction name="Tool_save_default"/>
+    <addaction name="Tool_load_default"/>
+    <addaction name="separator"/>
+    <addaction name="Tool_save_as"/>
+    <addaction name="Tool_load_from"/>
+   </widget>
+   <widget class="QMenu" name="menuWindow">
+    <property name="title">
+     <string>Window</string>
+    </property>
+    <widget class="QMenu" name="menu_Window_Drawing_Windows">
+     <property name="title">
+      <string>Drawing Windows</string>
+     </property>
+     <addaction name="separator"/>
+    </widget>
+    <addaction name="Window_Layers"/>
+    <addaction name="Window_Palette"/>
+    <addaction name="Window_Tool_Options"/>
+    <addaction name="Window_Tool_Selection"/>
+    <addaction name="menu_Window_Drawing_Windows"/>
+    <addaction name="separator"/>
+    <addaction name="action_Window_Save_Window_Positions"/>
+   </widget>
+   <widget class="QMenu" name="menuMain_Window">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="action_File_New"/>
+    <addaction name="action_File_Open"/>
+    <addaction name="action_File_Play"/>
+    <addaction name="action_File_Connect"/>
+    <addaction name="action_File_Exit"/>
+   </widget>
+   <addaction name="menuMain_Window"/>
+   <addaction name="menuEdit"/>
+   <addaction name="menuWindow"/>
+   <addaction name="menuTool"/>
+   <addaction name="menuPalette"/>
+   <addaction name="menuHelp"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="sizeGripEnabled">
+    <bool>false</bool>
+   </property>
+  </widget>
+  <action name="action_File_Open">
+   <property name="text">
+    <string>Open</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="action_File_Play">
+   <property name="text">
+    <string>Play</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+P</string>
+   </property>
+  </action>
+  <action name="action_File_Connect">
+   <property name="text">
+    <string>Connect</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+E</string>
+   </property>
+  </action>
+  <action name="action_File_Exit">
+   <property name="text">
+    <string>Exit</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Q</string>
+   </property>
+  </action>
+  <action name="action_File_New">
+   <property name="text">
+    <string>New</string>
+   </property>
+   <property name="toolTip">
+    <string>Create New Document</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+N</string>
+   </property>
+   <property name="autoRepeat">
+    <bool>true</bool>
+   </property>
+  </action>
+  <action name="action_Help_About">
+   <property name="text">
+    <string>About</string>
+   </property>
+  </action>
+  <action name="Window_Layers">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Layers</string>
+   </property>
+  </action>
+  <action name="action_Edit_Configure">
+   <property name="text">
+    <string>Configure</string>
+   </property>
+  </action>
+  <action name="Window_Palette">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Palette</string>
+   </property>
+  </action>
+  <action name="Tool_save_default">
+   <property name="text">
+    <string>Save  all current options as defaults</string>
+   </property>
+  </action>
+  <action name="Tool_load_default">
+   <property name="text">
+    <string>Set current options to defaults</string>
+   </property>
+  </action>
+  <action name="Tool_save_as">
+   <property name="text">
+    <string>Save all current tool options as</string>
+   </property>
+  </action>
+  <action name="Tool_load_from">
+   <property name="text">
+    <string>Load tool options from file</string>
+   </property>
+  </action>
+  <action name="Window_Tool_Options">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Tool Options</string>
+   </property>
+  </action>
+  <action name="action_Window_Save_Window_Positions">
+   <property name="text">
+    <string>Save Window Positions</string>
+   </property>
+  </action>
+  <action name="Palette_save_default">
+   <property name="text">
+    <string>Save as default</string>
+   </property>
+  </action>
+  <action name="Palette_load_default">
+   <property name="text">
+    <string>Load from default</string>
+   </property>
+  </action>
+  <action name="actionSave_as">
+   <property name="text">
+    <string>Save as</string>
+   </property>
+  </action>
+  <action name="Palette_load">
+   <property name="text">
+    <string>Load from file</string>
+   </property>
+  </action>
+  <action name="actionConfigure_Palette">
+   <property name="text">
+    <string>Configure Palette</string>
+   </property>
+  </action>
+  <action name="Palette_Configure">
+   <property name="text">
+    <string>Configure Palette</string>
+   </property>
+  </action>
+  <action name="actionTool_Selection">
+   <property name="text">
+    <string>Tool Selection</string>
+   </property>
+  </action>
+  <action name="Window_Tool_Selection">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Tool Selection</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>action_File_Exit</sender>
+   <signal>triggered()</signal>
+   <receiver>BeeMasterMdiSpec</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>161</x>
+     <y>136</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

@@ -5,13 +5,14 @@ from beeutil import *
 
 import os
 
-from abstractbeewindow import AbstractBeeWindow
+from abstractbeewindow import AbstractBeeDockWindow
 
-from ToolOptionsUi import Ui_ToolOptionsWindow
+from ToolOptionsDockUi import Ui_ToolOptionsWindow
+from BeeToolSelectionDockUi import Ui_ToolSelection
 
-class ToolWindow(AbstractBeeWindow):
+class ToolOptionsWindow(AbstractBeeDockWindow):
 	def __init__(self,master):
-		AbstractBeeWindow.__init__(self,master)
+		AbstractBeeDockWindow.__init__(self,master)
 		self.master=master
 
 		self.ui=Ui_ToolOptionsWindow()
@@ -37,4 +38,51 @@ class ToolWindow(AbstractBeeWindow):
 	def hideEvent(self,event):
 		if not self.isMinimized():
 			self.master.uncheckWindowToolOptionsBox()
+		return qtgui.QWidget.hideEvent(self,event)
+
+class ToolSelectionWindow(AbstractBeeDockWindow):
+	def __init__(self,master):
+		AbstractBeeDockWindow.__init__(self,master)
+		self.master=master
+
+		self.ui=Ui_ToolSelection()
+		self.ui.setupUi(self)
+		self.show()
+
+	# connect signals for tool buttons
+	def on_pencil_button_clicked(self,accept=False):
+		if accept:
+			self.master.changeCurToolByName("pencil")
+
+	def on_brush_button_clicked(self,accept=False):
+		if accept:
+			self.master.changeCurToolByName("brush")
+
+	def on_eraser_button_clicked(self,accept=False):
+		if accept:
+			self.master.changeCurToolByName("eraser")
+
+	def on_paint_bucket_button_clicked(self,accept=False):
+		if accept:
+			self.master.changeCurToolByName("bucket")
+
+	def on_eye_dropper_button_clicked(self,accept=False):
+		if accept:
+			self.master.changeCurToolByName("eyedropper")
+
+	def on_move_selection_button_clicked(self,accept=False):
+		if accept:
+			self.master.changeCurToolByName("move selection")
+
+	def on_rectangle_select_button_clicked(self,accept=False):
+		if accept:
+			self.master.changeCurToolByName("rectselect")
+
+	def on_feather_select_button_clicked(self,accept=False):
+		if accept:
+			self.master.changeCurToolByName("featherselect")
+
+	def hideEvent(self,event):
+		if not self.isMinimized():
+			self.master.uncheckWindowToolSelectBox()
 		return qtgui.QWidget.hideEvent(self,event)

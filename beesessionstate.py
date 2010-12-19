@@ -133,6 +133,7 @@ class BeeSessionState:
 		if layer:
 			if not listlock:
 				listlock=qtcore.QWriteLocker(self.layerslistlock)
+
 			if layer in self.layers:
 				index=self.layers.index(layer)
 				if history:
@@ -145,7 +146,7 @@ class BeeSessionState:
 
 		return (None,None)
 
-	def removeLayerByKey(self,key,history=False,lock=None):
+	def removeLayerByKey(self,key,history=True,lock=None):
 		""" remove layer with key equal to passed value, each layer should have a unique key so there is no need to check for multiples
       The history argument is 0 if the event should be added to the undo/redo history and -1 if it shouldn't.  This is needed so when running an undo/redo command it doesn't get added again.
 		"""
@@ -270,18 +271,15 @@ class BeeSessionState:
 
 		self.insertLayer(key,index,type,image,opacity=opacity,visible=visible,compmode=compmode)
 
-	def insertRawLayer(self,layer,index,history=0):
-		self.layers.insert(index,layer)
-		self.requestLayerListRefresh()
-		self.reCompositeImage()
-		curlaylock=qtcore.QMutexLocker(self.curlayerkeymutex)
-		# only select it immediately if we can draw on it
-		#if layer.type==LayerTypes.user:
-		#	self.curlayerkey=layer.key
+	# insert an existing layer into the scene, never do history because this is suppose to be called from the history
+	def insertRawLayer(self,layer,index):
+		if not listlock:
+			listlock=qtcore.QWriteLocker(self.layerslistlock)
 
-		# only add command to history if we should
-		if self.type==WindowTypes.singleuser and history!=-1:
-			self.addCommandToHistory(AddLayerCommand(layer.key))
+		try:
+			self.layers.insert(index,layer)
+		except:
+			self.layers.append(layer)
 
 	# insert a layer at a given point in the list of layers
 	def insertLayer(self,key,index,type=LayerTypes.user,image=None,opacity=None,visible=None,compmode=None,owner=0,history=0):
@@ -348,6 +346,9 @@ class BeeSessionState:
 
 	def addScaleCanvasToQueue(self,newwidth,newheight,source=ThreadTypes.user,owner=0):
 		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.scale,newwidth,newheight),source,owner)
+
+	def addFlattenImageToQueue(self,source=ThreadTypes.user,owner=0):
+		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.flatten),source,owner)
 
 	def getDocSize(self,sizelock=None):
 		if not sizelock:
