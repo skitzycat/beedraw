@@ -483,10 +483,9 @@ class FlattenImageCommand(AbstractCommand):
 		listlock=qtcore.QWriteLocker(win.layerslistlock)
 		win.removeLayer(win.layers[0],history=False,listlock=listlock)
 		index=0
-		for layer in oldlayers:
-			insertRawLayer(layer,index,listlock=listlock)
+		for layer in self.oldlayers:
+			win.insertRawLayer(layer,index,listlock=listlock)
 			index+=1
 
 	def redo(self,win):
-		listlock=qtcore.QWriteLocker(win.layerslistlock)
 		win.flattenImage(history=False)

@@ -675,8 +675,9 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 		self.requestLayerListRefresh()
 		self.reCompositeImage()
 
-	def insertLayer(self,key,index,type=LayerTypes.user,image=None,opacity=None,visible=None,compmode=None,owner=0,history=True):
-		lock=qtcore.QWriteLocker(self.layerslistlock)
+	def insertLayer(self,key,index,type=LayerTypes.user,image=None,opacity=None,visible=None,compmode=None,owner=0,history=True,lock=None):
+		if not lock:
+			lock=qtcore.QWriteLocker(self.layerslistlock)
 		# make sure layer doesn't exist already
 		oldlayer=self.getLayerForKey(key,lock=lock)
 		if oldlayer:
@@ -900,7 +901,7 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 
 	def on_action_Image_Flatten_Image_triggered(self,accept=True):
 		if accept:
-			addFlattenImageToQueue()
+			self.addFlattenImageToQueue()
 
 	def flattenImage(self,listlock=None,history=True):
 		# lock the list of layers and all the layer images
@@ -921,13 +922,16 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 		newlayer=BeeGuiLayer(self.id,LayerTypes.user,newkey,sceneimage)
 
 		oldlayers=[]
-		for l in self.layers:
+		layers=self.layers[:]
+		for l in layers:
 			layer,index=self.removeLayer(l,history=False,listlock=listlock)
 			oldlayers.append(layer)
 
 		newlayer.image=sceneimage
 
 		self.scene.update()
+
+		self.insertLayer(self.nextLayerKey(),0,history=False,image=sceneimage,lock=listlock)
 
 		if history:
 			historyevent=FlattenImageCommand(oldlayers)
