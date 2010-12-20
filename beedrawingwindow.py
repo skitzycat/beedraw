@@ -197,11 +197,17 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 
 		curaction=imagemenu.addAction("Canvas Size",self.on_action_Image_Canvas_Size_triggered)
 		curaction=imagemenu.addAction("Scale Image",self.on_action_Image_Scale_Image_triggered)
-
 		curaction=imagemenu.addAction("Flatten Image",self.on_action_Image_Flatten_Image_triggered)
 
 		#Select menu
+		selectmenu=menubar.addMenu("Select")
+		curaction=selectmenu.addAction("Select None",self.on_action_Select_None_triggered)
+		curaction=selectmenu.addAction("Invert Selection",self.on_action_Select_Invert_Selection_triggered)
+		curaction=selectmenu.addAction("Grow Selection",self.on_action_Select_Grow_Selection_triggered)
+		curaction=selectmenu.addAction("Shrink Selection",self.on_action_Select_Shrink_Selection_triggered)
+
 		#Network menu
+		#networkmenu=menubar.addMenu("Network")
 
 	def changeWindowTitle(self,name):
 		self.setWindowTitle(name)
