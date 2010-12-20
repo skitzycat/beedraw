@@ -53,7 +53,7 @@ class BeeApp(object):
 		self.app=BeeGuiApp(argv)
 
 		pixmap=qtgui.QPixmap()
-		if pixmap.load("beeicon.png"):
+		if pixmap.load("icons/beeicon.png"):
 			icon=qtgui.QIcon(pixmap)
 			qtgui.QApplication.setWindowIcon(icon)
 
