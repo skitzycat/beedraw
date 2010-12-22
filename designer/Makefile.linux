@@ -1,5 +1,5 @@
 PYUIC=pyuic4
-main: AboutDisplayDialogUi.py BeeDrawOptionsUi.py BeeMasterMdi.py BeePaletteDockUi.py BeeToolSelectionDockUi.py BeeToolsWindowDock.py BrushOptionsWidgetUi.py ConnectionDialogUi.py DrawingWindowMdiUi.py EraserOptionsWidgetUi.py EyeDropperOptionsWidget.py FeatherSelectOptionsWidgetUi.py GrowSelectionDialogUi.py HiveLayerWidgetUi.py HiveMasterUi.py HiveOptionsUi.py ImageScaleDialog.py ImageSizeAdjustDialogUi.py LayersWindowDockUi.py LayerWidgetUi.py PaintBucketOptionsWidgetUi.py PaletteOptionsDialogUi.py PencilOptionsWidgetUi.py PickNewCanvasSizeDialogUi.py SelectionModificationWidgetUi.py ShrinkSelectionDialogUi.py ToolOptionsDockUi.py
+main: AboutDisplayDialogUi.py BeeDrawOptionsUi.py BeeMasterMdi.py BeePaletteDockUi.py BeeToolSelectionDockUi.py BrushOptionsWidgetUi.py ConnectionDialogUi.py DrawingWindowMdiUi.py EraserOptionsWidgetUi.py EyeDropperOptionsWidget.py FeatherSelectOptionsWidgetUi.py GrowSelectionDialogUi.py HiveLayerWidgetUi.py HiveMasterUi.py HiveOptionsUi.py ImageScaleDialog.py ImageSizeAdjustDialogUi.py LayersWindowDockUi.py LayerWidgetUi.py PaintBucketOptionsWidgetUi.py PaletteOptionsDialogUi.py PencilOptionsWidgetUi.py PickNewCanvasSizeDialogUi.py SelectionModificationWidgetUi.py ShrinkSelectionDialogUi.py ToolOptionsDockUi.py
 
 %.py : %.ui
 	$(PYUIC) $< > $@
