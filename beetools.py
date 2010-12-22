@@ -489,7 +489,7 @@ class DrawingTool(AbstractTool):
 		if self.brushimageformat==BrushImageFormats.qt:
 			self.layer=BeeTemporaryLayer(self.parentlayer,self.options["opacity"]/100.,self.compmode)
 		else:
-			self.layer=BeeTemporaryLayerPIL(self.parentlayer,self.options["opacity"]/100.,self.compmode)
+			self.layer=BeeTemporaryLayerPIL(self.parentlayer,self.options["opacity"]/100.,self.compmode,self.clippath)
 
 		self.startLine(x,y,pressure)
 
@@ -724,11 +724,8 @@ class DrawingTool(AbstractTool):
 		if not self.pointshistory:
 			return
 
-		# clean up temporary layer
-		self.oldlayerimage=self.parentlayer.getImageCopy()
+		oldlayerimage=self.parentlayer.getImageCopy()
 
-
-		painter=qtgui.QPainter()
 		parentimagelock=qtcore.QWriteLocker(self.parentlayer.imagelock)
 
 		if self.brushimageformat==BrushImageFormats.qt:
@@ -738,7 +735,7 @@ class DrawingTool(AbstractTool):
 
 		self.layer.setParentItem(None)
 		self.window.scene.removeItem(self.layer)
-		self.parentlayer.compositeFromCorner(tmplayerimage,0,0,self.layer.compmode,opacity=self.layer.getOpacity(),lock=parentimagelock)
+		self.parentlayer.compositeFromCorner(tmplayerimage,0,0,self.layer.compmode,opacity=self.layer.getOpacity(),lock=parentimagelock,clippath=self.clippath)
 
 		parentimagelock.unlock()
 
@@ -781,7 +778,7 @@ class DrawingTool(AbstractTool):
 		dirtyrect=rectIntersectBoundingRect(dirtyrect,self.layer.getImageRect())
  
 		# get image of what area looked like before
-		oldimage=self.oldlayerimage.copy(dirtyrect)
+		oldimage=oldlayerimage.copy(dirtyrect)
  
 		command=DrawingCommand(self.layerkey,oldimage,dirtyrect)
 

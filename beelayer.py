@@ -510,8 +510,9 @@ class SelectedAreaDisplay(qtgui.QGraphicsItem):
 		painter.drawPath(self.path)
 
 class BeeTemporaryLayerPIL(BeeGuiLayer):
-	def __init__(self,parent,opacity,compmode):
+	def __init__(self,parent,opacity,compmode,clippath):
 		win=parent.getWindow()
+		self.clippath=clippath
 		width,height=win.getDocSize()
 		self.pilimage=Image.new("RGBA",(width,height),(0,0,0,0))
 		BeeGuiLayer.__init__(self,parent.windowid,LayerTypes.temporary,win.nextFloatingLayerKey(),opacity=opacity,parent=parent,compmode=compmode)
@@ -535,6 +536,8 @@ class BeeTemporaryLayerPIL(BeeGuiLayer):
 		localpainter.translate(self.pos())
 		#localpainter.setCompositionMode(self.compmode)
 		localpainter.setOpacity(painter.opacity())
+		if self.clippath:
+			localpainter.setClipPath(self.clippath)
 		localpainter.drawImage(drawrect,qimage)
 
 	# composite image onto layer from center coord

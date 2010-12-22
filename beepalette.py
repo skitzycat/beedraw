@@ -14,7 +14,6 @@ from beeload import PaletteParser,BeeToolConfigParser
 
 from PaletteOptionsDialogUi import Ui_Pallete_Config_Dialog
 
-from BeePaletteUi import Ui_PaletteWindow
 from BeePaletteDockUi import Ui_BeePaletteDock
 
 class BeeSwatchScrollArea(qtgui.QScrollArea):
