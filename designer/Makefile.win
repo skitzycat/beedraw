@@ -1,5 +1,5 @@
 PYUIC=pyuic4.bat
-main: BeeMasterUI.py DrawingWindowUI.py LayerWidgetUi.py LayersWindowUi.py HiveMasterUi.py HiveOptionsUi.py ImageSizeAdjustDialogUi.py ConnectionDialogUi.py ImageScaleDialog.py PencilOptionsWidgetUi.py BrushOptionsWidgetUi.py EraserOptionsWidgetUi.py PaintBucketOptionsWidgetUi.py HiveLayerWidgetUi.py AboutDisplayDialogUi.py PickNewCanvasSizeDialogUi.py BeeDrawOptionsUi.py BeePaletteUi.py ToolOptionsUi.py EyeDropperOptionsWidget.py FeatherSelectOptionsWidgetUi.py SelectionModificationWidgetUi.py PaletteOptionsDialogUi.py GrowSelectionDialogUi.py ShrinkSelectionDialogUi.py
+main: AboutDisplayDialogUi.py BeeDrawOptionsUi.py BeeMasterMdi.py BeePaletteDockUi.py BeeToolSelectionDockUi.py BeeToolsWindowDock.py BrushOptionsWidgetUi.py ConnectionDialogUi.py DrawingWindowMdiUi.py EraserOptionsWidgetUi.py EyeDropperOptionsWidget.py FeatherSelectOptionsWidgetUi.py GrowSelectionDialogUi.py HiveLayerWidgetUi.py HiveMasterUi.py HiveOptionsUi.py ImageScaleDialog.py ImageSizeAdjustDialogUi.py LayersWindowDockUi.py LayerWidgetUi.py PaintBucketOptionsWidgetUi.py PaletteOptionsDialogUi.py PencilOptionsWidgetUi.py PickNewCanvasSizeDialogUi.py SelectionModificationWidgetUi.py ShrinkSelectionDialogUi.py ToolOptionsDockUi.py
 
 %.py : %.ui
 	$(PYUIC) $< > $@
