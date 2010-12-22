@@ -1,55 +1,56 @@
-<ui version="4.0" >
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
  <class>SelectionModificationWidget</class>
- <widget class="QWidget" name="SelectionModificationWidget" >
-  <property name="geometry" >
+ <widget class="QWidget" name="SelectionModificationWidget">
+  <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>549</width>
-    <height>292</height>
+    <width>399</width>
+    <height>252</height>
    </rect>
   </property>
-  <property name="windowTitle" >
+  <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout" >
+  <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QGroupBox" name="groupBox" >
-     <property name="title" >
+    <widget class="QGroupBox" name="groupBox">
+     <property name="title">
       <string>Selection Modification Options</string>
      </property>
-     <property name="checkable" >
+     <property name="checkable">
       <bool>false</bool>
      </property>
-     <layout class="QVBoxLayout" name="verticalLayout_2" >
+     <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
-       <widget class="QRadioButton" name="new_selection_button" >
-        <property name="text" >
+       <widget class="QRadioButton" name="new_selection_button">
+        <property name="text">
          <string>New Selection</string>
         </property>
-        <property name="checked" >
+        <property name="checked">
          <bool>true</bool>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QRadioButton" name="add_selection_button" >
-        <property name="text" >
+       <widget class="QRadioButton" name="add_selection_button">
+        <property name="text">
          <string>Add to selection (Hold Shift)</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QRadioButton" name="subtract_selection_button" >
-        <property name="text" >
-         <string>Subtract from selection (Hold Alt)</string>
+       <widget class="QRadioButton" name="subtract_selection_button">
+        <property name="text">
+         <string>Subtract (Hold Alt)</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QRadioButton" name="intersect_selection_button" >
-        <property name="text" >
-         <string>Intersect with current selection (Hold Shift+Alt)</string>
+       <widget class="QRadioButton" name="intersect_selection_button">
+        <property name="text">
+         <string>Intersect (Hold Shift+Alt)</string>
         </property>
        </widget>
       </item>
@@ -57,22 +58,22 @@
     </widget>
    </item>
    <item>
-    <widget class="QGroupBox" name="groupBox_2" >
-     <property name="title" >
+    <widget class="QGroupBox" name="groupBox_2">
+     <property name="title">
       <string>Selection Shape Options:</string>
      </property>
-     <layout class="QVBoxLayout" name="verticalLayout_3" >
+     <layout class="QVBoxLayout" name="verticalLayout_3">
       <item>
-       <widget class="QCheckBox" name="checkBox_draw_center" >
-        <property name="text" >
-         <string>Draw from center instead of corner (Press Alt while selecting)</string>
+       <widget class="QCheckBox" name="checkBox_draw_center">
+        <property name="text">
+         <string>Draw from center (Press Alt)</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="checkBox_fixed_aspect" >
-        <property name="text" >
-         <string>Fixed Aspect Ratio (Press Shift while selecting)</string>
+       <widget class="QCheckBox" name="checkBox_fixed_aspect">
+        <property name="text">
+         <string>Square Shape (Press Shift)</string>
         </property>
        </widget>
       </item>

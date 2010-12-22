@@ -440,7 +440,7 @@ class LayerFinisher(qtgui.QGraphicsItem):
 class SelectedAreaAnimation(qtgui.QGraphicsItemAnimation):
 	def __init__(self,item,view,parent=None):
 		qtgui.QGraphicsItemAnimation.__init__(self,parent)
-		self.timer=qtcore.QTimeLine(10,self)
+		self.timer=qtcore.QTimeLine(8,self)
 		self.timer.setUpdateInterval(100)
 		self.timer.setLoopCount(0)
 		self.setTimeLine(self.timer)
@@ -451,12 +451,13 @@ class SelectedAreaAnimation(qtgui.QGraphicsItemAnimation):
 
 	def stop(self):
 		if self.running:
-			self.timeLine().stop()
+			self.timer.stop()
 			self.running=False
 
 	def start(self):
 		if not self.running:
-			self.timeLine().start()
+			self.timer.stop()
+			self.timer.start()
 			self.running=True
 
 	def beforeAnimationStep(self,time):
@@ -468,13 +469,14 @@ class SelectedAreaAnimation(qtgui.QGraphicsItemAnimation):
 
 # This is an animated dashed line displayed to indicate where the current selection is.
 class SelectedAreaDisplay(qtgui.QGraphicsItem):
-	def __init__(self,path,scene):
+	def __init__(self,path,scene,view):
 		qtgui.QGraphicsItem.__init__(self,None,scene)
 		self.rect=scene.sceneRect()
 		self.path=path
 		self.dashoffset=0
 		self.dashpatternlength=8
 		self.pathlock=qtcore.QReadWriteLock()
+		self.animation=SelectedAreaAnimation(self,view)
 
 	def incrementDashOffset(self):
 		self.dashoffset+=1
@@ -490,6 +492,11 @@ class SelectedAreaDisplay(qtgui.QGraphicsItem):
 		#lock=qtcore.QWriteLocker(self.pathlock)
 		self.path=path
 		self.prepareGeometryChange()
+
+		if path and not path.isEmpty():
+			self.animation.start()
+		else:
+			self.animation.stop()
 
 	def paint(self,painter,options,widget=None):
 		if not self.path:

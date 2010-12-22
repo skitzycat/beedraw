@@ -393,6 +393,11 @@ class DrawingTool(AbstractTool):
 		""" method of DrawingTool """
 		return self.fgcolor.rgba()
  
+	def getFullSizedBrush(self):
+		""" method of DrawingTool """
+		self.makeFullSizedBrush()
+		return self.fullsizedbrush
+
 	def makeFullSizedBrush(self):
 		""" method of DrawingTool """
 		fgr=self.fgcolor.red()
@@ -829,6 +834,10 @@ class PencilToolDesc(AbstractToolDesc):
 			self.optionswidget.updateDisplayFromOptions()
 		return self.optionswidget
 
+	def updatePreview(self):
+		return
+		brushimage=DrawingTool(self.options,None).getFullSizedBrush()
+
 class DrawingToolOptionsWidget(qtgui.QWidget):
 	def __init__(self,parent,tooldesc):
 		qtgui.QWidget.__init__(self,parent)
@@ -844,12 +853,14 @@ class DrawingToolOptionsWidget(qtgui.QWidget):
 
 	def on_brushdiameter_valueChanged(self,value):
 		self.tooldesc.options["maxdiameter"]=value
+		self.tooldesc.updatePreview()
 
 	def on_stepsize_valueChanged(self,value):
 		self.tooldesc.options["step"]=value
 
 	def on_opacity_valueChanged(self,value):
 		self.tooldesc.options["opacity"]=value
+		self.tooldesc.updatePreview()
  
 class EraserToolDesc(AbstractToolDesc):
 	# describe actual tool

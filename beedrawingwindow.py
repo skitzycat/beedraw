@@ -30,7 +30,7 @@ from beeutil import *
 from beeeventstack import *
 from datetime import datetime
 from beeglobals import *
-from beelayer import BeeGuiLayer,SelectedAreaDisplay,SelectedAreaAnimation,LayerFinisher
+from beelayer import BeeGuiLayer,SelectedAreaDisplay,LayerFinisher
 
 from Queue import Queue
 from drawingthread import DrawingThread
@@ -75,8 +75,6 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 		self.cursoroverlay=None
 		self.remotedrawingthread=None
 
-		self.selectiondisplay=None
-		self.selectionanimation=None
 
 		self.nextfloatinglayerkey=-1
 		self.nextfloatinglayerkeylock=qtcore.QReadWriteLock()
@@ -96,6 +94,8 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 		self.view=self.ui.PictureViewWidget
 		#self.resizeViewToWindow()
 		self.view.setCursor(master.getCurToolDesc().getCursor())
+
+		self.selectiondisplay=SelectedAreaDisplay(None,self.scene,self.view)
 
 		self.scene.addItem(self.layerfinisher)
 
@@ -391,27 +391,6 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 	def requestUpdateSelectionDisplayPath(self,path=None):
 		event=SelectionDisplayUpdateEvent(path)
 		BeeApp().app.postEvent(self,event)
-
-	def updateSelectionDisplayPath(self,path=None):
-		#print "running updateSelectionDisplayPath from thread:", qtcore.QThread.currentThreadId()
-		if path and not path.isEmpty():
-			lock=qtcore.QReadLocker(self.layerslistlock)
-			if self.selectiondisplay:
-				self.selectiondisplay.updatePath(path)
-				self.selectionanimation.start()
-			else:
-				self.selectiondisplay=SelectedAreaDisplay(path,self.scene)
-				self.selectionanimation=SelectedAreaAnimation(self.selectiondisplay,self.view)
-				self.resetLayerZValues(lock)
-
-		else:
-			if self.selectiondisplay:
-				lock=qtcore.QWriteLocker(self.layerslistlock)
-				self.selectionanimation.stop()
-				self.selectiondisplay.updatePath(None)
-				#self.scene.removeItem(self.selectiondisplay)
-				#self.selectiondisplay=None
-				#self.selectionanimation=None
 
 	# change the current selection path, and update to screen to show it
 	def changeSelection(self,type,newarea=None,slock=None,history=True):
@@ -748,7 +727,7 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 			self.displayMessage(event.boxtype,event.title,event.message)
 
 		elif event.type()==BeeCustomEventTypes.updateselectiondisplay:
-			self.updateSelectionDisplayPath(event.path)
+			self.selectiondisplay.updatePath(event.path)
 
 		# once the window has received a deferred delete it needs to have all it's references removed so memory can be freed up
 		elif event.type()==qtcore.QEvent.DeferredDelete:
