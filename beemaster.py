@@ -187,16 +187,6 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		else:
 			self.checkWindowToolOptionsBox()
 
-
-	def raiseAllWindows(self,curwin):
-		lock=qtcore.QWriteLocker(self.winzlistlock)
-
-		if curwin in self.winzlist:
-			self.winzlist.remove(curwin)
-			self.winzlist.append(curwin)
-			for win in self.winzlist:
-				win.raise_()
-
 	def restore_default_window_positions(self):
 		configfilename=os.path.join("config","windowpos.xml")
 		configfile=qtcore.QFile(configfilename)
@@ -317,13 +307,6 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 	def keyPressEvent(self,event):
 		self.keyEvent(event)
-
-	def event(self,event):
-	#	print event.type()
-		if event.type()==qtcore.QEvent.WindowActivate:
-			self.raiseAllWindows(self)
-
-		return qtgui.QMainWindow.event(self,event)
 
 	def getCurWindow(self,lock=None):
 		if not lock:

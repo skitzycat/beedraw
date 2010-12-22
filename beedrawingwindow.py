@@ -44,8 +44,6 @@ from beesessionstate import BeeSessionState
 
 from animation import *
 
-from abstractbeewindow import AbstractBeeWindow
-
 from canvasadjustpreview import CanvasAdjustDialog
 
 class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
@@ -54,7 +52,6 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 	def __init__(self,master,width=600,height=400,startlayer=True,type=WindowTypes.singleuser,maxundo=40):
 
 		BeeSessionState.__init__(self,master,width,height,type)
-		#AbstractBeeWindow.__init__(self,master)
 		qtgui.QWidget.__init__(self)
 
 		self.localcommandstack=CommandStack(self,CommandStackTypes.singleuser,maxundo=maxundo)

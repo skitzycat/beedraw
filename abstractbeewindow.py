@@ -20,56 +20,12 @@ import PyQt4.QtGui as qtgui
 
 import os
 
-class AbstractBeeWindow(qtgui.QMainWindow):
-	""" Base class for every non-master displayed window in the bee application """
-	def __init__(self,master):
-		qtgui.QMainWindow.__init__(self,master.topwinparent)
-		self.master=master
-		self.setAttribute(qtcore.Qt.WA_QuitOnClose,False)
-
-#	def closeEvent(self,event):
-#		event.ignore()
-#		self.hide()
-
-	def keyPressEvent(self,event):
-		self.master.keyEvent(event)
-
-	def keyReleaseEvent(self,event):
-		self.master.keyEvent(event)
-
-	def event(self,event):
-		if event.type()==qtcore.QEvent.WindowActivate:
-			self.master.raiseAllWindows(self)
-
-		return qtgui.QMainWindow.event(self,event)
-
-class AbstractBeeMdiWindow(qtgui.QDockWidget):
-	""" Base class for every non-master displayed window in the bee application """
-	def __init__(self,master):
-		qtgui.QMdiSubWindow.__init__(self,master)
-		self.master=master
-		self.setAttribute(qtcore.Qt.WA_QuitOnClose,False)
-
-#	def closeEvent(self,event):
-#		event.ignore()
-#		self.hide()
-
-	def keyPressEvent(self,event):
-		self.master.keyEvent(event)
-
-	def keyReleaseEvent(self,event):
-		self.master.keyEvent(event)
-
 class AbstractBeeDockWindow(qtgui.QDockWidget):
 	""" Base class for every non-master displayed window in the bee application """
 	def __init__(self,master):
 		qtgui.QDockWidget.__init__(self,master)
 		self.master=master
 		self.setAttribute(qtcore.Qt.WA_QuitOnClose,False)
-
-#	def closeEvent(self,event):
-#		event.ignore()
-#		self.hide()
 
 	def keyPressEvent(self,event):
 		self.master.keyEvent(event)

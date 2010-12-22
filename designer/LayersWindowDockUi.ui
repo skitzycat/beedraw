@@ -10,6 +10,9 @@
     <height>295</height>
    </rect>
   </property>
+  <property name="allowedAreas">
+   <set>Qt::LeftDockWidgetArea|Qt::RightDockWidgetArea</set>
+  </property>
   <property name="windowTitle">
    <string>Layers:</string>
   </property>

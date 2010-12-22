@@ -10,6 +10,9 @@
     <height>317</height>
    </rect>
   </property>
+  <property name="allowedAreas">
+   <set>Qt::LeftDockWidgetArea|Qt::RightDockWidgetArea</set>
+  </property>
   <property name="windowTitle">
    <string>Tool Options</string>
   </property>

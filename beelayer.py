@@ -33,7 +33,6 @@ from LayersWindowDockUi import Ui_LayersWindow
 from beeapp import BeeApp
 from beeeventstack import *
 
-from abstractbeewindow import AbstractBeeWindow
 from abstractbeewindow import AbstractBeeDockWindow
 
 class BeeLayerState:
