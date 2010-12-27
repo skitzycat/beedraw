@@ -18,6 +18,7 @@
 import PyQt4.QtGui as qtgui
 import PyQt4.QtCore as qtcore
 import math
+import sys
 import ImageChops
 from beeutil import *
 from beetypes import *
@@ -487,9 +488,9 @@ class DrawingTool(AbstractTool):
 
 		self.parentlayer=self.window.getLayerForKey(self.layerkey)
 		if self.brushimageformat==BrushImageFormats.qt:
-			self.layer=BeeTemporaryLayer(self.parentlayer,self.options["opacity"]/100.,self.compmode)
+			self.layer=self.parentlayer.getTmpLayer(self.options["opacity"]/100.,self.compmode)
 		else:
-			self.layer=BeeTemporaryLayerPIL(self.parentlayer,self.options["opacity"]/100.,self.compmode,self.clippath)
+			self.layer=self.parentlayer.getTmpLayerPIL(self.options["opacity"]/100.,self.compmode,self.clippath)
 
 		self.startLine(x,y,pressure)
 
@@ -674,7 +675,8 @@ class DrawingTool(AbstractTool):
 
 		refresharea=qtcore.QRectF(left,top,width,height)
 		#self.layer.update(refresharea)
-		self.layer.scene().update(refresharea)
+		self.layer.updateScene(refresharea)
+		#self.layer.scene().update(refresharea)
  
 		#self.layer.compositeFromCenter(lineimage,left,top,self.stampmode,self.clippath)
 		#self.addImageToLayer(lineimage,left,top)
@@ -733,13 +735,16 @@ class DrawingTool(AbstractTool):
 		else:
 			tmplayerimage=PILtoQImage(self.layer.pilimage)
 
-		self.layer.setParentItem(None)
-		self.window.scene.removeItem(self.layer)
+		self.layer.removeFromScene()
+		#self.layer.setParentItem(None)
+		#self.window.scene.removeItem(self.layer)
+
 		self.parentlayer.compositeFromCorner(tmplayerimage,0,0,self.layer.compmode,opacity=self.layer.getOpacity(),lock=parentimagelock,clippath=self.clippath)
 
 		parentimagelock.unlock()
 
-		self.window.scene.update()
+		#self.window.scene.update()
+		self.layer.updateScene()
 
 		radius=int(math.ceil(self.options["maxdiameter"]))
  
@@ -998,6 +1003,7 @@ class SelectionTool(AbstractTool):
 		dirtyrect.adjust(-1,-1,2,2)
  
 		self.window.view.updateView(dirtyrect)
+
  
 	def guiLevelPenDown(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
 		self.overlay=RectangleSelectionPickOverlay(self.window.docwidth,self.window.docheight)

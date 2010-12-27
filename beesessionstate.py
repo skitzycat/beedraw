@@ -44,6 +44,9 @@ class BeeSessionState:
 
 		self.historysize=20
 
+		self.nextfloatinglayerkey=-1
+		self.nextfloatinglayerkeylock=qtcore.QReadWriteLock()
+
 		self.layers=[]
 		# mutex for messing with the list of layer: adding, removing or rearranging
 		self.layerslistlock=qtcore.QReadWriteLock()
@@ -306,6 +309,15 @@ class BeeSessionState:
 		""" Only needed in subclasses that display a list of layers
 		"""
 		pass
+
+	def nextFloatingLayerKey(self):
+		""" returns the next floating layer key available, thread safe """
+		# get a lock so we don't get a collision ever
+		lock=qtcore.QWriteLocker(self.nextfloatinglayerkeylock)
+
+		key=self.nextfloatinglayerkey
+		self.nextfloatinglayerkey-=1
+		return key
 
 	def nextLayerKey(self):
 		""" returns the next layer key available, thread safe """

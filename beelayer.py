@@ -73,6 +73,25 @@ class BeeLayerState:
 		# set default name for layer
 		self.changeName("Layer %d" % key)
 
+	def removeFromScene(self):
+		pass
+
+	def setParentItem(self,layer):
+		pass
+
+	def getImageRect(self):
+		return qtcore.QRect()
+
+	def updateScene(self,rect=None):
+		pass
+
+	def getTmpLayer(self,opacity,compmode):
+		win=self.getWindow()
+		return BeeLayerState(self.windowid,LayerTypes.temporary,win.nextFloatingLayerKey(),opacity=opacity,compmode=compmode)
+
+	def getTmpLayerPIL(self,opacity,compmode,clippath):
+		return BeeTemporaryLayerStatePIL(self,opacity,compmode,clippath)
+
 	def changeOpacity(self,opacity):
 		self.opacity_setting=opacity
 
@@ -253,7 +272,7 @@ class BeeLayerState:
 	def getType(self):
 		return self.type
 
-class BeeGuiLayer(qtgui.QGraphicsItem,BeeLayerState):
+class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
 	def __init__(self,windowid,type,key,image=None,opacity=None,visible=None,compmode=None,owner=0,parent=None):
 		BeeLayerState.__init__(self,windowid,type,key,image,opacity,visible,compmode,owner)
 		qtgui.QGraphicsItem.__init__(self)
@@ -261,6 +280,21 @@ class BeeGuiLayer(qtgui.QGraphicsItem,BeeLayerState):
 		self.setFlag(qtgui.QGraphicsItem.ItemUsesExtendedStyleOption)
 		# setting the parent here instead of in the constructor seems to fix an occational error down in Qt about a pure virtual method being called
 		self.setParentItem(parent)
+
+	def removeFromScene(self):
+		if self.scene():
+			self.setParentItem(None)
+			self.scene().removeItem(self)
+
+	def updateScene(self,rect=qtcore.QRect()):
+		if self.scene():
+			self.scene().update(rect)
+
+	def getTmpLayer(self,opacity,compmode):
+		return BeeTemporaryLayer(self,opacity,compmode)
+
+	def getTmpLayerPIL(self,opacity,compmode,clippath):
+		return BeeTemporaryLayerPIL(self,opacity,compmode,clippath)
 
 	def paste(self,image,x,y):
 		win=BeeApp().master.getWindowById(self.windowid)
@@ -444,9 +478,16 @@ class SelectedAreaAnimation(qtgui.QGraphicsItemAnimation):
 		self.timer.setLoopCount(0)
 		self.setTimeLine(self.timer)
 		self.setItem(item)
-		self.timer.start()
 		self.view=view
-		self.running=True
+		self.running=False
+
+	#def __del__(self):
+	#	print "DESTRUCTOR: SelectedAreaAnimation"
+
+	def cleanUp(self):
+		self.stop()
+		self.view=None
+		self.timer=None
 
 	def stop(self):
 		if self.running:
@@ -455,7 +496,6 @@ class SelectedAreaAnimation(qtgui.QGraphicsItemAnimation):
 
 	def start(self):
 		if not self.running:
-			self.timer.stop()
 			self.timer.start()
 			self.running=True
 
@@ -476,6 +516,13 @@ class SelectedAreaDisplay(qtgui.QGraphicsItem):
 		self.dashpatternlength=8
 		self.pathlock=qtcore.QReadWriteLock()
 		self.animation=SelectedAreaAnimation(self,view)
+
+	#def __del__(self):
+	#	print "DESTRUCTOR: SelectedAreaDisplay"
+
+	def cleanUp(self):
+		self.animation.cleanUp()
+		self.animation=None
 
 	def incrementDashOffset(self):
 		self.dashoffset+=1
@@ -509,6 +556,60 @@ class SelectedAreaDisplay(qtgui.QGraphicsItem):
 		painter.setPen(pen)
 		painter.drawPath(self.path)
 
+class BeeTemporaryLayerStatePIL(BeeLayerState):
+	def __init__(self,parent,opacity,compmode,clippath):
+		win=parent.getWindow()
+		self.clippath=clippath
+		width,height=win.getDocSize()
+		self.pilimage=Image.new("RGBA",(width,height),(0,0,0,0))
+		BeeLayerState.__init__(self,parent.windowid,LayerTypes.temporary,win.nextFloatingLayerKey(),opacity=opacity,compmode=compmode)
+
+	# composite image onto layer from center coord
+	def compositeFromCenter(self,image,x,y,compmode,clippath=None,refreshimage=True,opacity=1):
+		x=int(x)
+		y=int(y)
+		#print "calling compositeFromCenter with args:",x,y
+		width=image.size[0]
+		height=image.size[0]
+		#print "image dimensions:", width, height
+		self.compositeFromCorner(image,x-int((width)/2),y-int((height)/2),compmode,clippath,refreshimage=refreshimage,opacity=opacity)
+
+	# composite image onto layer from corner coord
+	def compositeFromCorner(self,image,x,y,compmode,clippath=None,lock=None,refreshimage=True,opacity=1):
+		x=int(x)
+		y=int(y)
+
+		#print "compositing image onto pil temp layer:"
+		#printPILImage(image)
+		#print "calling compositeFromCorner with args:",x,y
+
+		if not lock:
+			lock=qtcore.QWriteLocker(self.imagelock)
+
+		width,height=image.size
+
+		rect=qtcore.QRect(x,y,width,height)
+
+		#self.pilimage.paste(image,box=(x,y),mask=image)
+		PILcomposite(self.pilimage,image,x,y,ImageCombineTypes.lightest)
+
+		#updatedsection=self.pilimage.crop((x,y,x+image.size[0],y+image.size[1]))
+		#print "new section looks like:", x,y,image.size
+		#printPILImage(updatedsection)
+
+		dirtyregion=qtgui.QRegion(rect)
+		win=BeeApp().master.getWindowById(self.windowid)
+
+		sizelock=qtcore.QReadLocker(win.docsizelock)
+		# not every type of window actually has a full image representation so just calculate what the image rectangle would be
+		imagerect=qtcore.QRect(0,0,win.docwidth,win.docheight)
+
+		if refreshimage:
+			dirtyregion=dirtyregion.intersect(qtgui.QRegion(imagerect))
+			lock.unlock()
+
+			win.reCompositeImage(dirtyregion.boundingRect())
+
 class BeeTemporaryLayerPIL(BeeGuiLayer):
 	def __init__(self,parent,opacity,compmode,clippath):
 		win=parent.getWindow()
@@ -516,6 +617,7 @@ class BeeTemporaryLayerPIL(BeeGuiLayer):
 		width,height=win.getDocSize()
 		self.pilimage=Image.new("RGBA",(width,height),(0,0,0,0))
 		BeeGuiLayer.__init__(self,parent.windowid,LayerTypes.temporary,win.nextFloatingLayerKey(),opacity=opacity,parent=parent,compmode=compmode)
+		parent.scene().addItem(self)
 
 	def paint(self,painter,options,widget=None):
 		scene=self.scene()
@@ -590,6 +692,7 @@ class BeeTemporaryLayer(BeeGuiLayer):
 	def __init__(self,parent,opacity,compmode):
 		win=parent.getWindow()
 		BeeGuiLayer.__init__(self,parent.windowid,LayerTypes.temporary,win.nextFloatingLayerKey(),opacity=opacity,parent=parent,compmode=compmode)
+		parent.scene().addItem(self)
 
 		# put below floating layers
 		self.setZValue(0)

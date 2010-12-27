@@ -18,6 +18,7 @@
 import PyQt4.QtCore as qtcore
 import PyQt4.QtGui as qtgui
 import math
+import sys
 
 from beeutil import *
 
@@ -44,6 +45,10 @@ class BeeCanvasView(qtgui.QGraphicsView):
 		self.setViewportUpdateMode(qtgui.QGraphicsView.SmartViewportUpdate)
 
 		self.show()
+
+	# for debugging memory usage
+	#def __del__(self):
+	#	print "DESTRUCTOR: BeeCanvasView"
 
 	def paintEvent(self,event):
 		window=BeeApp().master.getWindowById(self.windowid)
@@ -147,6 +152,7 @@ class BeeCanvasView(qtgui.QGraphicsView):
 		#print "cursorPressEvent:(x,y,pressure)",x,y,pressure
 
 		window=BeeApp().master.getWindowById(self.windowid)
+
 		# if the window has no layers in it's layers list then just return
 		if not window.layers:
 			return

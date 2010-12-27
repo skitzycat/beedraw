@@ -84,9 +84,6 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 				fileconfig=parser.loadOptions()
 				self.config.update(fileconfig)
 
-		self.winzlist=[]
-		self.winzlistlock=qtcore.QReadWriteLock()
-
 		# read tool options from file if needed
 		toolconfigfilename=os.path.join("config","tooloptions.xml")
 		toolconfigfile=qtcore.QFile(toolconfigfilename)
@@ -144,9 +141,6 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 
 		#self.restore_default_window_positions()
-
-		lock=qtcore.QWriteLocker(self.winzlistlock)
-		self.winzlist=[self,self.tooloptionswindow,self.palettewindow,self.layerswindow]
 
 		self.toolselectwindow=ToolSelectionWindow(self)
 
@@ -226,6 +220,13 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 			if "masterw" in winconfig and "masterh" in winconfig:
 				self.resize(winconfig["masterw"],winconfig["masterh"])
+
+	# for debugging:
+	#def event(self,event):
+	#	print "master event type:", event.type()
+	#	val=qtgui.QMainWindow.event(self,event)
+	#	print "after handling event", event.type()
+	#	return val
 
 	# Palette Menu Actions:
 	def on_Palette_Configure_triggered(self,accept=True):
@@ -359,18 +360,13 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		self.drawingwindows.append(window)
 		self.setCurWindow(window,lock)
 
-		zlock=qtcore.QWriteLocker(self.winzlistlock)
-		self.winzlist.append(window)
-
 		action=WindowSelectionAction(self,self.ui.menu_Window_Drawing_Windows,window.id)
 		self.ui.menu_Window_Drawing_Windows.addAction(action)
 		window.menufocusaction=action
 
 	def unregisterWindow(self,window):
 		lock=qtcore.QWriteLocker(self.drawingwindowslock)
-		zlock=qtcore.QWriteLocker(self.winzlistlock)
-		if window in self.winzlist:
-			self.winzlist.remove(window)
+
 		self.drawingwindows.remove(window)
 		self.ui.menu_Window_Drawing_Windows.removeAction(window.menufocusaction)
 		# if the window we're deleting was the active window
@@ -382,6 +378,8 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 				self.curwindow=None
 
 			self.requestLayerListRefresh()
+
+		#self.ui.mdiArea.removeSubWindow(window)
 
 	def requestLayerListRefresh(self):
 		event=qtcore.QEvent(BeeCustomEventTypes.refreshlayerslist)
@@ -520,8 +518,10 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			self.playFile(filename)
 
 	def playFile(self,filename):
-		curwin=AnimationDrawingWindow(self,filename)
-		curwin.setFileName(filename)
+		window=self.ui.mdiArea.addSubWindow(AnimationDrawingWindow(self,filename))
+		result=qtcore.QObject.connect(window,qtcore.SIGNAL("windowStateChanged(Qt::WindowStates,Qt::WindowStates)"),window.widget().mdiWinStateChange)
+		window.widget().setFileName(filename)
+		window.show()
 
 	def on_action_File_Open_triggered(self,accept=True):
 		if not accept:
@@ -551,10 +551,11 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			reader=qtgui.QImageReader(filename)
 			image=reader.read()
 
-			newwindow=self.ui.mdiArea.addSubWindow(BeeDrawingWindow(self,image.width(),image.height(),False,maxundo=self.config["maxundo"]))
-			newwindow.loadLayer(image)
-			newwindow.setFileName(filename)
-			newwindow.show()
+			window=self.ui.mdiArea.addSubWindow(BeeDrawingWindow(self,image.width(),image.height(),False,maxundo=self.config["maxundo"]))
+			result=qtcore.QObject.connect(window,qtcore.SIGNAL("windowStateChanged(Qt::WindowStates,Qt::WindowStates)"),window.widget().mdiWinStateChange)
+			window.widget().loadLayer(image)
+			window.widget().setFileName(filename)
+			window.show()
 
 	def on_action_File_New_triggered(self,accept=True):
 		if not accept:
@@ -568,9 +569,8 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			width=dialogui.width_box.value()
 			height=dialogui.height_box.value()
 
-			widget=BeeDrawingWindow(self,width=width,height=height,maxundo=self.config["maxundo"])
-			window=self.ui.mdiArea.addSubWindow(widget)
-			result=qtcore.QObject.connect(window,qtcore.SIGNAL("windowStateChanged(Qt::WindowStates,Qt::WindowStates)"),widget.mdiWinStateChange)
+			window=self.ui.mdiArea.addSubWindow(BeeDrawingWindow(self,width=width,height=height,maxundo=self.config["maxundo"]))
+			result=qtcore.QObject.connect(window,qtcore.SIGNAL("windowStateChanged(Qt::WindowStates,Qt::WindowStates)"),window.widget().mdiWinStateChange)
 			window.show()
 
 	def on_action_Edit_Configure_triggered(self,accept=True):
@@ -668,7 +668,9 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		socket=self.getServerConnection(username,password,hostname,port)
 
 		if socket:
-			window=NetworkClientDrawingWindow(self,socket)
+			window=self.ui.mdiArea.addSubWindow(NetworkClientDrawingWindow(self,socket))
+			result=qtcore.QObject.connect(window,qtcore.SIGNAL("windowStateChanged(Qt::WindowStates,Qt::WindowStates)"),window.widget().mdiWinStateChange)
+			window.show()
 
 	# connect to host and authticate
 	def getServerConnection(self,username,password,host,port):

@@ -72,10 +72,6 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 		self.cursoroverlay=None
 		self.remotedrawingthread=None
 
-
-		self.nextfloatinglayerkey=-1
-		self.nextfloatinglayerkeylock=qtcore.QReadWriteLock()
-
 		self.tooloverlay=None
 
 		self.selection=None
@@ -213,15 +209,6 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 	def setFileName(self,filename):
 		self.filename=filename
 		self.changeWindowTitle(os.path.basename(str(filename)))
-
-	def nextFloatingLayerKey(self):
-		""" returns the next floating layer key available, thread safe """
-		# get a lock so we don't get a collision ever
-		lock=qtcore.QWriteLocker(self.nextfloatinglayerkeylock)
-
-		key=self.nextfloatinglayerkey
-		self.nextfloatinglayerkey-=1
-		return key
 
 	def resetLayerZValues(self,lock=None):
 		i=0
@@ -1051,11 +1038,11 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 	# this is here because the window doesn't seem to get deleted when it's closed
 	# the cleanUp function attempts to clean up as much memory as possible
 	def cleanUp(self):
+		#print "ref counts at beginning of cleanup:", sys.getrefcount(self)
 		# end the log if there is one
 		self.endLog()
 
-		# for some reason this seems to get rid of a reference needed to allow garbage collection
-		self.setParent(None)
+		self.selectiondisplay.cleanUp()
 
 		self.localdrawingthread.addExitEventToQueue()
 		if not self.localdrawingthread.wait(10000):
@@ -1067,10 +1054,20 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 			if not self.remotedrawingthread.wait(20000):
 				print_debug("WARNING: remote drawing thread did not terminate on time")
 
+		self.scene.removeItem(self.selectiondisplay)
+		self.selectiondisplay=None
+
+		self.scene.removeItem(self.layerfinisher)
+
+		if self.tooloverlay:
+			self.scene.removeItem(self.tooloverlay)
+
 		# this should be the last referece to the window
 		self.master.unregisterWindow(self)
 
-		#self.localcommandstack=None
+		self.localcommandstack=None
+
+		#print "ref counts after cleanup:", sys.getrefcount(self)
 
 	# just in case someone lets up on the cursor when outside the drawing area this will make sure it's caught
 	def tabletEvent(self,event):
@@ -1187,8 +1184,8 @@ class NetworkClientDrawingWindow(BeeDrawingWindow):
 		#self.ui.action_Image_Scale_Image.setDisabled(True)
 
 		# enable/disable menu options for network window
-		self.ui.menuImage.setDisabled(True)
-		self.ui.menuNetwork.setEnabled(True)
+		self.imagemenu.setDisabled(True)
+		#self.networkmenu.setEnabled(True)
 
 		# setup command stack with 0 size network history, this should get reset during intialization
 		self.localcommandstack=CommandStack(self,CommandStackTypes.network,maxundo=maxundo)
@@ -1228,8 +1225,8 @@ class NetworkClientDrawingWindow(BeeDrawingWindow):
 		self.remotecommandstacks={}
 
 		# switch around which menus are active
-		self.ui.menuNetwork.setDisabled(True)
-		self.ui.menuImage.setEnabled(True)
+		#self.networkmenu.setDisabled(True)
+		self.imagemenu.setEnabled(True)
 
 	# add an event to the undo/redo history
 	def addCommandToHistory(self,command,source=0):
