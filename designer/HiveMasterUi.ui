@@ -1,39 +1,40 @@
-<ui version="4.0" >
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
  <class>HiveMasterSpec</class>
- <widget class="QMainWindow" name="HiveMasterSpec" >
-  <property name="geometry" >
+ <widget class="QMainWindow" name="HiveMasterSpec">
+  <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>666</width>
+    <width>723</width>
     <height>586</height>
    </rect>
   </property>
-  <property name="windowTitle" >
+  <property name="windowTitle">
    <string>Hive Server</string>
   </property>
-  <widget class="QWidget" name="centralwidget" >
-   <layout class="QHBoxLayout" >
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QHBoxLayout">
     <item>
-     <layout class="QVBoxLayout" >
+     <layout class="QVBoxLayout">
       <item>
-       <layout class="QHBoxLayout" >
+       <layout class="QHBoxLayout">
         <item>
-         <widget class="QLabel" name="label_5" >
-          <property name="text" >
+         <widget class="QLabel" name="label_5">
+          <property name="text">
            <string>Status:</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QLabel" name="statusLabel" >
-          <property name="sizePolicy" >
-           <sizepolicy vsizetype="Preferred" hsizetype="MinimumExpanding" >
+         <widget class="QLabel" name="statusLabel">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
-          <property name="text" >
+          <property name="text">
            <string>Server not running</string>
           </property>
          </widget>
@@ -41,59 +42,56 @@
        </layout>
       </item>
       <item>
-       <widget class="QLabel" name="label_2" >
-        <property name="text" >
+       <widget class="QLabel" name="label_2">
+        <property name="text">
          <string>Clients:</string>
         </property>
-        <property name="alignment" >
+        <property name="alignment">
          <set>Qt::AlignCenter</set>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QListWidget" name="clientsList" />
+       <widget class="QListWidget" name="clientsList"/>
       </item>
       <item>
-       <widget class="QPushButton" name="kick_button" >
-        <property name="enabled" >
-         <bool>false</bool>
-        </property>
-        <property name="text" >
+       <widget class="QPushButton" name="kick_button">
+        <property name="text">
          <string>Kick</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QLabel" name="label_3" >
-        <property name="text" >
+       <widget class="QLabel" name="label_3">
+        <property name="text">
          <string>Requests:</string>
         </property>
-        <property name="alignment" >
+        <property name="alignment">
          <set>Qt::AlignCenter</set>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QListWidget" name="listWidget_2" />
+       <widget class="QListWidget" name="listWidget_2"/>
       </item>
       <item>
-       <layout class="QHBoxLayout" >
+       <layout class="QHBoxLayout">
         <item>
-         <widget class="QPushButton" name="accept_request_button" >
-          <property name="enabled" >
+         <widget class="QPushButton" name="accept_request_button">
+          <property name="enabled">
            <bool>false</bool>
           </property>
-          <property name="text" >
+          <property name="text">
            <string>Accept</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="reject_request_button" >
-          <property name="enabled" >
+         <widget class="QPushButton" name="reject_request_button">
+          <property name="enabled">
            <bool>false</bool>
           </property>
-          <property name="text" >
+          <property name="text">
            <string>Reject</string>
           </property>
          </widget>
@@ -103,27 +101,27 @@
      </layout>
     </item>
     <item>
-     <layout class="QVBoxLayout" >
+     <layout class="QVBoxLayout">
       <item>
-       <widget class="QLabel" name="label" >
-        <property name="sizePolicy" >
-         <sizepolicy vsizetype="Minimum" hsizetype="Minimum" >
+       <widget class="QLabel" name="label">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
-        <property name="text" >
+        <property name="text">
          <string>Layers:</string>
         </property>
-        <property name="alignment" >
+        <property name="alignment">
          <set>Qt::AlignCenter</set>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QWidget" native="1" name="widget" >
-        <property name="sizePolicy" >
-         <sizepolicy vsizetype="Expanding" hsizetype="Expanding" >
+       <widget class="QWidget" name="widget" native="true">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
@@ -131,43 +129,43 @@
        </widget>
       </item>
       <item>
-       <layout class="QHBoxLayout" >
+       <layout class="QHBoxLayout">
         <item>
-         <widget class="QPushButton" name="new_layer_button" >
-          <property name="enabled" >
+         <widget class="QPushButton" name="new_layer_button">
+          <property name="enabled">
            <bool>false</bool>
           </property>
-          <property name="text" >
+          <property name="text">
            <string>New Layer</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="delete_layer_button" >
-          <property name="enabled" >
+         <widget class="QPushButton" name="delete_layer_button">
+          <property name="enabled">
            <bool>false</bool>
           </property>
-          <property name="text" >
+          <property name="text">
            <string>Delete Layer</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="layer_up_button" >
-          <property name="enabled" >
+         <widget class="QPushButton" name="layer_up_button">
+          <property name="enabled">
            <bool>false</bool>
           </property>
-          <property name="text" >
+          <property name="text">
            <string>Move Up</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="layer_down_button" >
-          <property name="enabled" >
+         <widget class="QPushButton" name="layer_down_button">
+          <property name="enabled">
            <bool>false</bool>
           </property>
-          <property name="text" >
+          <property name="text">
            <string>Move Down</string>
           </property>
          </widget>
@@ -178,45 +176,45 @@
     </item>
    </layout>
   </widget>
-  <widget class="QMenuBar" name="menubar" >
-   <property name="geometry" >
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>666</width>
-     <height>35</height>
+     <width>723</width>
+     <height>27</height>
     </rect>
    </property>
-   <widget class="QMenu" name="menuFile" >
-    <property name="title" >
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
      <string>File</string>
     </property>
-    <addaction name="separator" />
-    <addaction name="actionStart" />
-    <addaction name="actionStop" />
-    <addaction name="actionOptions" />
-    <addaction name="actionClose" />
+    <addaction name="separator"/>
+    <addaction name="actionStart"/>
+    <addaction name="actionStop"/>
+    <addaction name="actionOptions"/>
+    <addaction name="actionClose"/>
    </widget>
-   <addaction name="menuFile" />
+   <addaction name="menuFile"/>
   </widget>
-  <widget class="QStatusBar" name="statusbar" />
-  <action name="actionStart" >
-   <property name="text" >
+  <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionStart">
+   <property name="text">
     <string>Start</string>
    </property>
   </action>
-  <action name="actionStop" >
-   <property name="text" >
+  <action name="actionStop">
+   <property name="text">
     <string>Stop</string>
    </property>
   </action>
-  <action name="actionClose" >
-   <property name="text" >
+  <action name="actionClose">
+   <property name="text">
     <string>Close</string>
    </property>
   </action>
-  <action name="actionOptions" >
-   <property name="text" >
+  <action name="actionOptions">
+   <property name="text">
     <string>Options</string>
    </property>
   </action>
@@ -229,11 +227,11 @@
    <receiver>HiveMasterSpec</receiver>
    <slot>close()</slot>
    <hints>
-    <hint type="sourcelabel" >
+    <hint type="sourcelabel">
      <x>-1</x>
      <y>-1</y>
     </hint>
-    <hint type="destinationlabel" >
+    <hint type="destinationlabel">
      <x>332</x>
      <y>292</y>
     </hint>

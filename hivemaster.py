@@ -240,8 +240,7 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 	def kickClient(self,name):
 		for i in self.clientnames.keys():
 			if self.clientnames[i]==name:
-				self.socketsmap[i].abort()
-				self.socketsmap[i].socket.disconnectFromHost()
+				self.socketsmap[i].disconnect()
 				self.routinginput.put(((DrawingCommandTypes.quit,),0-i))
 
 	def on_actionStart_triggered(self,accept=True):
