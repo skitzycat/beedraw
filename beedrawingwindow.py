@@ -1033,7 +1033,12 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 
 	def on_action_File_Close_triggered(self,accept=True):
 		if accept:
-			self.close()
+			self.closeDrawingWindow()
+
+	def closeDrawingWindow(self):
+		parent=self.parentWidget()
+		if parent:
+			parent.close()
 
 	# this is here because the window doesn't seem to get deleted when it's closed
 	# the cleanUp function attempts to clean up as much memory as possible
@@ -1135,11 +1140,6 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 		self.master.updateLayerHighlight(self,newkey,lock)
 		self.master.updateLayerHighlight(self,oldkey,lock)
 
-	# do what's needed to start up any network threads
-	def startNetworkThreads(self,socket):
-		self.listenerthread=NetworkListenerThread(self,socket)
-		self.listenerthread.start()
-
 	def switchAllLayersToLocal(self):
 		lock=qtcore.QReadLocker(self.layerslistlock)
 		for layer in self.layers:
@@ -1179,7 +1179,7 @@ class NetworkClientDrawingWindow(BeeDrawingWindow):
 		self.socket=socket
 		BeeDrawingWindow.__init__(self,parent,startlayer=False,type=WindowTypes.networkclient,maxundo=maxundo)
 
-		self.disconnectmessage=""
+		self.disconnectmessage="No Response From Server"
 		# disable options that can't be used in network sessions
 		#self.ui.action_Image_Scale_Image.setDisabled(True)
 
@@ -1193,8 +1193,11 @@ class NetworkClientDrawingWindow(BeeDrawingWindow):
 	def setDisconnectMessage(self,message):
 		self.disconnectmessage=message
 
+	# do what's needed to start up any network threads
 	def startRemoteDrawingThreads(self):
-		self.startNetworkThreads(self.socket)
+		self.listenerthread=NetworkListenerThread(self.id,self.socket)
+		self.listenerthread.start()
+
 		self.remotedrawingthread=DrawingThread(self.remotecommandqueue,self.id,ThreadTypes.network,master=self.master)
 		self.remotedrawingthread.start()
 
@@ -1220,7 +1223,9 @@ class NetworkClientDrawingWindow(BeeDrawingWindow):
 
 	def switchToSingleUser(self):
 		# change command stack to single user
-		self.localcommandstack.changeToLocal()
+		localcommand=self.localcommandstack
+		if localcommand:
+			localcommand.changeToLocal()
 		# get rid of all remote command stacks
 		self.remotecommandstacks={}
 
@@ -1239,3 +1244,11 @@ class NetworkClientDrawingWindow(BeeDrawingWindow):
 		else:
 			self.remotecommandstacks[source]=CommandStack(self,0,CommandStackTypes.remoteonly)
 			self.remotecommandstacks[source].add(command)
+
+	def cleanUp(self):
+		BeeDrawingWindow.cleanUp(self)
+		self.remotecommandstacks=None
+		self.socket.disconnect()
+		self.socket=None
+		#self.listenerthread.terminate()
+		#self.listenerthread.wait(10000)

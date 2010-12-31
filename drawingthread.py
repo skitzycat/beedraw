@@ -90,9 +90,7 @@ class DrawingThread(qtcore.QThread):
 		if subtype==LocalOnlyCommandTypes.selection:
 			selectionop=command[2]
 			newpath=command[3]
-			print "refcount at beginning of selection change", sys.getrefcount(window)
 			window.changeSelection(selectionop,newpath)
-			print "refcount at end of selection change", sys.getrefcount(window)
 
 		elif subtype==LocalOnlyCommandTypes.floatingmove:
 			layerkey=command[2]

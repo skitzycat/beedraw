@@ -166,6 +166,7 @@ class BeeSocket:
 			self.socket.disconnectFromHost()
 			self.socket.waitForDisconnected(1000)
 		elif self.type==BeeSocketTypes.python:
+			self.socket.shutdown(socket.SHUT_RDWR)
 			self.socket.close()
 
 	def abort(self):
@@ -205,6 +206,7 @@ class BeeSocket:
 			except socket.error, errmsg:
 				print_debug("exception while trying to read data: %s" % errmsg)
 				self.connected=False
+				retstring=""
 				
 			except:
 				print_debug("unknown error while trying to read data")

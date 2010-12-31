@@ -22,6 +22,7 @@ from beeglobals import *
 from beetypes import *
 from beeutil import *
 from sketchlog import SketchLogWriter
+from beeapp import BeeApp
 
 import Image
 from ImageQt import ImageQt
@@ -346,28 +347,31 @@ class PlayBackAnimation (qtcore.QThread):
 		self.window.type=WindowTypes.singleuser
 
 class NetworkListenerThread (qtcore.QThread):
-	def __init__(self,window,socket):
+	def __init__(self,windowid,socket):
 		qtcore.QThread.__init__(self)
-		self.window=window
+		self.windowid=windowid
 		self.socket=socket
 
 		# during the destructor this seems to forget about qtnet so keep this around to check aginst it then
 		self.connectedstate=qtnet.QAbstractSocket.ConnectedState
 
 	def run(self):
+		window=BeeApp().master.getWindowById(self.windowid)
+
 		# if we failed to get a socket then destroy the window and exit
 		if not self.socket:
 			print_debug("failed to get socket connection")
-			self.window.close()
-			return
+			window.closeDrawingWindow()
 
 		# get ready for next contact from server
-		self.parser=XmlToQueueEventsConverter(None,self.window,0,type=ThreadTypes.network)
+
+		self.parser=XmlToQueueEventsConverter(None,window,0,type=ThreadTypes.network)
+
 		#qtcore.QObject.connect(self.socket, qtcore.SIGNAL("readyRead()"), self.readyRead)
 		#qtcore.QObject.connect(self.socket, qtcore.SIGNAL("disconnected()"), self.disconnected)
 
-		sendingthread=NetworkWriterThread(self.window,self.socket)
-		self.window.sendingthread=sendingthread
+		sendingthread=NetworkWriterThread(self.windowid,self.socket)
+		window.sendingthread=sendingthread
 		sendingthread.start()
 
 		# enter read loop, read till socket closes
@@ -377,27 +381,29 @@ class NetworkListenerThread (qtcore.QThread):
 
 			if not data:
 				print_debug("Error due to closed remote connection")
-				self.window.setDisconnectMessage("Server has closed connection")
+				window.setDisconnectMessage("Server has closed connection")
 				break
 
 			print_debug("got animation data from socket: %s" % data)
 
 			self.parser.xml.addData(data)
 			error=self.parser.read()
+			#error=QXmlStreamReader.NoError
 
 			# if there was an error and it wasn't a premature end of document error then we can't recover and need to disconnect
 			if error!=QXmlStreamReader.PrematureEndOfDocumentError and error!=QXmlStreamReader.NoError:
-				self.window.setDisconnectMessage("Error in XML stream")
-				self.window.addExitEventToQueue(source=ThreadTypes.network)
+				window.setDisconnectMessage("Error in XML stream")
+				window.addExitEventToQueue(source=ThreadTypes.network)
 				break
 
 		# this should be run when the socket is disconnected and the buffer is empty
-		self.window.disconnected()
+		window.disconnected()
+		self.parser=None
 
 class NetworkWriterThread (qtcore.QThread):
 	""" class representing a client thread that is sending information to server
   """
-	def __init__(self,window,socket):
+	def __init__(self,windowid,socket):
 		qtcore.QThread.__init__(self)
 		self.socket=socket
 
@@ -405,10 +411,12 @@ class NetworkWriterThread (qtcore.QThread):
 		self.buffer.open(qtcore.QIODevice.ReadWrite)
 		self.gen=SketchLogWriter(self.buffer)
 
-		self.window=window
+		window=BeeApp().master.getWindowById(windowid)
+
 		self.queue=window.remoteoutputqueue
 
 	def run(self):
+
 		while 1:
 			# write out initial document start tag
 			datastr="%s" % qtcore.QString(self.buffer.data())

@@ -1029,6 +1029,9 @@ class SelectionTool(AbstractTool):
 
 		self.desc.resetOptions()
 
+		# not sure why I need this, but without it there ends up being an extra reference to the window after it is closed which prevents memory cleanup
+		self.window=None
+
 	# set overlay to display area that would be selected if user lifted up button
 	def guiLevelPenMotion(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
 		if not self.pendown:
