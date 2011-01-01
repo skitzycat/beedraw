@@ -143,17 +143,23 @@ class BeeSocket:
 		self.socket=socket
 		self.errorStr=""
 		self.connected=connected
+		self.pyconnectlock=qtcore.QReadWriteLock()
 
 		# set blocking to never time out
 		if self.type==BeeSocketTypes.python:
 			self.socket.settimeout(None)
+
+	def setPyConnectedState(self,state,lock=None):
+		if not lock:
+			lock=qtcore.QWriteLocker(self.pyconnectlock)
+		self.connected=state
 
 	def waitForConnected(self):
 		if self.type==BeeSocketTypes.qt:
 			connected=self.socket.waitForConnected()
 			return connected
 		elif self.type==BeeSocketTypes.python:
-			return self.connected
+			return self.isConnected()
 
 	def errorString(self):
 		if self.type==BeeSocketTypes.qt:
@@ -163,10 +169,16 @@ class BeeSocket:
 
 	def disconnect(self):
 		if self.type==BeeSocketTypes.qt:
+			if not self.isConnected():
+				return
 			self.socket.disconnectFromHost()
 		elif self.type==BeeSocketTypes.python:
+			lock=qtcore.QWriteLocker(self.pyconnectlock)
+			if not self.isConnected(lock):
+				return
 			self.socket.shutdown(socket.SHUT_RDWR)
 			self.socket.close()
+			self.setPyConnectedState(False,lock)
 
 	def abort(self):
 		if self.type==BeeSocketTypes.qt:
@@ -179,15 +191,15 @@ class BeeSocket:
 		elif self.type==BeeSocketTypes.python:
 			try:
 				self.socket.connect((host,port))
-				self.connected=True
+				self.setPyConnectedState(True)
 			except socket.error, errmsg:
 				print_debug("error while connecting: %s" % errmsg)
-				self.connected=False
+				self.setPyConnectedState(False)
 			except:
 				self.errorStr="unknown connection error"
-				self.connected=False
+				self.setPyConnectedState(False)
 
-			return self.connected
+			return self.isConnected()
 
 	def read(self,size):
 		retstring=""
@@ -204,23 +216,25 @@ class BeeSocket:
 
 			except socket.error, errmsg:
 				print_debug("exception while trying to read data: %s" % errmsg)
-				self.connected=False
+				self.setPyConnectedState(False)
 				retstring=""
 				
 			except:
 				print_debug("unknown error while trying to read data")
-				self.connected=False
+				self.setPyConnectedState(False)
 				retstring=""
 
 		return retstring
 
-	def isConnected(self):
+	def isConnected(self,lock=None):
 		if self.type==BeeSocketTypes.qt:
 			if self.socket.state()==qtnet.QAbstractSocket.UnconnectedState:
 				return False
 			else:
 				return True
 		elif self.type==BeeSocketTypes.python:
+			if not lock:
+				lock=qtcore.QReadLocker(self.pyconnectlock)
 			return self.connected
 
 	def write(self,data):
@@ -237,11 +251,11 @@ class BeeSocket:
 
 			except socket.error, errmsg:
 				print_debug("exception while trying to send data: %s" % errmsg)
-				self.connected=False
+				self.setPyConnectedState(False)
 				
 			except:
 				print_debug("unknown exception while trying to send data")
-				self.connected=False
+				self.setPyConnectedState(False)
 
 # thread to setup connection, authenticate and then
 # listen to a socket and add incomming client commands to queue
