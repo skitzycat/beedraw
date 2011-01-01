@@ -164,7 +164,6 @@ class BeeSocket:
 	def disconnect(self):
 		if self.type==BeeSocketTypes.qt:
 			self.socket.disconnectFromHost()
-			self.socket.waitForDisconnected(1000)
 		elif self.type==BeeSocketTypes.python:
 			self.socket.shutdown(socket.SHUT_RDWR)
 			self.socket.close()
@@ -230,7 +229,8 @@ class BeeSocket:
 		if self.type==BeeSocketTypes.qt:
 			self.socket.write(data)
 			self.socket.flush()
-			self.socket.waitForBytesWritten(-1)
+			if self.socket.state()!=qtnet.QTcpSocket.UnconnectedState:
+				self.socket.waitForBytesWritten(-1)
 		elif self.type==BeeSocketTypes.python:
 			try:
 				self.socket.sendall(data)
@@ -358,6 +358,7 @@ class HiveClientListener(qtcore.QThread):
 		while 1:
 			if not data:
 				print_debug("remote socket closed")
+				print "exiting listener thread"
 				break
 
 			#print_debug("got animation data from socket: %s" % qtcore.QString(data))
@@ -415,6 +416,7 @@ class HiveClientWriter(qtcore.QThread):
 			data=self.queue.get()
 			if data[0]==DrawingCommandTypes.quit:
 				self.master.unregisterClient(self.id)
+				print "exiting client writer thread"
 				return
 			#print "Hive Client Writer got command from Queue:", data
 			# write xml data to socket

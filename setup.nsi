@@ -31,6 +31,8 @@ Section "Base Files"
     writeRegStr HKLM "SOFTWARE\Bee Draw" "" "$INSTDIR"
     SetOutPath '$INSTDIR\beedraw\config'
     File 'config\default.pal'
+    SetOutPath '$INSTDIR\beedraw\icons'
+    File 'icons\*.*'
     SetOutPath '$INSTDIR\beedraw'
     File '${py2exeOutputDirectory}\*.*'
 SectionEnd

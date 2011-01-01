@@ -214,6 +214,7 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 				self.changeStatusLabel("Failed to start on port %d" % self.config["port"])
 			elif event.status==HiveServerStatusTypes.stopped:
 				self.changeStatusLabel("Server not running")
+				print "changed status to server not running"
 
 		return qtgui.QMainWindow.event(self,event)
 
