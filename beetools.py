@@ -482,6 +482,7 @@ class DrawingTool(AbstractTool):
 		if self.logtype==ToolLogTypes.unlogable:
 			return
 
+
 		self.returning=False
 		self.inside=True
 		self.pendown=True

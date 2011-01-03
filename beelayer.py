@@ -272,12 +272,12 @@ class BeeLayerState:
 	def getType(self):
 		return self.type
 
-class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
+class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsObject):
 	def __init__(self,windowid,type,key,image=None,opacity=None,visible=None,compmode=None,owner=0,parent=None):
 		BeeLayerState.__init__(self,windowid,type,key,image,opacity,visible,compmode,owner)
-		qtgui.QGraphicsItem.__init__(self)
+		qtgui.QGraphicsObject.__init__(self)
 		self.setOpacity(self.opacity_setting)
-		self.setFlag(qtgui.QGraphicsItem.ItemUsesExtendedStyleOption)
+		self.setFlag(qtgui.QGraphicsObject.ItemUsesExtendedStyleOption)
 		# setting the parent here instead of in the constructor seems to fix an occational error down in Qt about a pure virtual method being called
 		self.setParentItem(parent)
 
@@ -692,6 +692,7 @@ class BeeTemporaryLayer(BeeGuiLayer):
 	def __init__(self,parent,opacity,compmode):
 		win=parent.getWindow()
 		BeeGuiLayer.__init__(self,parent.windowid,LayerTypes.temporary,win.nextFloatingLayerKey(),opacity=opacity,parent=parent,compmode=compmode)
+		self.moveToThread(parent.scene().thread())
 		parent.scene().addItem(self)
 
 		# put below floating layers

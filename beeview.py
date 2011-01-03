@@ -212,6 +212,18 @@ class BeeCanvasScene(qtgui.QGraphicsScene):
 
 		self.tmppainter=None
 
+	def event(self,event):
+		if event.type()==BeeCustomEventTypes.addlayertoscene:
+			self.addItem(event.layer)
+		return qtgui.QGraphicsScene.event(self,event)
+
+	def addItem(self,item):
+		if qtcore.QThread.currentThread()==self.thread():
+			qtgui.QGraphicsScene.addItem(self,item)
+		else:
+			event=AddLayerToSceneEvent(item)
+			BeeApp().app.postEvent(self,event)
+
 	def getImageCopy(self):
 		lock=qtcore.QReadLocker(self.imagelock)
 		return self.image.copy()

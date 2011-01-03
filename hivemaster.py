@@ -198,7 +198,7 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 		# make sure no other instance is running
 		self.stopServer()
 
-		self.serverthread=HiveServerThread(self,self.config["port"])
+		self.serverthread=HiveServerThread(self,self.config["port"],sockettype=BeeSocketTypes.python)
 		self.serverthread.start()
 
 	def event(self,event):
@@ -294,11 +294,12 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 
 # class to handle running the TCP server and handling new connections
 class HiveServerThread(qtcore.QThread):
-	def __init__(self,master,port=8333):
+	def __init__(self,master,port=8333,sockettype=BeeSocketTypes.python):
 		qtcore.QThread.__init__(self,master)
 		self.threads=[]
 		self.port=port
 		self.master=master
+		self.sockettype=sockettype
 
 		# connect the signals we want
 		qtcore.QObject.connect(self, qtcore.SIGNAL("finished()"), self.finished)
@@ -306,7 +307,8 @@ class HiveServerThread(qtcore.QThread):
 
 	def started(self):
 		# under linux Qt sockets aren't working correctly for me
-		if os.name=="posix":
+		#if os.name=="posix":
+		if self.sockettype==BeeSocketTypes.python:
 			return
 
 		# needs to be done here because this is running in the proper thread
@@ -325,7 +327,8 @@ class HiveServerThread(qtcore.QThread):
 		print_debug("server thread has finished")
 
 	def run(self):
-		if os.name=="posix":
+		#if os.name=="posix":
+		if self.sockettype==BeeSocketTypes.python:
 			# under linux Qt sockets aren't working correctly for me
 			self.server=BeeTCPServer(BeeSocketTypes.python,self.port,self,self.master)
 			self.server.start()
