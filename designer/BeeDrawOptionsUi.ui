@@ -1,80 +1,112 @@
-<ui version="4.0" >
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
  <class>BeeMasterOptions</class>
- <widget class="QDialog" name="BeeMasterOptions" >
-  <property name="geometry" >
+ <widget class="QDialog" name="BeeMasterOptions">
+  <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
     <width>410</width>
-    <height>198</height>
+    <height>229</height>
    </rect>
   </property>
-  <property name="windowTitle" >
+  <property name="windowTitle">
    <string>Bee Draw Options</string>
   </property>
-  <layout class="QVBoxLayout" >
+  <layout class="QVBoxLayout">
    <item>
-    <layout class="QGridLayout" >
-     <item row="1" column="0" >
-      <widget class="QCheckBox" name="autolog_checkBox" >
-       <property name="text" >
+    <layout class="QGridLayout">
+     <item row="1" column="0">
+      <widget class="QCheckBox" name="autolog_checkBox">
+       <property name="text">
         <string>Automatically start log</string>
        </property>
       </widget>
      </item>
-     <item row="2" column="0" >
-      <widget class="QLabel" name="label" >
-       <property name="text" >
+     <item row="2" column="0">
+      <widget class="QLabel" name="label">
+       <property name="text">
         <string>Default Username:</string>
        </property>
       </widget>
      </item>
-     <item row="2" column="1" >
-      <widget class="QLineEdit" name="username_entry" >
-       <property name="maxLength" >
+     <item row="2" column="1">
+      <widget class="QLineEdit" name="username_entry">
+       <property name="maxLength">
         <number>32</number>
        </property>
       </widget>
      </item>
-     <item row="1" column="1" >
-      <widget class="QCheckBox" name="autosave_checkBox" >
-       <property name="enabled" >
+     <item row="1" column="1">
+      <widget class="QCheckBox" name="autosave_checkBox">
+       <property name="enabled">
         <bool>false</bool>
        </property>
-       <property name="text" >
+       <property name="text">
         <string>Auto Save</string>
        </property>
       </widget>
      </item>
-     <item row="0" column="0" >
-      <widget class="QCheckBox" name="debug_checkBox" >
-       <property name="text" >
+     <item row="0" column="0">
+      <widget class="QCheckBox" name="debug_checkBox">
+       <property name="text">
         <string>Debug Output</string>
        </property>
       </widget>
      </item>
-     <item row="3" column="0" >
-      <widget class="QLabel" name="label_2" >
-       <property name="text" >
+     <item row="3" column="0">
+      <widget class="QLabel" name="label_2">
+       <property name="text">
         <string>History Size:</string>
        </property>
       </widget>
      </item>
-     <item row="3" column="1" >
-      <widget class="QSpinBox" name="history_size_box" >
-       <property name="value" >
+     <item row="3" column="1">
+      <widget class="QSpinBox" name="history_size_box">
+       <property name="value">
         <number>30</number>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="0">
+      <widget class="QLabel" name="label_3">
+       <property name="text">
+        <string>Default Server:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="0">
+      <widget class="QLabel" name="label_4">
+       <property name="text">
+        <string>Default Port</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="1">
+      <widget class="QLineEdit" name="server_entry">
+       <property name="text">
+        <string>localhost</string>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="1">
+      <widget class="QSpinBox" name="port_spinBox">
+       <property name="maximum">
+        <number>65535</number>
+       </property>
+       <property name="value">
+        <number>8333</number>
        </property>
       </widget>
      </item>
     </layout>
    </item>
    <item>
-    <widget class="QDialogButtonBox" name="buttonBox" >
-     <property name="orientation" >
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
-     <property name="standardButtons" >
+     <property name="standardButtons">
       <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
      </property>
     </widget>
@@ -89,11 +121,11 @@
    <receiver>BeeMasterOptions</receiver>
    <slot>accept()</slot>
    <hints>
-    <hint type="sourcelabel" >
+    <hint type="sourcelabel">
      <x>248</x>
      <y>254</y>
     </hint>
-    <hint type="destinationlabel" >
+    <hint type="destinationlabel">
      <x>157</x>
      <y>274</y>
     </hint>
@@ -105,11 +137,11 @@
    <receiver>BeeMasterOptions</receiver>
    <slot>reject()</slot>
    <hints>
-    <hint type="sourcelabel" >
+    <hint type="sourcelabel">
      <x>316</x>
      <y>260</y>
     </hint>
-    <hint type="destinationlabel" >
+    <hint type="destinationlabel">
      <x>286</x>
      <y>274</y>
     </hint>

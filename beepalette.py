@@ -9,8 +9,8 @@ from colorswatch import *
 from abstractbeewindow import AbstractBeeDockWindow
 from beeutil import *
 
-from beesave import PaletteXmlWriter,BeeToolConfigWriter,BeeMasterConfigWriter
-from beeload import PaletteParser,BeeToolConfigParser
+from beesave import PaletteXmlWriter
+from beeload import PaletteParser
 
 from PaletteOptionsDialogUi import Ui_Pallete_Config_Dialog
 

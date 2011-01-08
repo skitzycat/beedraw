@@ -401,14 +401,14 @@ class BeeSessionState:
 	def addAdjustCanvasSizeRequestToQueue(self,leftadj,topadj,rightadj,bottomadj,source=ThreadTypes.user,owner=0):
 		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.resize,leftadj,topadj,rightadj,bottomadj),source,owner)
 
-	def setCanvasSize(self,width,height):
+	def setCanvasSize(self,width,height,history=True):
 		sizelock=qtcore.QWriteLocker(self.docsizelock)
 		rightadj=width-self.docwidth
 		bottomadj=height-self.docheight
-		self.adjustCanvasSize(0,0,rightadj,bottomadj,sizelock)
+		self.adjustCanvasSize(0,0,rightadj,bottomadj,sizelock,history=history)
 
 	# grow or crop canvas according to adjustments on each side
-	def adjustCanvasSize(self,leftadj,topadj,rightadj,bottomadj,sizelock=None):
+	def adjustCanvasSize(self,leftadj,topadj,rightadj,bottomadj,sizelock=None,history=True):
 		# get lock on adjusting the document size
 		if not sizelock:
 			sizelock=qtcore.QWriteLocker(self.docsizelock)

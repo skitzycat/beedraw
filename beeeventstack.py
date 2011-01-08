@@ -44,6 +44,9 @@ class CommandStack:
 	def changeToLocal(self):
 		self.type=CommandStackTypes.singleuser
 
+	def changeToNetwork(self):
+		self.type=CommandStackTypes.network
+
 	def setHistorySize(self,newsize):
 		if self.type==CommandStackTypes.remoteonly:
 			self.setNetworkHistorySize(newsize)
@@ -57,6 +60,10 @@ class CommandStack:
 		self.networkmaxundo=newsize
 		if self.networkmaxundo<0:
 			self.networkmaxundo=0
+
+		if self.maxundo<self.networkmaxundo:
+			self.maxundo=self.networkmaxundo
+
 		self.checkStackSize()
 
 	def cleanLocalLayerHistory(self):
@@ -114,12 +121,11 @@ class CommandStack:
 		if self.type==CommandStackTypes.network and command.undotype==UndoCommandTypes.remote:
 			self.networkinhist+=1
 
-		# if the command stack is full, delete the oldest one
-		self.checkStackSize()
-
 		self.commandstack.append(command)
 		self.index=len(self.commandstack)
 		self.changessincesave+=1
+
+		self.checkStackSize()
 
 	def undo(self):
 		if self.index<=0:

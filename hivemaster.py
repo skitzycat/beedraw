@@ -40,8 +40,6 @@ from animation import XmlToQueueEventsConverter
 from sketchlog import SketchLogWriter
 from abstractbeemaster import AbstractBeeMaster
 from hivestate import HiveSessionState
-from beeload import HiveMasterConfigParser
-from beesave import HiveMasterConfigWriter
 
 from Queue import Queue
 import time
@@ -55,21 +53,13 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 		AbstractBeeMaster.__init__(self)
 
 		# set defaults
-		self.config["port"]=8333
-		self.config["width"]=600
-		self.config["height"]=400
-		self.config["networkhistorysize"]=20
-		self.config["password"]=""
-		self.config["autolog"]=False
+		settings=qtcore.QSettings("BeeDraw","Hive")
 
-		# then load from config file if possible
-		configfilename=os.path.join("config","hiveoptions.xml")
-		configfile=qtcore.QFile(configfilename)
-		if configfile.exists():
-			if configfile.open(qtcore.QIODevice.ReadOnly):
-				parser=HiveMasterConfigParser(configfile)
-				fileconfig=parser.loadOptions()
-				self.config.update(fileconfig)
+		self.config["port"],ok=settings.value("port",8333).toInt()
+		self.config["width"],ok=settings.value("width",600).toInt()
+		self.config["height"],ok=settings.value("height",400).toInt()
+		self.config["networkhistorysize"],ok=settings.value("networkhistorysize",20).toInt()
+		self.config["password"]=settings.value("password").toString()
 
 		# Initialize values
 		self.nextclientid=1
@@ -107,6 +97,10 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 		# drawing window which holds the current state of the network session
 		self.curwindow=None
 		self.serverthread=None
+
+		#restore window position
+		self.restoreGeometry(settings.value("geometry").toByteArray())
+		self.restoreState(settings.value("windowState").toByteArray())
 
 	def getHistorySize(self):
 		return self.config["networkhistorysize"]
@@ -181,6 +175,16 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 		del self.socketsmap[id]
 
 	def closeEvent(self,event):
+		if self.serverthread:
+			result=qtgui.QMessageBox.question(self,"Ready to Quit?","Are you sure you'd like to exit the whole application?\nThe currently running server will be terminated.",qtgui.QMessageBox.Ok,qtgui.QMessageBox.Cancel)
+			if result!=qtgui.QMessageBox.Ok:
+				event.ignore()
+				return
+
+		settings=qtcore.QSettings("BeeDraw","Hive")
+		settings.setValue("geometry",self.saveGeometry())
+		settings.setValue("windowState",self.saveState())
+
 		qtgui.QMainWindow.closeEvent(self,event)
 #		self.stopServer()
 
@@ -285,12 +289,13 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 		self.config["height"]=dialog.ui.height_box.value()
 		self.config["networkhistorysize"]=dialog.ui.history_size_box.value()
 
-		filename=os.path.join("config","hiveoptions.xml")
-		outfile=qtcore.QFile(filename,self)
-		outfile.open(qtcore.QIODevice.Truncate|qtcore.QIODevice.WriteOnly)
-		writer=HiveMasterConfigWriter(outfile)
-		writer.writeConfig(self.config)
-		outfile.close()
+		settings=qtcore.QSettings("BeeDraw","Hive")
+
+		settings.setValue("port",self.config["port"])
+		settings.setValue("password",self.config["password"])
+		settings.setValue("width",self.config["width"])
+		settings.setValue("height",self.config["height"])
+		settings.setValue("networkhistorysize",self.config["networkhistorysize"])
 
 # class to handle running the TCP server and handling new connections
 class HiveServerThread(qtcore.QThread):

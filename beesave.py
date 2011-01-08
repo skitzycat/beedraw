@@ -54,16 +54,6 @@ class PaletteXmlWriter:
 
 		self.out.writeEndElement()
 
-class BeeDrawConfigWriter:
-	def __init__(self, output):
-		self.out=QXmlStreamWriter(output)
-
-	def startLog(self):
-		self.out.writeStartElement('beeconfig')
-
-	def endLog(self):
-		self.out.writeEndElement()
-
 class BeeToolConfigWriter:
 	def __init__(self, output):
 		self.out=QXmlStreamWriter(output)
@@ -85,76 +75,3 @@ class BeeToolConfigWriter:
 			self.out.writeEndElement()
 
 		self.out.writeEndElement()
-
-class BeeMasterConfigWriter:
-	def __init__(self, output):
-		self.out=QXmlStreamWriter(output)
-
-	def writeConfig(self,config):
-		self.startLog()
-		for key in config:
-			if key in ["username","server"]:
-				self.logTextValue(key,config[key])
-			elif key in ["port","maxundo"]:
-				self.logIntValue(key,config[key])
-			elif key in ["autolog","autosave","debug"]:
-				if config[key]:
-					self.logBoolValue(key,"True")
-				else:
-					self.logBoolValue(key,"False")
-		self.endLog()
-
-	def startLog(self):
-		self.out.writeStartElement('beemasterconfig')
-
-	def endLog(self):
-		self.out.writeEndElement()
-
-	def logTextValue(self,field,value):
-		self.out.writeStartElement(field)
-		self.out.writeAttribute('value',value)
-		self.out.writeEndElement()
-
-	def logBoolValue(self,field,value):
-		self.out.writeStartElement(field)
-		self.out.writeAttribute('value',value)
-		self.out.writeEndElement()
-
-	def logIntValue(self,field,value):
-		self.out.writeStartElement(field)
-		self.out.writeAttribute('value',str(value))
-		self.out.writeEndElement()
-
-class BeeWindowPositionConfigWriter(BeeMasterConfigWriter):
-	def startLog(self):
-		self.out.writeStartElement('beewindowpositions')
-
-	def writeConfig(self,config):
-		self.startLog()
-		for key in config:
-			if key in ["toolx","tooly","toolw","toolh","palettex","palettey","palettew","paletteh","layerx","layery","layerw","layerh","masterx","mastery","masterw","masterh"]:
-				self.logIntValue(key,config[key])
-			elif key in ["toolshow","paletteshow","layershow"]:
-				if config[key]:
-					self.logBoolValue(key,"True")
-				else:
-					self.logBoolValue(key,"False")
-		self.endLog()
-
-class HiveMasterConfigWriter(BeeMasterConfigWriter):
-	def writeConfig(self,config):
-		self.startLog()
-		for key in config:
-			if key in ["password"]:
-				self.logTextValue(key,config[key])
-			elif key in ["port","height","width","networkhistorysize"]:
-				self.logIntValue(key,config[key])
-			elif key in ["debug"]:
-				if config[key]:
-					self.logBoolValue(key,"True")
-				else:
-					self.logBoolValue(key,"False")
-		self.endLog()
-
-	def startLog(self):
-		self.out.writeStartElement('hivemasterconfig')

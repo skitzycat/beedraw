@@ -540,7 +540,7 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 
 		if history:
 			command=ChangeSelectionCommand(oldpath,self.selection)
-			self.localcommandstack.add(command)
+			self.addCommandToHistory(command)
 
 		return oldpath,self.selection
 
@@ -1175,7 +1175,7 @@ class AnimationDrawingWindow(BeeDrawingWindow):
 class NetworkClientDrawingWindow(BeeDrawingWindow):
 	""" Represents a window that the user can draw in with others in a network session
 	"""
-	def __init__(self,parent,socket,maxundo=50):
+	def __init__(self,parent,socket,maxundo=20):
 		self.socket=socket
 		BeeDrawingWindow.__init__(self,parent,startlayer=False,type=WindowTypes.networkclient,maxundo=maxundo)
 
@@ -1188,7 +1188,7 @@ class NetworkClientDrawingWindow(BeeDrawingWindow):
 		#self.networkmenu.setEnabled(True)
 
 		# setup command stack with 0 size network history, this should get reset during intialization
-		self.localcommandstack=CommandStack(self,CommandStackTypes.network,maxundo=maxundo)
+		self.localcommandstack.changeToNetwork()
 
 	def setDisconnectMessage(self,message):
 		self.disconnectmessage=message
@@ -1236,7 +1236,7 @@ class NetworkClientDrawingWindow(BeeDrawingWindow):
 	# add an event to the undo/redo history
 	def addCommandToHistory(self,command,source=0):
 		# if we don't get a source then assume that it's local
-		if self.ownedByMe(source) or source<0:
+		if self.ownedByMe(source) or source<=0:
 			self.localcommandstack.add(command)
 		# else add it to proper remote command stack, add stack if needed
 		elif source in self.remotecommandstacks:

@@ -801,6 +801,9 @@ class LayerConfigWidget(qtgui.QWidget):
 	# update the gui to reflect the values of the layer
 	def updateValuesFromLayer(self,winlock=None,proplock=None):
 		win=BeeApp().master.getWindowById(self.windowid,winlock)
+		if not win:
+			return
+
 		layer=win.getLayerForKey(self.layerkey)
 
 		if not layer:

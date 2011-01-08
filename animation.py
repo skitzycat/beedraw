@@ -380,7 +380,6 @@ class NetworkListenerThread (qtcore.QThread):
 			data=self.socket.read(1024)
 
 			if not data:
-				print_debug("Error due to closed remote connection")
 				window.setDisconnectMessage("Server has closed connection")
 				break
 

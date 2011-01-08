@@ -43,6 +43,7 @@ class BeeApp(object):
 		return BeeApp.instances[cls]
 
 	def __init__(self,argv,type=1):
+		self.closing=False
 		self.debug_flags={}
 		if os.path.isfile("beedebug"):
 			self.debug_flags[DebugFlags.allon]=True
@@ -58,9 +59,18 @@ class BeeApp(object):
 			qtgui.QApplication.setWindowIcon(icon)
 
 class BeeGuiApp(qtgui.QApplication):
+	def __init__(self,argv):
+		qtgui.QApplication.__init__(self,argv)
+		self.closing=False
+
 	def event(self,event):
 		if event.type()==qtcore.QEvent.TabletEnterProximity:
 			BeeApp().master.pointerTypeCheck(event.pointerType())
 			event.accept()
 			return True
 		return qtgui.QApplication.event(self,event)
+
+	# this is here to avoid causing errors due to a sending updates to a closed window
+	def closingState(self):
+		self.closing=True
+

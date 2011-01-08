@@ -517,7 +517,9 @@ def requestDisplayMessage(type,title,message,destination=None):
 		destination=BeeApp().master
 
 	event=DisplayMessageEvent(type,title,message)
-	BeeApp().app.postEvent(destination,event)
+
+	if not BeeApp().app.closing:
+		BeeApp().app.postEvent(destination,event)
 
 class ThreadNotifierQueue(Queue,qtcore.QObject):
 	__pyqtSignals__ = ("datainqueue()")

@@ -372,7 +372,6 @@ class HiveClientListener(qtcore.QThread):
 		while 1:
 			if not data:
 				print_debug("remote socket closed")
-				print "exiting listener thread"
 				break
 
 			#print_debug("got animation data from socket: %s" % qtcore.QString(data))

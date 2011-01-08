@@ -37,11 +37,10 @@ from ConnectionDialogUi import Ui_ConnectionInfoDialog
 from BeeDrawOptionsUi import Ui_BeeMasterOptions
 from beelayer import BeeLayersWindow
 from beeutil import *
-from beesave import BeeToolConfigWriter,BeeMasterConfigWriter,BeeWindowPositionConfigWriter
-from beeload import PaletteParser,BeeToolConfigParser,BeeWindowPositionConfigParser
+from beesave import BeeToolConfigWriter
+from beeload import PaletteParser,BeeToolConfigParser
 from beepalette import PaletteWindow
 from toolwindow import *
-from beeload import BeeMasterConfigParser
 
 from beeapp import BeeApp
 
@@ -66,23 +65,16 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		qtgui.QMainWindow.__init__(self)
 		AbstractBeeMaster.__init__(self)
 
-		# set default config values
-		self.config['username']=""
-		self.config['server']="localhost"
-		self.config['port']=8333
-		self.config['autolog']=False
-		self.config['autosave']=False
-		self.config['debug']=False
-		self.config['maxundo']=30
+		settings=qtcore.QSettings("BeeDraw","BeeDraw")
 
-		# then load from config file if possible
-		configfilename=os.path.join("config","beedrawoptions.xml")
-		configfile=qtcore.QFile(configfilename)
-		if configfile.exists():
-			if configfile.open(qtcore.QIODevice.ReadOnly):
-				parser=BeeMasterConfigParser(configfile)
-				fileconfig=parser.loadOptions()
-				self.config.update(fileconfig)
+		# set default config values
+		self.config['username']=settings.value("username").toString()
+		self.config['server']=settings.value("server","localhost").toString()
+		self.config['port'],ok=settings.value("port",8333).toInt()
+		self.config['autolog']=settings.value("autolog",False).toBool()
+		self.config['autosave']=settings.value("autosave",False).toBool()
+		self.config['debug']=settings.value("debug",False).toBool()
+		self.config['maxundo'],ok=settings.value("maxundo",30).toInt()
 
 		# read tool options from file if needed
 		toolconfigfilename=os.path.join("config","tooloptions.xml")
@@ -139,9 +131,6 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		# setup window with colors
 		self.palettewindow=PaletteWindow(self)
 
-
-		#self.restore_default_window_positions()
-
 		self.toolselectwindow=ToolSelectionWindow(self)
 
 		self.setCorner(qtcore.Qt.TopLeftCorner,qtcore.Qt.LeftDockWidgetArea)
@@ -156,7 +145,6 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		self.addDockWidget(qtcore.Qt.RightDockWidgetArea,self.layerswindow)
 
 		# restore settings
-		settings=qtcore.QSettings("BeeDraw","BeeDraw")
 		self.restoreGeometry(settings.value("geometry").toByteArray())
 		self.restoreState(settings.value("windowState").toByteArray())
 
@@ -180,53 +168,6 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			self.uncheckWindowToolOptionsBox()
 		else:
 			self.checkWindowToolOptionsBox()
-
-	def restore_default_window_positions(self):
-		configfilename=os.path.join("config","windowpos.xml")
-		configfile=qtcore.QFile(configfilename)
-		if configfile.exists() and configfile.open(qtcore.QIODevice.ReadOnly):
-			parser=BeeWindowPositionConfigParser(configfile)
-			winconfig=parser.loadOptions()
-
-			if "toolx" in winconfig and "tooly" in winconfig:
-				self.tooloptionswindow.move(winconfig["toolx"],winconfig["tooly"])
-
-			if "toolw" in winconfig and "toolh" in winconfig:
-				self.tooloptionswindow.resize(winconfig["toolw"],winconfig["toolh"])
-
-			if "toolshow" in winconfig and "toolh" in winconfig:
-				self.tooloptionswindow.setVisible(winconfig["toolshow"])
-
-			if "palettex" in winconfig and "palettey" in winconfig:
-				self.palettewindow.move(winconfig["palettex"],winconfig["palettey"])
-
-			if "palettew" in winconfig and "paletteh" in winconfig:
-				self.palettewindow.resize(winconfig["palettew"],winconfig["paletteh"])
-
-			if "paletteshow" in winconfig and "paletteh" in winconfig:
-				self.palettewindow.setVisible(winconfig["paletteshow"])
-
-			if "layerx" in winconfig and "layery" in winconfig:
-				self.layerswindow.move(winconfig["layerx"],winconfig["layery"])
-
-			if "layerw" in winconfig and "layerh" in winconfig:
-				self.layerswindow.resize(winconfig["layerw"],winconfig["layerh"])
-
-			if "layershow" in winconfig and "layerh" in winconfig:
-				self.layerswindow.setVisible(winconfig["layershow"])
-
-			if "masterx" in winconfig and "mastery" in winconfig:
-				self.move(winconfig["masterx"],winconfig["mastery"])
-
-			if "masterw" in winconfig and "masterh" in winconfig:
-				self.resize(winconfig["masterw"],winconfig["masterh"])
-
-	# for debugging:
-	#def event(self,event):
-	#	print "master event type:", event.type()
-	#	val=qtgui.QMainWindow.event(self,event)
-	#	print "after handling event", event.type()
-	#	return val
 
 	# Palette Menu Actions:
 	def on_Palette_Configure_triggered(self,accept=True):
@@ -258,42 +199,6 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			return
 
 		self.palettewindow.on_Palette_load_triggered
-
-	def on_action_Window_Save_Window_Positions_triggered(self,accept=True):
-		if not accept:
-			return
-
-		winconfig={}
-
-		winconfig["toolx"]=self.tooloptionswindow.pos().x()
-		winconfig["tooly"]=self.tooloptionswindow.pos().y()
-		winconfig["toolw"]=self.tooloptionswindow.size().width()
-		winconfig["toolh"]=self.tooloptionswindow.size().height()
-		winconfig["toolshow"]=self.tooloptionswindow.isVisible()
-
-		winconfig["palettex"]=self.palettewindow.pos().x()
-		winconfig["palettey"]=self.palettewindow.pos().y()
-		winconfig["palettew"]=self.palettewindow.size().width()
-		winconfig["paletteh"]=self.palettewindow.size().height()
-		winconfig["paletteshow"]=self.palettewindow.isVisible()
-
-		winconfig["layerx"]=self.layerswindow.pos().x()
-		winconfig["layery"]=self.layerswindow.pos().y()
-		winconfig["layerw"]=self.layerswindow.size().width()
-		winconfig["layerh"]=self.layerswindow.size().height()
-		winconfig["layershow"]=self.layerswindow.isVisible()
-
-		winconfig["masterx"]=self.pos().x()
-		winconfig["mastery"]=self.pos().y()
-		winconfig["masterw"]=self.size().width()
-		winconfig["masterh"]=self.size().height()
-
-		filename=os.path.join("config","windowpos.xml")
-		outfile=qtcore.QFile(filename,self)
-		if outfile.open(qtcore.QIODevice.Truncate|qtcore.QIODevice.WriteOnly):
-			writer=BeeWindowPositionConfigWriter(outfile)
-			writer.writeConfig(winconfig)
-			outfile.close()
 
 	def keyEvent(self,event):
 		if event.key() in (qtcore.Qt.Key_Shift,qtcore.Qt.Key_Control,qtcore.Qt.Key_Alt,qtcore.Qt.Key_Meta):
@@ -593,6 +498,8 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		if self.config['autosave']:
 			dialogui.autosave_checkBox.setCheckState(qtcore.Qt.Checked)
 		dialogui.username_entry.setText(self.config['username'])
+		dialogui.server_entry.setText(self.config['server'])
+		dialogui.port_spinBox.setValue(self.config['port'])
 		
 		ok=dialog.exec_()
 
@@ -601,8 +508,10 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 		# get values out of GUI
 		self.config['username']=dialogui.username_entry.text()
+		self.config['server']=dialogui.server_entry.text()
 
 		self.config['maxundo']=dialogui.history_size_box.value()
+		self.config['port']=dialogui.port_spinBox.value()
 
 		if dialogui.debug_checkBox.isChecked():
 			self.config['debug']=True
@@ -621,13 +530,14 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		else:
 			self.config['autosave']=False
 
-		# write out everything to file
-		filename=os.path.join("config","beedrawoptions.xml")
-		outfile=qtcore.QFile(filename,self)
-		if outfile.open(qtcore.QIODevice.Truncate|qtcore.QIODevice.WriteOnly):
-			writer=BeeMasterConfigWriter(outfile)
-			writer.writeConfig(self.config)
-			outfile.close()
+		settings=qtcore.QSettings("BeeDraw","BeeDraw")
+		settings.setValue("username",self.config['username'])
+		settings.setValue("maxundo",self.config['maxundo'])
+		settings.setValue("debug",self.config['debug'])
+		settings.setValue("autolog",self.config['autolog'])
+		settings.setValue("autosave",self.config['autosave'])
+		settings.setValue("server",self.config['server'])
+		settings.setValue("port",self.config['port'])
 
 	def on_action_Help_About_triggered(self,accept=True):
 		if not accept:
@@ -668,7 +578,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		socket=self.getServerConnection(username,password,hostname,port)
 
 		if socket:
-			window=self.ui.mdiArea.addSubWindow(NetworkClientDrawingWindow(self,socket))
+			window=self.ui.mdiArea.addSubWindow(NetworkClientDrawingWindow(self,socket,maxundo=self.config["maxundo"]))
 			result=qtcore.QObject.connect(window,qtcore.SIGNAL("windowStateChanged(Qt::WindowStates,Qt::WindowStates)"),window.widget().mdiWinStateChange)
 			window.show()
 
@@ -784,6 +694,8 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 	# destroy all subwindows
 	def cleanUp(self):
+		BeeApp().app.closingState()
+
 		# copy list of windows otherwise destroying the windows as we iterate through will skip some
 		lock=qtcore.QWriteLocker(self.drawingwindowslock)
 		tmplist=self.drawingwindows[:]
