@@ -25,6 +25,12 @@ class BeeCustomEventTypes:
 	starthiveserver = qtcore.QEvent.User+3
 	updateselectiondisplay = qtcore.QEvent.User+4
 	addlayertoscene = qtcore.QEvent.User+5
+	setscenerect = qtcore.QEvent.User+6
+
+class SetSceneRectEvent(qtcore.QEvent):
+	def __init__(self,rect):
+		qtcore.QEvent.__init__(self,BeeCustomEventTypes.setscenerect)
+		self.rect=rect
 
 class AddLayerToSceneEvent(qtcore.QEvent):
 	def __init__(self,layer):

@@ -201,7 +201,7 @@ class BeeCanvasView(qtgui.QGraphicsView):
 class BeeCanvasScene(qtgui.QGraphicsScene):
 	def __init__(self,window):
 		qtgui.QGraphicsScene.__init__(self,window)
-		self.setSceneRect(0,0,window.docwidth,window.docheight)
+		self.setSceneRect(qtcore.QRectF(0,0,window.docwidth,window.docheight))
 		self.windowid=window.id
 		self.backdropcolor=qtgui.QColor(255,255,255)
 		self.framecolor=qtgui.QColor(200,200,200)
@@ -215,6 +215,8 @@ class BeeCanvasScene(qtgui.QGraphicsScene):
 	def event(self,event):
 		if event.type()==BeeCustomEventTypes.addlayertoscene:
 			self.addItem(event.layer)
+		elif event.type()==BeeCustomEventTypes.setscenerect:
+			self.setSceneRect(event.rect)
 		return qtgui.QGraphicsScene.event(self,event)
 
 	def addItem(self,item):
@@ -237,6 +239,13 @@ class BeeCanvasScene(qtgui.QGraphicsScene):
 			lock=qtcore.QReadLocker(self.scenerectlock)
 		return qtcore.QRectF(self.sceneRect())
 
+	def setSceneRect(self,rect):
+		if qtcore.QThread.currentThread()==self.thread():
+			qtgui.QGraphicsScene.setSceneRect(self,rect)
+		else:
+			event=SetSceneRectEvent(rect)
+			BeeApp().app.postEvent(self,event)
+
 	def setCanvasSize(self,newwidth,newheight):
 		scenelocker=qtcore.QWriteLocker(self.scenerectlock)
 		imagelock=qtcore.QWriteLocker(self.imagelock)
@@ -246,13 +255,14 @@ class BeeCanvasScene(qtgui.QGraphicsScene):
 	def adjustCanvasSize(self,leftadj,topadj,rightadj,bottomadj):
 		scenelocker=qtcore.QWriteLocker(self.scenerectlock)
 		imagelock=qtcore.QWriteLocker(self.imagelock)
-		oldrect=self.getSceneRect(scenelocker)
+		oldrect=self.image.rect()
 		newrect=oldrect.adjusted(0,0,leftadj+rightadj,topadj+bottomadj)
-		self.setSceneRect(newrect)
+		self.setSceneRect(qtcore.QRectF(newrect))
 		newimage=qtgui.QImage(newrect.width(),newrect.height(),qtgui.QImage.Format_ARGB32_Premultiplied)
 		painter=qtgui.QPainter()
 		painter.begin(newimage)
 		painter.drawImage(qtcore.QPoint(leftadj,topadj),self.image)
+		painter.end()
 		self.image=newimage
 		self.update()
 

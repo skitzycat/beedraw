@@ -352,9 +352,6 @@ class NetworkListenerThread (qtcore.QThread):
 		self.windowid=windowid
 		self.socket=socket
 
-		# during the destructor this seems to forget about qtnet so keep this around to check aginst it then
-		self.connectedstate=qtnet.QAbstractSocket.ConnectedState
-
 	def run(self):
 		window=BeeApp().master.getWindowById(self.windowid)
 
