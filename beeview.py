@@ -200,9 +200,9 @@ class BeeCanvasView(qtgui.QGraphicsView):
 
 class BeeCanvasScene(qtgui.QGraphicsScene):
 	def __init__(self,window):
+		self.windowid=window.id
 		qtgui.QGraphicsScene.__init__(self,window)
 		self.setSceneRect(qtcore.QRectF(0,0,window.docwidth,window.docheight))
-		self.windowid=window.id
 		self.backdropcolor=qtgui.QColor(255,255,255)
 		self.framecolor=qtgui.QColor(200,200,200)
 		self.scenerectlock=qtcore.QReadWriteLock()
@@ -242,6 +242,8 @@ class BeeCanvasScene(qtgui.QGraphicsScene):
 	def setSceneRect(self,rect):
 		if qtcore.QThread.currentThread()==self.thread():
 			qtgui.QGraphicsScene.setSceneRect(self,rect)
+			window=BeeApp().master.getWindowById(self.windowid)
+			window.layerfinisher.resize(qtcore.QRectF(0,0,self.docwidth,self.docheight))
 		else:
 			event=SetSceneRectEvent(rect)
 			BeeApp().app.postEvent(self,event)
