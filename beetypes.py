@@ -25,10 +25,16 @@ class BeeCustomEventTypes:
 	starthiveserver = qtcore.QEvent.User+3
 	updateselectiondisplay = qtcore.QEvent.User+4
 	addlayertoscene = qtcore.QEvent.User+5
+	removelayerfromscene = qtcore.QEvent.User+6
 
 class AddLayerToSceneEvent(qtcore.QEvent):
 	def __init__(self,layer):
 		qtcore.QEvent.__init__(self,BeeCustomEventTypes.addlayertoscene)
+		self.layer=layer
+
+class RemoveLayerFromSceneEvent(qtcore.QEvent):
+	def __init__(self,layer):
+		qtcore.QEvent.__init__(self,BeeCustomEventTypes.removelayerfromscene)
 		self.layer=layer
 
 class SelectionDisplayUpdateEvent(qtcore.QEvent):

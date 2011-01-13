@@ -215,7 +215,16 @@ class BeeCanvasScene(qtgui.QGraphicsScene):
 	def event(self,event):
 		if event.type()==BeeCustomEventTypes.addlayertoscene:
 			self.addItem(event.layer)
+		elif event.type()==BeeCustomEventTypes.removelayerfromscene:
+			self.removeItem(event.layer)
 		return qtgui.QGraphicsScene.event(self,event)
+
+	def removeItem(self,item):
+		if qtcore.QThread.currentThread()==self.thread():
+			qtgui.QGraphicsScene.removeItem(self,item)
+		else:
+			event=RemoveLayerFromSceneEvent(item)
+			BeeApp().app.postEvent(self,event)
 
 	def addItem(self,item):
 		if qtcore.QThread.currentThread()==self.thread():

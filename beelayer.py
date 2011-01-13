@@ -286,7 +286,7 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsObject):
 			self.setParentItem(None)
 			self.scene().removeItem(self)
 
-	def updateScene(self,rect=qtcore.QRect()):
+	def updateScene(self,rect=qtcore.QRectF()):
 		if self.scene():
 			self.scene().update(rect)
 
