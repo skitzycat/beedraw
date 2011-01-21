@@ -138,14 +138,16 @@ class BeeCanvasView(qtgui.QGraphicsView):
 			self.cursorReleaseEvent(event.x(),event.y(),event.modifiers())
 
 	def mousePressEvent(self,event):
-		self.cursorPressEvent(event.x(),event.y(),event.modifiers())
+		if not event.isAccepted():
+			self.cursorPressEvent(event.x(),event.y(),event.modifiers())
 
 	def mouseMoveEvent(self,event):
-		#print "mouseMoveEvent (x,y,pressure):",x,y,pressure
-		self.cursorMoveEvent(event.x(),event.y(),event.modifiers())
+		if not event.isAccepted():
+			self.cursorMoveEvent(event.x(),event.y(),event.modifiers())
 
 	def mouseReleaseEvent(self,event):
-		self.cursorReleaseEvent(event.x(),event.y(),event.modifiers())
+		if not event.isAccepted():
+			self.cursorReleaseEvent(event.x(),event.y(),event.modifiers())
 
 	# these are called regardless of if a mouse or tablet event was used
 	def cursorPressEvent(self,x,y,modkeys,pointertype=4,pressure=1,subx=0,suby=0):
@@ -243,7 +245,7 @@ class BeeCanvasScene(qtgui.QGraphicsScene):
 		if qtcore.QThread.currentThread()==self.thread():
 			qtgui.QGraphicsScene.setSceneRect(self,rect)
 			window=BeeApp().master.getWindowById(self.windowid)
-			window.layerfinisher.resize(qtcore.QRectF(0,0,self.docwidth,self.docheight))
+			window.layerfinisher.resize(rect)
 		else:
 			event=SetSceneRectEvent(rect)
 			BeeApp().app.postEvent(self,event)

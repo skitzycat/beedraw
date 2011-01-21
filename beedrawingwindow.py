@@ -1073,7 +1073,7 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 	def tabletEvent(self,event):
 		if event.type()==qtcore.QEvent.TabletRelease:
 			self.view.cursorReleaseEvent(event.x(),event.y(),event.modifiers())
-		return qtgui.QMainWindow.tabletEvent(self,event)
+		return qtgui.QWidget.tabletEvent(self,event)
 
 	def getLayerForKey(self,key,lock=None):
 		if key==None:
