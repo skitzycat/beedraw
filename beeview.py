@@ -26,6 +26,8 @@ from beeapp import BeeApp
 
 class BeeCanvasView(qtgui.QGraphicsView):
 	def __init__(self,window,oldwidget,scene):
+		self.tabletdown=False
+
 		qtgui.QGraphicsView.__init__(self,scene,window)
 		replaceWidget(oldwidget,self)
 		self.windowid=window.id
@@ -132,21 +134,24 @@ class BeeCanvasView(qtgui.QGraphicsView):
 				self.cursorMoveEvent(event.x(),event.y(),event.modifiers(),event.pointerType(),event.pressure(),event.hiResGlobalX()%1,event.hiResGlobalY()%1)
 
 		elif event.type()==qtcore.QEvent.TabletPress:
+			self.tabletdown=True
 			self.cursorPressEvent(event.x(),event.y(),event.modifiers(),event.pointerType(),event.pressure(),event.hiResGlobalX()%1,event.hiResGlobalY()%1)
 
 		elif event.type()==qtcore.QEvent.TabletRelease:
+			self.tabletdown=False
 			self.cursorReleaseEvent(event.x(),event.y(),event.modifiers())
 
 	def mousePressEvent(self,event):
-		if not event.isAccepted():
+		if not self.tabletdown:
 			self.cursorPressEvent(event.x(),event.y(),event.modifiers())
 
 	def mouseMoveEvent(self,event):
-		if not event.isAccepted():
+		print "got mouse move event"
+		if not self.tabletdown:
 			self.cursorMoveEvent(event.x(),event.y(),event.modifiers())
 
 	def mouseReleaseEvent(self,event):
-		if not event.isAccepted():
+		if not self.tabletdown:
 			self.cursorReleaseEvent(event.x(),event.y(),event.modifiers())
 
 	# these are called regardless of if a mouse or tablet event was used
