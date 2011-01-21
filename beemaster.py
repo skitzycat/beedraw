@@ -204,9 +204,9 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		if event.key() in (qtcore.Qt.Key_Shift,qtcore.Qt.Key_Control,qtcore.Qt.Key_Alt,qtcore.Qt.Key_Meta):
 			self.newModKeys(event.modifiers())
 
-		#curwin=self.getCurWindow()
-		#if curwin:
-		#	curwin.keyPressEvent(event)
+		curwin=self.getCurWindow()
+		if curwin:
+			curwin.keyPressEvent(event)
 
 	def keyReleaseEvent(self,event):
 		self.keyEvent(event)

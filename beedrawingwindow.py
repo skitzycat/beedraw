@@ -134,13 +134,13 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 		# File Menu
 		filemenu=menubar.addMenu("File")
 		curaction=filemenu.addAction("New",self.on_action_File_New_triggered)
-		curaction.setShortcut("Ctrl+N")
+		#curaction.setShortcut("Ctrl+N")
 		curaction=filemenu.addAction("Open",self.on_action_File_Open_triggered)
-		curaction.setShortcut("Ctrl+O")
+		#curaction.setShortcut("Ctrl+O")
 		curaction=filemenu.addAction("Play",self.on_action_File_Play_triggered)
-		curaction.setShortcut("Ctrl+P")
+		#curaction.setShortcut("Ctrl+P")
 		curaction=filemenu.addAction("Connect",self.on_action_File_Connect_triggered)
-		curaction.setShortcut("Ctrl+E")
+		#curaction.setShortcut("Ctrl+E")
 
 		filemenu.addSeparator()
 
