@@ -1,0 +1,7 @@
+#!/bin/sh
+#
+# Just an uber-simple startup script for Linux, 
+#     just tells Python where to find UI modules
+#
+export PYTHONPATH=$PYTHONPATH:designer
+python beedraw.py
