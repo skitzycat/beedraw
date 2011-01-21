@@ -278,8 +278,6 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 	def scaleCanvas(self,newwidth,newheight,history=True):
 		sizelock=qtcore.QWriteLocker(self.docsizelock)
 		BeeSessionState.scaleCanvas(self,newwidth,newheight,sizelock,history)
-
-		self.layerfinisher.resize(qtcore.QRectF(0,0,self.docwidth,self.docheight))
 		self.scene.setCanvasSize(newwidth,newheight)
 
 	def adjustCanvasSize(self,leftadj,topadj,rightadj,bottomadj,sizelock=None,history=True):
@@ -297,9 +295,6 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 		# adjust size of all the layers
 		for layer in self.layers:
 			layer.adjustCanvasSize(leftadj,topadj,rightadj,bottomadj)
-
-		# adjust size of the layer finisher
-		self.layerfinisher.resize(qtcore.QRectF(0,0,self.docwidth,self.docheight))
 
 		# finally resize the widget and update image
 		self.scene.adjustCanvasSize(leftadj,topadj,rightadj,bottomadj)
@@ -1078,7 +1073,7 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 	def tabletEvent(self,event):
 		if event.type()==qtcore.QEvent.TabletRelease:
 			self.view.cursorReleaseEvent(event.x(),event.y(),event.modifiers())
-		return qtgui.QMainWindow.tabletEvent(self,event)
+		return qtgui.QWidget.tabletEvent(self,event)
 
 	def getLayerForKey(self,key,lock=None):
 		if key==None:
