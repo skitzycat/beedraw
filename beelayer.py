@@ -287,8 +287,9 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsObject):
 			self.scene().removeItem(self)
 
 	def updateScene(self,rect=qtcore.QRectF()):
-		if self.scene():
-			self.scene().update(rect)
+		scene=self.scene()
+		if scene:
+			scene.update(rect)
 
 	def getTmpLayer(self,opacity,compmode):
 		return BeeTemporaryLayer(self,opacity,compmode)
@@ -618,6 +619,9 @@ class BeeTemporaryLayerPIL(BeeGuiLayer):
 		self.pilimage=Image.new("RGBA",(width,height),(0,0,0,0))
 		BeeGuiLayer.__init__(self,parent.windowid,LayerTypes.temporary,win.nextFloatingLayerKey(),opacity=opacity,parent=parent,compmode=compmode)
 		parent.scene().addItem(self)
+
+	#def __del__(self):
+	#	print "running destructor in temporary pil layer", self.key
 
 	def paint(self,painter,options,widget=None):
 		scene=self.scene()

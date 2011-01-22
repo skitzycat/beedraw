@@ -720,7 +720,6 @@ class DrawingTool(AbstractTool):
 
 	def penUp(self,x=None,y=None):
 		""" penUp method of DrawingTool class """
-
 		#print "Got penUp"
 		self.pendown=False
 
