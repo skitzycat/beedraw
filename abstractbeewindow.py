@@ -28,7 +28,7 @@ class AbstractBeeDockWindow(qtgui.QDockWidget):
 		self.setAttribute(qtcore.Qt.WA_QuitOnClose,False)
 
 	def keyPressEvent(self,event):
-		self.master.keyEvent(event)
+		self.master.keyPressEvent(event)
 
 	def keyReleaseEvent(self,event):
-		self.master.keyEvent(event)
+		self.master.keyReleaseEvent(event)

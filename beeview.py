@@ -126,7 +126,6 @@ class BeeCanvasView(qtgui.QGraphicsView):
 		#self.scene().update()
 
 	def tabletEvent(self,event):
-		event.accept()
 		#print "tablet event (x,y,pressure):", event.x(),event.y(), event.pressure()
 		#print "other values", event.rotation(), event.tangentialPressure(), event.xTilt(), event.yTilt()
 		if event.type()==qtcore.QEvent.TabletMove:
@@ -146,7 +145,6 @@ class BeeCanvasView(qtgui.QGraphicsView):
 			self.cursorPressEvent(event.x(),event.y(),event.modifiers())
 
 	def mouseMoveEvent(self,event):
-		print "got mouse move event"
 		if not self.tabletdown:
 			self.cursorMoveEvent(event.x(),event.y(),event.modifiers())
 

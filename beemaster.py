@@ -204,15 +204,14 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 		if event.key() in (qtcore.Qt.Key_Shift,qtcore.Qt.Key_Control,qtcore.Qt.Key_Alt,qtcore.Qt.Key_Meta):
 			self.newModKeys(event.modifiers())
 
-		curwin=self.getCurWindow()
-		if curwin:
-			curwin.keyPressEvent(event)
-
 	def keyReleaseEvent(self,event):
 		self.keyEvent(event)
 
 	def keyPressEvent(self,event):
 		self.keyEvent(event)
+		curwin=self.getCurWindow()
+		if curwin:
+			curwin.keyPressEvent(event)
 
 	def getCurWindow(self,lock=None):
 		if not lock:
@@ -474,7 +473,8 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			width=dialogui.width_box.value()
 			height=dialogui.height_box.value()
 
-			window=self.ui.mdiArea.addSubWindow(BeeDrawingWindow(self,width=width,height=height,maxundo=self.config["maxundo"]))
+			widget=BeeDrawingWindow(self,width=width,height=height,maxundo=self.config["maxundo"])
+			window=self.ui.mdiArea.addSubWindow(widget)
 			result=qtcore.QObject.connect(window,qtcore.SIGNAL("windowStateChanged(Qt::WindowStates,Qt::WindowStates)"),window.widget().mdiWinStateChange)
 			window.show()
 

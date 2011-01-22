@@ -134,55 +134,39 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 		# File Menu
 		filemenu=menubar.addMenu("File")
 		curaction=filemenu.addAction("New",self.on_action_File_New_triggered)
-		#curaction.setShortcut("Ctrl+N")
 		curaction=filemenu.addAction("Open",self.on_action_File_Open_triggered)
-		#curaction.setShortcut("Ctrl+O")
 		curaction=filemenu.addAction("Play",self.on_action_File_Play_triggered)
-		#curaction.setShortcut("Ctrl+P")
 		curaction=filemenu.addAction("Connect",self.on_action_File_Connect_triggered)
-		#curaction.setShortcut("Ctrl+E")
 
 		filemenu.addSeparator()
 
-		curaction=filemenu.addAction("Save",self.on_action_File_Save_triggered)
-		curaction.setShortcut("Ctrl+S")
-		curaction=filemenu.addAction("Save As",self.on_action_File_Save_As_triggered)
-		curaction.setShortcut("Ctrl+A")
+		curaction=filemenu.addAction("Save (Ctrl+S)",self.on_action_File_Save_triggered)
+		curaction=filemenu.addAction("Save As (Ctrl+A)",self.on_action_File_Save_As_triggered)
 
-		curaction=filemenu.addAction("Log")
+		curaction=filemenu.addAction("Log (Ctrl+L)")
 		curaction.setCheckable(True)
 		qtcore.QObject.connect(curaction,qtcore.SIGNAL("toggled(bool)"),self.on_action_File_Log_toggled)
-		curaction.setShortcut("Ctrl+L")
+		self.logaction=curaction
 
 		curaction=filemenu.addAction("Close",self.on_action_File_Close_triggered)
 
 		# Edit menu
 		editmenu=menubar.addMenu("Edit")
 
-		curaction=editmenu.addAction("Undo",self.on_action_Edit_Undo_triggered)
-		curaction.setShortcut("Ctrl+Z")
-		curaction=editmenu.addAction("Redo",self.on_action_Edit_Redo_triggered)
-		curaction.setShortcut("Ctrl+R")
+		curaction=editmenu.addAction("Undo (Ctrl+Z)",self.on_action_Edit_Undo_triggered)
+		curaction=editmenu.addAction("Redo (Ctrl+R)",self.on_action_Edit_Redo_triggered)
 
 		editmenu.addSeparator()
 
-		curaction=editmenu.addAction("Cut",self.on_action_Edit_Cut_triggered)
-		curaction.setShortcut("Ctrl+X")
-		curaction=editmenu.addAction("Copy",self.on_action_Edit_Copy_triggered)
-		curaction.setShortcut("Ctrl+C")
-		curaction=editmenu.addAction("Paste",self.on_action_Edit_Paste_triggered)
-		curaction.setShortcut("Ctrl+V")
+		curaction=editmenu.addAction("Cut (Ctrl+X)",self.on_action_Edit_Cut_triggered)
+		curaction=editmenu.addAction("Copy (Ctrl+C)",self.on_action_Edit_Copy_triggered)
+		curaction=editmenu.addAction("Paste (Ctrl+V)",self.on_action_Edit_Paste_triggered)
 
 		#View menu
 		viewmenu=menubar.addMenu("View")
-		curaction=viewmenu.addAction("Zoom In",self.on_action_View_Zoom_In_triggered)
-		curaction.setShortcut("+")
-
-		curaction=viewmenu.addAction("Zoom Out",self.on_action_View_Zoom_Out_triggered)
-		curaction.setShortcut("-")
-
-		curaction=viewmenu.addAction("Zoom 1:1",self.on_action_View_Zoom_1_1_triggered)
-		curaction.setShortcut("1")
+		curaction=viewmenu.addAction("Zoom In (+)",self.on_action_View_Zoom_In_triggered)
+		curaction=viewmenu.addAction("Zoom Out (-)",self.on_action_View_Zoom_Out_triggered)
+		curaction=viewmenu.addAction("Zoom 1:1 (1)",self.on_action_View_Zoom_1_1_triggered)
 
 		#Image menu
 		imagemenu=menubar.addMenu("Image")
@@ -201,6 +185,35 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 
 		#Network menu
 		#networkmenu=menubar.addMenu("Network")
+
+		self.menubar=menubar
+
+	def keyPressEvent(self,event):
+		if event.modifiers()==qtcore.Qt.ControlModifier:
+			if event.key()==qtcore.Qt.Key_Z:
+				self.on_action_Edit_Undo_triggered()
+			elif event.key()==qtcore.Qt.Key_R:
+				self.on_action_Edit_Redo_triggered()
+			elif event.key()==qtcore.Qt.Key_X:
+				self.on_action_Edit_Cut_triggered()
+			elif event.key()==qtcore.Qt.Key_C:
+				self.on_action_Edit_Copy_triggered()
+			elif event.key()==qtcore.Qt.Key_P:
+				self.on_action_Edit_Paste_triggered()
+			elif event.key()==qtcore.Qt.Key_S:
+				self.on_action_File_Save_triggered()
+			elif event.key()==qtcore.Qt.Key_A:
+				self.on_action_File_Save_As_triggered()
+			elif event.key()==qtcore.Qt.Key_L:
+				self.logaction.toggle()
+
+		else:
+			if event.key()==qtcore.Qt.Key_Plus:
+				self.on_action_View_Zoom_In_triggered()
+			elif event.key()==qtcore.Qt.Key_Minus:
+				self.on_action_View_Zoom_Out_triggered()
+			elif event.key()==qtcore.Qt.Key_1:
+				self.on_action_View_Zoom_1_1_triggered()
 
 	def changeWindowTitle(self,name):
 		self.setWindowTitle(name)
