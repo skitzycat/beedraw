@@ -1,7 +1,8 @@
-<ui version="4.0" >
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
  <class>EraserOptionsWidget</class>
- <widget class="QWidget" name="EraserOptionsWidget" >
-  <property name="geometry" >
+ <widget class="QWidget" name="EraserOptionsWidget">
+  <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
@@ -9,90 +10,90 @@
     <height>107</height>
    </rect>
   </property>
-  <property name="windowTitle" >
+  <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QGridLayout" >
-   <item row="0" column="0" >
-    <widget class="QLabel" name="label" >
-     <property name="text" >
-      <string>Eraser Diameter:</string>
+  <layout class="QGridLayout">
+   <item row="0" column="0">
+    <widget class="QLabel" name="label">
+     <property name="text">
+      <string>Max Diameter:</string>
      </property>
     </widget>
    </item>
-   <item row="0" column="1" >
-    <widget class="QLabel" name="eraserdiameterdisplay" >
-     <property name="text" >
+   <item row="0" column="1">
+    <widget class="QLabel" name="eraserdiameterdisplay">
+     <property name="text">
       <string>11</string>
      </property>
     </widget>
    </item>
-   <item row="0" column="2" >
-    <widget class="QSlider" name="eraserdiameter" >
-     <property name="minimum" >
+   <item row="0" column="2">
+    <widget class="QSlider" name="eraserdiameter">
+     <property name="minimum">
       <number>1</number>
      </property>
-     <property name="singleStep" >
+     <property name="singleStep">
       <number>2</number>
      </property>
-     <property name="orientation" >
+     <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
-     <property name="tickPosition" >
+     <property name="tickPosition">
       <enum>QSlider::TicksAbove</enum>
      </property>
     </widget>
    </item>
-   <item row="1" column="0" >
-    <widget class="QLabel" name="label_2" >
-     <property name="text" >
-      <string>Edge Blur Percent:</string>
+   <item row="1" column="0">
+    <widget class="QLabel" name="label_2">
+     <property name="text">
+      <string>Edge Fade:</string>
      </property>
     </widget>
    </item>
-   <item row="1" column="1" >
-    <widget class="QLabel" name="blurpercentdisplay" >
-     <property name="text" >
+   <item row="1" column="1">
+    <widget class="QLabel" name="blurpercentdisplay">
+     <property name="text">
       <string>70</string>
      </property>
     </widget>
    </item>
-   <item row="1" column="2" >
-    <widget class="QSlider" name="blurpercent" >
-     <property name="enabled" >
+   <item row="1" column="2">
+    <widget class="QSlider" name="blurpercent">
+     <property name="enabled">
       <bool>false</bool>
      </property>
-     <property name="orientation" >
+     <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
-     <property name="tickPosition" >
+     <property name="tickPosition">
       <enum>QSlider::TicksAbove</enum>
      </property>
     </widget>
    </item>
-   <item row="2" column="0" >
-    <widget class="QLabel" name="label_3" >
-     <property name="text" >
+   <item row="2" column="0">
+    <widget class="QLabel" name="label_3">
+     <property name="text">
       <string>Step Size:</string>
      </property>
     </widget>
    </item>
-   <item row="2" column="1" >
-    <widget class="QLabel" name="stepsizedisplay" >
-     <property name="text" >
+   <item row="2" column="1">
+    <widget class="QLabel" name="stepsizedisplay">
+     <property name="text">
       <string>1</string>
      </property>
     </widget>
    </item>
-   <item row="2" column="2" >
-    <widget class="QSlider" name="stepsize" >
-     <property name="minimum" >
+   <item row="2" column="2">
+    <widget class="QSlider" name="stepsize">
+     <property name="minimum">
       <number>1</number>
      </property>
-     <property name="orientation" >
+     <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
-     <property name="tickPosition" >
+     <property name="tickPosition">
       <enum>QSlider::TicksAbove</enum>
      </property>
     </widget>
@@ -107,11 +108,11 @@
    <receiver>eraserdiameterdisplay</receiver>
    <slot>setNum(int)</slot>
    <hints>
-    <hint type="sourcelabel" >
+    <hint type="sourcelabel">
      <x>265</x>
      <y>21</y>
     </hint>
-    <hint type="destinationlabel" >
+    <hint type="destinationlabel">
      <x>174</x>
      <y>21</y>
     </hint>
@@ -123,11 +124,11 @@
    <receiver>blurpercentdisplay</receiver>
    <slot>setNum(int)</slot>
    <hints>
-    <hint type="sourcelabel" >
+    <hint type="sourcelabel">
      <x>265</x>
      <y>53</y>
     </hint>
-    <hint type="destinationlabel" >
+    <hint type="destinationlabel">
      <x>174</x>
      <y>53</y>
     </hint>
@@ -139,11 +140,11 @@
    <receiver>stepsizedisplay</receiver>
    <slot>setNum(int)</slot>
    <hints>
-    <hint type="sourcelabel" >
+    <hint type="sourcelabel">
      <x>265</x>
      <y>85</y>
     </hint>
-    <hint type="destinationlabel" >
+    <hint type="destinationlabel">
      <x>174</x>
      <y>85</y>
     </hint>
