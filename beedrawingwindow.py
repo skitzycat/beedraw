@@ -715,6 +715,12 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 				self.reCompositeImage()
 				self.startRemoteDrawingThreads()
 
+		elif event.type()==qtcore.QEvent.Show:
+			if self.activated==False:
+				self.activated=True
+				self.reCompositeImage()
+				self.startRemoteDrawingThreads()
+
 		elif event.type()==BeeCustomEventTypes.displaymessage:
 			self.displayMessage(event.boxtype,event.title,event.message)
 
