@@ -380,7 +380,7 @@ class NetworkListenerThread (qtcore.QThread):
 				window.setDisconnectMessage("Server has closed connection")
 				break
 
-			print_debug("got animation data from socket: %s" % data)
+			#print_debug("got animation data from socket: %s" % data)
 
 			self.parser.xml.addData(data)
 			error=self.parser.read()

@@ -56,9 +56,9 @@ class DrawingThread(qtcore.QThread):
 		self.windowtype=self.master.getWindowById(self.windowid).type
 
 		while 1:
-			#print "Drawing thread ready to get commands from queue:", self.queue
+			#print "ready to get next command from queue"
 			command=self.queue.get()
-			#print "got command from queue:", command, self.type
+			#print "got command from queue:", command
 
 			type=command[0]
 
@@ -268,6 +268,7 @@ class DrawingThread(qtcore.QThread):
 			index = command[3]
 			image = command[4]
 			owner = command[5]
+
 			if self.type==ThreadTypes.server and owner != 0:
 				window.insertLayer(key,index,image=image,owner=owner)
 

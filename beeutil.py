@@ -423,6 +423,17 @@ def scaleShiftPIL(im,dx,dy,newsizex,newsizey,xscale,yscale):
 	#printPILImage(newim)
 	return newim
 
+def scaleImage(srcimage,width,height):
+	srcwidth,srcheight=srcimage.size
+
+	if srcwidth==width and srcheight==height:
+		return srcimage
+
+	xscale=width/float(srcwidth)
+	yscale=height/float(srcheight)
+
+	return scaleShiftPIL(srcimage,0,0,width,height,xscale,yscale)
+
 # debugging function to see how the affine translation is working
 def translatePoint(x,y,trans):
 	a,b,c,d,e,f=trans

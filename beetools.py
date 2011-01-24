@@ -108,6 +108,9 @@ class AbstractToolDesc:
 
 	def newModKeys(self,modkeys):
 		pass
+
+	def newOptions(self):
+		pass
  
 	# setup needed parts of tool using knowledge of current window
 	# this should be implemented in subclass if needed
@@ -224,6 +227,7 @@ class DrawingTool(AbstractTool):
 		self.stampmode=qtgui.QPainter.CompositionMode_SourceOver
 		self.layer=None
 		self.pendown=False
+		self.fullsizedbrush=None
 
 		self.inside=True
 		self.returning=False
@@ -396,7 +400,8 @@ class DrawingTool(AbstractTool):
  
 	def getFullSizedBrush(self):
 		""" method of DrawingTool """
-		self.makeFullSizedBrush()
+		if not self.fullsizedbrush:
+			self.makeFullSizedBrush()
 		return self.fullsizedbrush
 
 	def makeFullSizedBrush(self):
@@ -694,7 +699,7 @@ class DrawingTool(AbstractTool):
 
 		self.pointshistory=[(x,y,pressure)]
 		self.lastpoint=(x,y)
-		self.makeFullSizedBrush()
+		self.getFullSizedBrush()
 		self.updateBrushForPressure(pressure,x%1,y%1)
 
 		if self.brushimageformat==BrushImageFormats.qt:
@@ -1432,7 +1437,97 @@ class EllipseSelectionToolDesc(AbstractToolDesc):
 class SketchToolDesc(PencilToolDesc):
 	def __init__(self):
 		AbstractToolDesc.__init__(self,"brush")
+		self.brushshape=BrushShapes.ellipse
 		self.displayname="Brush"
+		self.makeFullSizedBrush()
+
+	# make full sized brush (and list of pre-scaled brushes)
+	def makeFullSizedBrush(self):
+		# only support one brush shape right now
+		if self.brushshape==BrushShapes.ellipse:
+			self.fullsizedbrush=self.makeEllipseBrush(self.options["maxdiameter"],self.options["maxdiameter"])
+
+		self.makeScaledBrushes()
+
+		self.singlepixelbrush=self.scaledbrushes[-1][0]
+
+	def makeEllipseBrush(self,width,height):
+		""" Make an ellipse brush to use, in order to save processing time the image is in gray scale here """
+
+		radius=width/2.
+		imgwidth=int(math.ceil(width))
+		imgheight=int(math.ceil(height))
+
+		fadepercent=self.options["fade percent"]
+
+		# use a greyscale image here to reduce number of calculations
+		brushimage=Image.new("L",(imgwidth,imgheight),0)
+
+		# create raw access object for faster pixel setting
+		pix=brushimage.load()
+
+		for i in range(width):
+			for j in range(height):
+				v=self.ellipseBrushFadeAt(i,j,radius,width,height,fadepercent)
+				if v>0:
+					pix[i,j]=(int(round(255*v)))
+
+		return brushimage
+
+	def ellipseBrushFadeAt(self,x,y,radius,imgwidth,imgheight,fadepercent):
+		centerx=math.ceil(imgwidth)/2.
+		centery=math.ceil(imgheight)/2.
+
+		distance=math.sqrt(((x+.5-centerx)**2)+((y+.5-centery)**2))
+
+		# if the distance is over .5 past the radius then it's past the bounds of the brush
+		if distance>radius+.5:
+			return 0
+
+		# special case for the center pixel
+		elif distance==0:
+			if radius<.5:
+				return radius*2
+			return 1
+
+		elif distance<radius-.5:
+			return 1
+
+		return radius+.5-distance
+
+	# make list of pre-scaled brushes
+	def makeScaledBrushes(self):
+		self.scaledbrushes=[]
+
+		width,height=self.fullsizedbrush.size
+		fullwidth,fullheight=self.fullsizedbrush.size
+
+		while True:
+			if width >= fullwidth and height >= fullheight:
+				scaledImage=scaleImage(self.fullsizedbrush,width,height)
+			# scale down using previous one once below 1:1
+			else:
+				scaledImage=scaleImage(scaledImage,width,height)
+
+			xscale = float(width) / fullwidth
+			yscale = float(height) / fullheight
+			scale=xscale
+
+			self.scaledbrushes.append((scaledImage,xscale,yscale))
+
+			# break after we get to a single pixel brush, single pixel brushes don't scale up right so don't bother making one
+			if width<=3 and height<=3:
+				break
+
+			# never scale by less than 1/2
+			width = int ((width + 1) / 2)
+			height = int((height + 1) / 2)
+
+			# don't scale to even numbered sizes, scale to next highest odd number
+			if width%2==0:
+				width+=1
+			if height%2==0:
+				height+=1
 
 	def pressToolButton(self):
 		BeeApp().master.toolselectwindow.ui.brush_button.setChecked(True)
@@ -1442,12 +1537,15 @@ class SketchToolDesc(PencilToolDesc):
 		self.options["mindiameter"]=0
 		self.options["maxdiameter"]=7
 		self.options["step"]=1
-		self.options["blur"]=30
+		self.options["blur"]=50
 		self.options["pressurebalance"]=100
 		self.options["fade percent"]=0
 		self.options["opacity"]=100
 		self.options["pressuresize"]=1
 		self.options["pressureopacity"]=0
+
+	def newOptions(self):
+		pass
  
 	def getTool(self,window):
 		tool=SketchTool(self.options,window)
@@ -1473,6 +1571,7 @@ class BrushOptionsWidget(qtgui.QWidget):
 		self.ui.brushdiameter.setValue(self.tooldesc.options["maxdiameter"])
 		self.ui.stepsize.setValue(self.tooldesc.options["step"])
 		self.ui.opacity_slider.setValue(self.tooldesc.options["opacity"])
+		self.ui.blur_slider.setValue(self.tooldesc.options["blur"])
 
 		if self.tooldesc.options["pressuresize"]:
 			self.ui.pressure_size_box.setChecked(True)
@@ -1486,12 +1585,18 @@ class BrushOptionsWidget(qtgui.QWidget):
 
 	def on_brushdiameter_valueChanged(self,value):
 		self.tooldesc.options["maxdiameter"]=value
+		self.tooldesc.newOptions()
 
 	def on_stepsize_valueChanged(self,value):
 		self.tooldesc.options["step"]=value
 
+	def on_blurslider_valueChanged(self,value):
+		self.tooldesc.options["blur"]=value
+		self.tooldesc.newOptions()
+
 	def on_opacity_slider_valueChanged(self,value):
 		self.tooldesc.options["opacity"]=value
+		self.tooldesc.newOptions()
 
 	def on_pressure_size_box_stateChanged(self,value):
 		if value:
@@ -1677,10 +1782,10 @@ class SketchTool(DrawingTool):
 
 		while True:
 			if width >= fullwidth and height >= fullheight:
-				scaledImage=self.scaleImage(self.fullsizedbrush,width,height)
+				scaledImage=scaleImage(self.fullsizedbrush,width,height)
 			# scale down using previous one once below 1:1
 			else:
-				scaledImage=self.scaleImage(scaledImage,width,height)
+				scaledImage=scaleImage(scaledImage,width,height)
 
 			xscale = float(width) / fullwidth
 			yscale = float(height) / fullheight
@@ -1757,17 +1862,6 @@ class SketchTool(DrawingTool):
 		#print "going from scale:", srcbrush[1], "to scale", targetscale
 		#print "calculated conversion:", scale
 		return scaleShiftPIL(srcbrush[0],subpixelx,subpixely,targetwidth,targetheight,scale,scale)
-
-	def scaleImage(self,srcimage,width,height):
-		srcwidth,srcheight=srcimage.size
-
-		if srcwidth==width and srcheight==height:
-			return srcimage
-
-		xscale=width/float(srcwidth)
-		yscale=height/float(srcheight)
-
-		return scaleShiftPIL(srcimage,0,0,width,height,xscale,yscale)
 
 	def getFullSizedBrushWidth(self):
 		return self.fullsizedbrush.size[0]

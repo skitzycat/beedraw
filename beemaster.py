@@ -732,7 +732,7 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			if self.curwindow:
 				if not layerslock:
 					layerslock=qtcore.QReadLocker(self.curwindow.layerslistlock)
-				self.layerswindow.refreshLayersList(self.curwindow,self.curwindow.curlayerkey,winlock)
+				self.layerswindow.refreshLayersList(self.curwindow,self.curwindow.curlayerkey,winlock,layerslock)
 			else:
 				self.layerswindow.refreshLayersList(None,None)
 

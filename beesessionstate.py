@@ -420,8 +420,8 @@ class BeeSessionState:
 		self.master.refreshLayerThumb(self.id)
 
 	def addInsertLayerEventToQueue(self,index,key,image=None,source=ThreadTypes.user,owner=0):
-		# when the source is local like this the owner will always be me (id 0)
-		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.insertlayer,key,index,image,owner),source,owner)
+		command=(DrawingCommandTypes.alllayer,AllLayerCommandTypes.insertlayer,key,index,image,owner)
+		self.queueCommand(command,source,owner)
 		return key
 
 	def addLayer(self):

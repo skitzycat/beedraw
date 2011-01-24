@@ -434,14 +434,14 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsObject):
 		scene.curlayercompmode=self.getCompmode()
 		scene.curlayeropacity=painter.opacity()
 
-	def getConfigWidget(self,winlock=None):
+	def getConfigWidget(self,winlock=None,layerslock=None):
 		# can't do this in the constructor because that may occur in a thread other than the GUI thread, this function however should only occur in the GUI thread
 		if not self.configwidget:
-			self.configwidget=LayerConfigWidget(self.windowid,self.key)
+			self.configwidget=LayerConfigWidget(self.windowid,self.key,layerslock=layerslock)
 			self.configwidget.setSizePolicy(qtgui.QSizePolicy.MinimumExpanding,qtgui.QSizePolicy.Fixed)
 			self.configwidget.ui.background_frame.setSizePolicy(qtgui.QSizePolicy.MinimumExpanding,qtgui.QSizePolicy.MinimumExpanding)
 		else:
-			self.configwidget.updateValuesFromLayer(winlock)
+			self.configwidget.updateValuesFromLayer(winlock,layerslock=layerslock)
 		return self.configwidget
 
 class LayerFinisher(qtgui.QGraphicsItem):
@@ -620,6 +620,9 @@ class BeeTemporaryLayerPIL(BeeGuiLayer):
 		BeeGuiLayer.__init__(self,parent.windowid,LayerTypes.temporary,win.nextFloatingLayerKey(),opacity=opacity,parent=parent,compmode=compmode)
 		parent.scene().addItem(self)
 
+		# put at same z value as parent so it will be just above it
+		self.setZValue(parent.zValue())
+
 	#def __del__(self):
 	#	print "running destructor in temporary pil layer", self.key
 
@@ -699,8 +702,8 @@ class BeeTemporaryLayer(BeeGuiLayer):
 		self.moveToThread(parent.scene().thread())
 		parent.scene().addItem(self)
 
-		# put below floating layers
-		self.setZValue(0)
+		# put at same z value as parent so it will be just above it
+		self.setZValue(parent.zValue())
 
 	def paint(self,painter,options,widget=None):
 		scene=self.scene()
@@ -762,7 +765,7 @@ class FloatingSelection(BeeGuiLayer):
 
 # widget that we can use to set the options of each layer
 class LayerConfigWidget(qtgui.QWidget):
-	def __init__(self,windowid,layerkey):
+	def __init__(self,windowid,layerkey,layerslock=None):
 		qtgui.QWidget.__init__(self)
 
 		# save the layer this is suppose to configure
@@ -789,7 +792,7 @@ class LayerConfigWidget(qtgui.QWidget):
 		self.ui.layerThumb.setAutoFillBackground(True)
 
 		# set initial values according to what the layer has set
-		self.updateValuesFromLayer()
+		self.updateValuesFromLayer(layerslock=layerslock)
 
 	# create a quick instance just to figure out the standard geometry
 	def getStandardGeometry():
@@ -803,12 +806,12 @@ class LayerConfigWidget(qtgui.QWidget):
 	getStandardGeometry=staticmethod(getStandardGeometry)
 
 	# update the gui to reflect the values of the layer
-	def updateValuesFromLayer(self,winlock=None,proplock=None):
+	def updateValuesFromLayer(self,winlock=None,proplock=None,layerslock=None):
 		win=BeeApp().master.getWindowById(self.windowid,winlock)
 		if not win:
 			return
 
-		layer=win.getLayerForKey(self.layerkey)
+		layer=win.getLayerForKey(self.layerkey,layerslock)
 
 		if not layer:
 			print_debug("WARNING: updateValueFromLayer could not find layer with key %s" % self.layerkey)
@@ -990,7 +993,7 @@ class BeeLayersWindow(AbstractBeeDockWindow):
 		self.hide()
 
 	# rebuild layers window by removing all the layers widgets and then adding them back in order
-	def refreshLayersList(self,win,curlayerkey,winlock=None):
+	def refreshLayersList(self,win,curlayerkey,winlock=None,layerslock=None):
 		""" Update the list of layers displayed in the layers display window
 		"""
 		if not winlock:
@@ -1021,11 +1024,11 @@ class BeeLayersWindow(AbstractBeeDockWindow):
 				if layer.getType()==LayerTypes.temporary:
 					continue
 
-				newwidget=floating.getConfigWidget(winlock)
+				newwidget=floating.getConfigWidget(winlock,layerslock)
 				vbox.addWidget(newwidget)
 				newwidget.show()
 
-			newwidget=layer.getConfigWidget(winlock)
+			newwidget=layer.getConfigWidget(winlock,layerslock)
 			if layer.key==curlayerkey:
 				newwidget.highlight()
 			else:

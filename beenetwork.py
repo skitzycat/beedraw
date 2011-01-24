@@ -429,7 +429,7 @@ class HiveClientWriter(qtcore.QThread):
 			data=self.queue.get()
 			if data[0]==DrawingCommandTypes.quit:
 				self.master.unregisterClient(self.id)
-				print "exiting client writer thread"
+				print_debug("exiting client writer thread")
 				return
 			#print "Hive Client Writer got command from Queue:", data
 			# write xml data to socket

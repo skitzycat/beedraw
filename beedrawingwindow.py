@@ -655,8 +655,10 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 	def insertLayer(self,key,index,type=LayerTypes.user,image=None,opacity=None,visible=None,compmode=None,owner=0,history=True,lock=None):
 		if not lock:
 			lock=qtcore.QWriteLocker(self.layerslistlock)
+
 		# make sure layer doesn't exist already
 		oldlayer=self.getLayerForKey(key,lock=lock)
+
 		if oldlayer:
 			print_debug("ERROR: tried to create layer with same key as existing layer")
 			return
@@ -1100,6 +1102,7 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 
 		if not lock:
 			lock=qtcore.QReadLocker(self.layerslistlock)
+
 		for layer in self.layers:
 			if layer.key==key:
 				return layer
@@ -1107,7 +1110,6 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 				if child.key==key:
 					return child
 
-		print_debug("WARNING: could not find layer for key %d" % key )
 		return None
 
 	def findValidLayer(self,listlock=None):
