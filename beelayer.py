@@ -275,7 +275,7 @@ class BeeLayerState:
 class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsObject):
 	def __init__(self,windowid,type,key,image=None,opacity=None,visible=None,compmode=None,owner=0,parent=None):
 		BeeLayerState.__init__(self,windowid,type,key,image,opacity,visible,compmode,owner)
-		qtgui.QGraphicsObject.__init__(self)
+		qtgui.QGraphicsObject.__init__(self,parent=parent)
 		self.setOpacity(self.opacity_setting)
 		self.setFlag(qtgui.QGraphicsObject.ItemUsesExtendedStyleOption)
 		# setting the parent here instead of in the constructor seems to fix an occational error down in Qt about a pure virtual method being called
@@ -302,7 +302,11 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsObject):
 		newkey=win.nextFloatingLayerKey()
 		newlayer=FloatingSelection(image,newkey,self)
 		newlayer.setPos(qtcore.QPointF(x,y))
-		BeeApp().master.requestLayerListRefresh()
+
+		scene=self.scene()
+		if scene:
+			scene.addItem(newlayer)
+
 		self.scene().update()
 		return newkey
 
@@ -730,7 +734,7 @@ class FloatingSelection(BeeGuiLayer):
 		self.name="Floating selection (%d x %d)" % ( self.image.rect().width(), self.image.rect().height() )
 		#self.setAcceptedMouseButtons(qtcore.Qt.NoButton)
 		# put above temporary layers, exact order between floating layers isn't important
-		self.setZValue(1)
+		self.setZValue(parentlayer.zValue()+.5)
 
 	def paint(self,painter,options,widget=None):
 		scene=self.scene()
@@ -1024,6 +1028,7 @@ class BeeLayersWindow(AbstractBeeDockWindow):
 				if layer.getType()==LayerTypes.temporary:
 					continue
 
+				print "found child layer with key:", layer.key
 				newwidget=floating.getConfigWidget(winlock,layerslock)
 				vbox.addWidget(newwidget)
 				newwidget.show()

@@ -1,53 +1,54 @@
-<ui version="4.0" >
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
  <class>ConnectionInfoDialog</class>
- <widget class="QDialog" name="ConnectionInfoDialog" >
-  <property name="geometry" >
+ <widget class="QDialog" name="ConnectionInfoDialog">
+  <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>465</width>
-    <height>143</height>
+    <width>436</width>
+    <height>116</height>
    </rect>
   </property>
-  <property name="windowTitle" >
+  <property name="windowTitle">
    <string>Connection Information</string>
   </property>
-  <layout class="QVBoxLayout" >
+  <layout class="QVBoxLayout">
    <item>
-    <layout class="QHBoxLayout" >
+    <layout class="QHBoxLayout">
      <item>
-      <widget class="QLabel" name="label" >
-       <property name="text" >
-        <string>Hostname</string>
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>Sever name/IP:</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QLineEdit" name="hostnamefield" >
-       <property name="minimumSize" >
+      <widget class="QLineEdit" name="hostnamefield">
+       <property name="minimumSize">
         <size>
          <width>60</width>
          <height>0</height>
         </size>
        </property>
-       <property name="text" >
+       <property name="text">
         <string>localhost</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QLabel" name="label_2" >
-       <property name="text" >
+      <widget class="QLabel" name="label_2">
+       <property name="text">
         <string>Port</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QSpinBox" name="portbox" >
-       <property name="maximum" >
+      <widget class="QSpinBox" name="portbox">
+       <property name="maximum">
         <number>65535</number>
        </property>
-       <property name="value" >
+       <property name="value">
         <number>8333</number>
        </property>
       </widget>
@@ -55,43 +56,43 @@
     </layout>
    </item>
    <item>
-    <layout class="QHBoxLayout" >
+    <layout class="QHBoxLayout">
      <item>
-      <widget class="QLabel" name="label_3" >
-       <property name="text" >
+      <widget class="QLabel" name="label_3">
+       <property name="text">
         <string>Username:</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QLineEdit" name="usernamefield" >
-       <property name="minimumSize" >
+      <widget class="QLineEdit" name="usernamefield">
+       <property name="minimumSize">
         <size>
          <width>60</width>
          <height>0</height>
         </size>
        </property>
-       <property name="maxLength" >
+       <property name="maxLength">
         <number>32</number>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QLabel" name="label_4" >
-       <property name="text" >
+      <widget class="QLabel" name="label_4">
+       <property name="text">
         <string>Password:</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QLineEdit" name="passwordfield" >
-       <property name="minimumSize" >
+      <widget class="QLineEdit" name="passwordfield">
+       <property name="minimumSize">
         <size>
          <width>60</width>
          <height>0</height>
         </size>
        </property>
-       <property name="maxLength" >
+       <property name="maxLength">
         <number>32</number>
        </property>
       </widget>
@@ -99,21 +100,21 @@
     </layout>
    </item>
    <item>
-    <widget class="QDialogButtonBox" name="buttonBox" >
-     <property name="orientation" >
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
-     <property name="standardButtons" >
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::NoButton|QDialogButtonBox::Ok</set>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
      </property>
     </widget>
    </item>
    <item>
     <spacer>
-     <property name="orientation" >
+     <property name="orientation">
       <enum>Qt::Vertical</enum>
      </property>
-     <property name="sizeHint" >
+     <property name="sizeHint" stdset="0">
       <size>
        <width>20</width>
        <height>40</height>
@@ -131,11 +132,11 @@
    <receiver>ConnectionInfoDialog</receiver>
    <slot>accept()</slot>
    <hints>
-    <hint type="sourcelabel" >
+    <hint type="sourcelabel">
      <x>248</x>
      <y>254</y>
     </hint>
-    <hint type="destinationlabel" >
+    <hint type="destinationlabel">
      <x>157</x>
      <y>274</y>
     </hint>
@@ -147,11 +148,11 @@
    <receiver>ConnectionInfoDialog</receiver>
    <slot>reject()</slot>
    <hints>
-    <hint type="sourcelabel" >
+    <hint type="sourcelabel">
      <x>316</x>
      <y>260</y>
     </hint>
-    <hint type="destinationlabel" >
+    <hint type="destinationlabel">
      <x>286</x>
      <y>274</y>
     </hint>
