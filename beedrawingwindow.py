@@ -229,7 +229,12 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 			lock=qtcore.QReadLocker(self.layerslistlock)
 		for layer in self.layers:
 			layer.setZValue(i)
+			sublock=qtcore.QReadLocker(layer.sublayerslock)
+			for sublayer in layer.sublayers:
+				sublayer.setZValue(i+.5)
 			i+=1
+
+		sublock=None
 
 		self.layerfinisher.setZValue(i)
 		i+=1
@@ -574,17 +579,19 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 		layer=self.getCurLayer()
 		if layer:
 			if layer.type==LayerTypes.floating:
-				parent=layer.parentItem()
+				parent=layer.layerparent
 				lock=qtcore.QReadLocker(self.layerslistlock)
 				if parent in self.layers:
 					index=self.layers.index(parent)
 					while index>0:
 						index-=1
 						if self.ownedByMe(self.layers[index].owner):
-							layer.setParentItem(self.layers[index])
+							newparent=self.layers[index]
+							layer.changeParent(newparent)
+
 							self.scene.update()
-							self.master.refreshLayersList(layerslock=lock)
-							self.addFloatingLayerMoveToQueue(layer.key,parent.key,self.layers[index].key)
+							self.requestLayerListRefresh(lock=lock)
+							self.addFloatingLayerMoveToQueue(layer.key,parent.key,newparent.key)
 							break
 			else:
 				self.addLayerDownToQueue(layer.key)
@@ -596,18 +603,21 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 		layer=self.getCurLayer()
 		if layer:
 			if layer.type==LayerTypes.floating:
-				parent=layer.parentItem()
+				parent=layer.layerparent
 				lock=qtcore.QReadLocker(self.layerslistlock)
 				if parent in self.layers:
 					index=self.layers.index(parent)
 					index+=1
 					while index<len(self.layers):
 						if self.ownedByMe(self.layers[index].owner):
-							layer.setParentItem(self.layers[index])
+							newparent=self.layers[index]
+							layer.changeParent(newparent)
+
 							self.scene.update()
-							self.master.refreshLayersList(layerslock=lock)
-							self.addFloatingLayerMoveToQueue(layer.key,parent.key,self.layers[index].key)
+							self.requestLayerListRefresh(lock=lock)
+							self.addFloatingLayerMoveToQueue(layer.key,parent.key,newparent.key)
 							break
+
 						index+=1
 			else:
 				self.addLayerUpToQueue(layer.key)
@@ -618,12 +628,14 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 			listlock=qtcore.QWriteLocker(self.layerslistlock)
 
 		if layer.type==LayerTypes.floating:
-			index=-1
-			self.scene.removeItem(layer)
-			self.scene.update()
-			if checkvalid:
+			parent=layer.getParent()
+			if parent:
+				layer.changeParent(None)
 				self.setValidActiveLayer(True,listlock=listlock)
-			self.requestLayerListRefresh(listlock)
+				self.requestLayerListRefresh(listlock)
+
+				command=RemoveFloatingCommand(layer,parent.key)
+				self.addCommandToHistory(command)
 
 		else:
 			(layer,index)=BeeSessionState.removeLayer(self,layer,history=history,listlock=listlock)
@@ -663,18 +675,20 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 			print_debug("ERROR: tried to create layer with same key as existing layer")
 			return
 
-		layer=BeeGuiLayer(self.id,type,key,image,opacity=opacity,visible=visible,compmode=compmode,owner=owner)
+		layer=BeeGuiLayer(self.id,type,key,image,opacity=opacity,visible=visible,compmode=compmode,owner=owner,scene=self.scene)
 
 		try:
 			self.layers.insert(index,layer)
 		except:
 			self.layers.append(layer)
 
+		self.resetLayerZValues(lock=lock)
+
 		# only add command to history if we are in a local session
 		if self.type==WindowTypes.singleuser and history:
 			self.addCommandToHistory(AddLayerCommand(layer.key))
 
-		self.scene.addItem(layer)
+		#self.scene.addItem(layer)
 		lock.unlock()
 
 		self.setValidActiveLayer()
@@ -1106,7 +1120,8 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 		for layer in self.layers:
 			if layer.key==key:
 				return layer
-			for child in layer.childItems():
+
+			for child in layer.sublayers:
 				if child.key==key:
 					return child
 

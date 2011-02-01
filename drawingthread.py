@@ -162,7 +162,7 @@ class DrawingThread(qtcore.QThread):
 				y=command[4]
 				newkey=layer.paste(image,x,y)
 				oldpath,newpath=window.changeSelection(SelectionModTypes.clear,history=False)
-				historycommand=PasteCommand(newkey,oldpath,newpath)
+				historycommand=PasteCommand(newkey,layer.key,oldpath,newpath)
 				window.addCommandToHistory(historycommand,layer.owner)
 
 		elif subtype==LayerCommandTypes.pendown:

@@ -217,6 +217,7 @@ class AnchorCommand(DrawingCommand):
 			lock=qtcore.QWriteLocker(win.layerslistlock)
 			layer.scene().addItem(self.floating)
 			self.floating.setParentItem(layer)
+			layer.addSubLayer(self.floating)
 			win.requestLayerListRefresh(lock)
 			BeeApp().master.updateLayerHighlight(win,self.floating.key)
 
@@ -226,6 +227,7 @@ class AnchorCommand(DrawingCommand):
 		if layer:
 			lock=qtcore.QWriteLocker(win.layerslistlock)
 			layer.scene().removeItem(self.floating)
+			layer.removeSubLayer(self.floating)
 			win.setValidActiveLayer(listlock=lock)
 			win.requestLayerListRefresh(lock=lock)
 
@@ -266,23 +268,23 @@ class FloatingChangeParentCommand(AbstractCommand):
 	def undo(self,win):
 		parent=win.getLayerForKey(self.oldparentkey)
 		layer=win.getLayerForKey(self.layerkey)
-		if layer and parent and win.ownedByMe(layer.getOwner()) and win.ownedByMe(parent.getOwner()):
-			layer.setParentItem(parent)
+		if layer and parent and win.ownedByMe(parent.getOwner()):
+			layer.changeParent(parent)
 			layer.scene().update()
 			win.master.requestLayerListRefresh()
 
 	def redo(self,win):
 		parent=win.getLayerForKey(self.newparentkey)
 		layer=win.getLayerForKey(self.layerkey)
-		if layer and parent and win.ownedByMe(layer.getOwner()) and win.ownedByMe(parent.getOwner()):
-			layer.setParentItem(parent)
+		if layer and parent and win.ownedByMe(parent.getOwner()):
+			layer.changeParent(parent)
 			layer.scene().update()
 			win.master.requestLayerListRefresh()
 
 	def stillValid(self,win):
 		parent=win.getLayerForKey(self.newparentkey)
 		layer=win.getLayerForKey(self.layerkey)
-		if layer and parent and win.ownedByMe(layer.getOwner()) and win.ownedByMe(parent.getOwner()):
+		if layer and parent and win.ownedByMe(parent.getOwner()):
 			return True
 
 		return False
@@ -355,34 +357,65 @@ class ChangeSelectionCommand(AbstractCommand):
 		else:
 			win.changeSelection(SelectionModTypes.clear,history=False)
 
+class RemoveFloatingCommand(AbstractCommand):
+	def __init__(self,layer,parentkey):
+		AbstractCommand.__init__(self)
+		self.undotype=UndoCommandTypes.localonly
+		self.layer=layer
+		self.parentkey=parentkey
+
+	def undo(self,win):
+		layerparent=win.getLayerForKey(self.parentkey)
+		if layerparent:
+			self.layer.changeParent(layerparent)
+			win.requestLayerListRefresh()
+
+	def redo(self,win):
+		self.layer.changeParent(None)
+		win.requestLayerListRefresh()
+
+	def stillValid(self,win):
+		parent=win.getLayerForKey(self.parentkey)
+		if parent and win.ownedByMe(parent.getOwner()):
+			return True
+		return False
+
 class PasteCommand(ChangeSelectionCommand):
-	def __init__(self,layerkey,oldpath,newpath):
+	def __init__(self,layerkey,parentkey,oldpath,newpath):
 		ChangeSelectionCommand.__init__(self,oldpath,newpath)
 		self.undotype=UndoCommandTypes.localonly
 		self.layerkey=layerkey
 		self.oldlayer=None
-		self.layerparent=None
+		self.parentkey=parentkey
 
 	def undo(self,win):
 		ChangeSelectionCommand.undo(self,win)
 		layer=win.getLayerForKey(self.layerkey)
-		if layer:
-			self.scene=layer.scene()
-			self.layerparent=layer.parentItem().key
-			self.oldlayer,self.index=win.removeLayer(layer,history=False)
+		layerparent=win.getLayerForKey(self.parentkey)
+		if layer and layerparent:
+			#self.scene=layer.scene()
+			#win.removeLayer(layer,history=False)
+			#layerparent.removeSubLayer(layer)
+			layer.changeParent(None)
+			self.oldlayer=layer
+
+		win.requestLayerListRefresh()
 
 	def redo(self,win):
+		layerparent=win.getLayerForKey(self.parentkey)
 		ChangeSelectionCommand.redo(self,win)
-		if self.oldlayer:
-			parent=win.getLayerForKey(self.layerparent)
-			if parent and win.ownedByMe(parent.owner):
-				self.scene.addItem(self.oldlayer)
-				self.oldlayer.setParentItem(parent)
-				win.requestLayerListRefresh()
+		if self.oldlayer and layerparent:
+			if win.ownedByMe(layerparent.getOwner()):
+				self.oldlayer.changeParent(layerparent)
+				#self.scene.addItem(self.oldlayer)
+				#self.oldlayer.setParentItem(layerparent)
+				#layerparent.addSubLayer(self.oldlayer)
+
+		win.requestLayerListRefresh()
 
 	def stillValid(self,win):
-		parent=win.getLayerForKey(self.layerparent)
-		if parent and win.ownedByMe(parent.owner):
+		parent=win.getLayerForKey(self.parentkey)
+		if parent and win.ownedByMe(parent.getOwner()):
 			return True
 
 		return False

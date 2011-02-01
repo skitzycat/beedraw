@@ -90,7 +90,8 @@ class BeeLayerState:
 		return BeeLayerState(self.windowid,LayerTypes.temporary,win.nextFloatingLayerKey(),opacity=opacity,compmode=compmode)
 
 	def getTmpLayerPIL(self,opacity,compmode,clippath):
-		return BeeTemporaryLayerStatePIL(self,opacity,compmode,clippath)
+		layer=BeeTemporaryLayerStatePIL(None,opacity,compmode,clippath)
+		return layer
 
 	def changeOpacity(self,opacity):
 		self.opacity_setting=opacity
@@ -272,12 +273,19 @@ class BeeLayerState:
 	def getType(self):
 		return self.type
 
-class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsObject):
-	def __init__(self,windowid,type,key,image=None,opacity=None,visible=None,compmode=None,owner=0,parent=None):
+class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
+	def __init__(self,windowid,type,key,image=None,opacity=None,visible=None,compmode=None,owner=0,parent=None,scene=None):
 		BeeLayerState.__init__(self,windowid,type,key,image,opacity,visible,compmode,owner)
-		qtgui.QGraphicsObject.__init__(self,parent=parent)
+		qtgui.QGraphicsItem.__init__(self,parent=parent)
+			
+		self.sublayers=[]
+		self.sublayerslock=qtcore.QReadWriteLock()
 		self.setOpacity(self.opacity_setting)
 		self.setFlag(qtgui.QGraphicsObject.ItemUsesExtendedStyleOption)
+
+		if scene:
+			scene.addItem(self)
+
 		# setting the parent here instead of in the constructor seems to fix an occational error down in Qt about a pure virtual method being called
 		self.setParentItem(parent)
 
@@ -292,23 +300,32 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsObject):
 			scene.update(rect)
 
 	def getTmpLayer(self,opacity,compmode):
-		return BeeTemporaryLayer(self,opacity,compmode)
+		newlayer=BeeTemporaryLayer(self,opacity,compmode)
+		return newlayer
 
 	def getTmpLayerPIL(self,opacity,compmode,clippath):
-		return BeeTemporaryLayerPIL(self,opacity,compmode,clippath)
+		newlayer=BeeTemporaryLayerPIL(self,opacity,compmode,clippath)
+		return newlayer
 
 	def paste(self,image,x,y):
 		win=BeeApp().master.getWindowById(self.windowid)
 		newkey=win.nextFloatingLayerKey()
-		newlayer=FloatingSelection(image,newkey,self)
+		newlayer=FloatingSelection(image,newkey,self,self.windowid)
 		newlayer.setPos(qtcore.QPointF(x,y))
+		BeeApp().master.requestLayerListRefresh()
 
-		scene=self.scene()
-		if scene:
-			scene.addItem(newlayer)
-
-		self.scene().update()
 		return newkey
+
+	def addSubLayer(self,sublayer):
+		if sublayer:
+			lock=qtcore.QWriteLocker(self.sublayerslock)
+			self.sublayers.append(sublayer)
+
+	def removeSubLayer(self,sublayer):
+		if sublayer:
+			lock=qtcore.QWriteLocker(self.sublayerslock)
+			if sublayer in self.sublayers:
+				self.sublayers.remove(sublayer)
 
 	def setImage(self,image,lock=None):
 		if not lock:
@@ -398,6 +415,7 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsObject):
 		win=BeeApp().master.getWindowById(self.windowid)
 		win.addAnchorToQueue(self.key,child)
 		win.scene.removeItem(child)
+		self.removeSubLayer(child)
 		newactive=win.setValidActiveLayer()
 		if newactive:
 			win.master.updateLayerHighlight(win,newactive)
@@ -622,10 +640,9 @@ class BeeTemporaryLayerPIL(BeeGuiLayer):
 		width,height=win.getDocSize()
 		self.pilimage=Image.new("RGBA",(width,height),(0,0,0,0))
 		BeeGuiLayer.__init__(self,parent.windowid,LayerTypes.temporary,win.nextFloatingLayerKey(),opacity=opacity,parent=parent,compmode=compmode)
-		parent.scene().addItem(self)
 
 		# put at same z value as parent so it will be just above it
-		self.setZValue(parent.zValue())
+		self.setZValue(parent.zValue()+.1)
 
 	#def __del__(self):
 	#	print "running destructor in temporary pil layer", self.key
@@ -703,11 +720,10 @@ class BeeTemporaryLayer(BeeGuiLayer):
 	def __init__(self,parent,opacity,compmode):
 		win=parent.getWindow()
 		BeeGuiLayer.__init__(self,parent.windowid,LayerTypes.temporary,win.nextFloatingLayerKey(),opacity=opacity,parent=parent,compmode=compmode)
-		self.moveToThread(parent.scene().thread())
-		parent.scene().addItem(self)
+		#self.moveToThread(parent.thread())
 
 		# put at same z value as parent so it will be just above it
-		self.setZValue(parent.zValue())
+		self.setZValue(parent.zValue()+.1)
 
 	def paint(self,painter,options,widget=None):
 		scene=self.scene()
@@ -728,13 +744,50 @@ class BeeTemporaryLayer(BeeGuiLayer):
 		localpainter.drawImage(drawrect,self.image,drawrect)
 
 class FloatingSelection(BeeGuiLayer):
-	def __init__(self,image,key,parentlayer):
-		BeeGuiLayer.__init__(self,parentlayer.windowid,LayerTypes.floating,key,image,parent=parentlayer,owner=-1)
+	def __init__(self,image,key,parent,windowid):
+		BeeGuiLayer.__init__(self,windowid,LayerTypes.floating,key,image,parent=None,owner=-1)
 		#self.setFlag(qtgui.QGraphicsItem.ItemIsMovable)
 		self.name="Floating selection (%d x %d)" % ( self.image.rect().width(), self.image.rect().height() )
-		#self.setAcceptedMouseButtons(qtcore.Qt.NoButton)
-		# put above temporary layers, exact order between floating layers isn't important
-		self.setZValue(parentlayer.zValue()+.5)
+
+		self.layerparent=None
+		self.changeParent(parent)
+
+	def getParent(self):
+		return self.layerparent
+
+	def changeParent(self,newparent):
+		# if there's no new or old parent don't bother doing anything
+		if not newparent and not self.layerparent:
+			return
+
+		# if there was a parent before remove this layer from the sublayer list
+		if self.layerparent:
+			self.layerparent.removeSubLayer(self)
+
+		# if new parent is a real layer
+		if newparent:
+			# if there wasn't a parent before add this to the scene, because it should have been removed from the scene before
+			if not self.layerparent:
+				scene=newparent.scene()
+				if scene:
+					scene.addItem(self)
+
+			newparent.addSubLayer(self)
+			scene=self.scene()
+			#if scene:
+			#	scene.removeItem(self)
+
+			#self.setParentItem(newparent)
+
+			self.setZValue(newparent.zValue()+.5)
+
+		# if there is no new parent, stop displaying the layer
+		else:
+			scene=self.scene()
+			if scene:
+				scene.removeItem(self)
+
+		self.layerparent=newparent
 
 	def paint(self,painter,options,widget=None):
 		scene=self.scene()
@@ -753,19 +806,12 @@ class FloatingSelection(BeeGuiLayer):
 	# don't allow pasting on other floating selections, go to parent layer instead
 	def paste(self,image,x,y):
 		win=BeeApp().master.getWindowById(self.windowid)
-		return self.parentItem().paste(image,x,y)
+		parent=self.layerparent
+		if parent:
+			return parent.paste(image,x,y)
 
 	def anchor(self,layer):
 		print_debug("WARNING: anchor called from child layer")
-
-	def mousePressEvent(self,event):
-		pass
-
-	def mouseMoveEvent(self,event):
-		pass
-
-	def mouseReleaseEvent(self,event):
-		pass
 
 # widget that we can use to set the options of each layer
 class LayerConfigWidget(qtgui.QWidget):
@@ -919,7 +965,7 @@ class LayerConfigWidget(qtgui.QWidget):
 		proplock=qtcore.QReadLocker(layer.propertieslock)
 
 		if layer.type==LayerTypes.floating:
-			parent=layer.parentItem()
+			parent=layer.layerparent
 			parent.anchor(layer)
 
 		# the layer is owned locally so change it to be owned by no one
@@ -1024,14 +1070,15 @@ class BeeLayersWindow(AbstractBeeDockWindow):
 
 		# ask each layer for it's widget and add it
 		for layer in reversed(win.layers):
-			for floating in layer.childItems():
-				if layer.getType()==LayerTypes.temporary:
-					continue
+			#for floating in layer.childItems():
+			sublocker=qtcore.QReadLocker(layer.sublayerslock)
+			for floating in layer.sublayers:
+				if floating.getType()==LayerTypes.floating:
+					newwidget=floating.getConfigWidget(winlock,layerslock)
+					vbox.addWidget(newwidget)
+					newwidget.show()
 
-				print "found child layer with key:", layer.key
-				newwidget=floating.getConfigWidget(winlock,layerslock)
-				vbox.addWidget(newwidget)
-				newwidget.show()
+			sublocker=None
 
 			newwidget=layer.getConfigWidget(winlock,layerslock)
 			if layer.key==curlayerkey:

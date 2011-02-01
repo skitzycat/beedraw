@@ -70,6 +70,9 @@ class DisplayMessageEvent(qtcore.QEvent):
 class BeeSocketTypes:
 	qt, python = range(2)
 
+class DirectionsEnum:
+	up, down = range(2)
+
 # custom enumerated types
 class DrawingCommandTypes:
 	quit, history, layer, alllayer, networkcontrol, localonly = range(6)

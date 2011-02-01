@@ -161,7 +161,9 @@ class BeeSessionState:
 		curlaylock=qtcore.QMutexLocker(self.curlayerkeymutex)
 		
 		layer=self.getLayerForKey(key,lock)
-		return self.removeLayer(layer,history,lock)
+		if layer:
+			return self.removeLayer(layer,history,lock)
+		return None
 
 	def addLayerDownToQueue(self,key,source=ThreadTypes.user):
 		self.queueCommand((DrawingCommandTypes.alllayer,AllLayerCommandTypes.layerdown,key),source)
