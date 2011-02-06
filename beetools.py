@@ -244,6 +244,14 @@ class DrawingTool(AbstractTool):
 			self.window.master.setFGColor(qtgui.QColor(color))
 			self.logtype=ToolLogTypes.unlogable
 
+		else:
+			self.parentlayer=self.window.getLayerForKey(self.layerkey)
+
+			if self.brushimageformat==BrushImageFormats.qt:
+				self.layer=self.parentlayer.getTmpLayer(self.options["opacity"]/100.,self.compmode)
+			else:
+				self.layer=self.parentlayer.getTmpLayerPIL(self.options["opacity"]/100.,self.compmode,self.clippath)
+
 	def calculateCloseEdgePoint(self,p1,p2):
 		""" Stub for now, eventually I'd like this algorithm to take over if the other one encounters data that looks bad """
 		return p2 
@@ -491,12 +499,6 @@ class DrawingTool(AbstractTool):
 		self.returning=False
 		self.inside=True
 		self.pendown=True
-
-		self.parentlayer=self.window.getLayerForKey(self.layerkey)
-		if self.brushimageformat==BrushImageFormats.qt:
-			self.layer=self.parentlayer.getTmpLayer(self.options["opacity"]/100.,self.compmode)
-		else:
-			self.layer=self.parentlayer.getTmpLayerPIL(self.options["opacity"]/100.,self.compmode,self.clippath)
 
 		self.startLine(x,y,pressure)
 
