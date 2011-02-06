@@ -169,6 +169,7 @@ class BeeLayerState:
 
 	# composite image onto layer from corner coord
 	def compositeFromCorner(self,image,x,y,compmode,clippath=None,lock=None,refreshimage=True,opacity=1):
+		""" Method of BeeLayerState """
 		x=int(x)
 		y=int(y)
 		#print "calling compositeFromCorner with args:",x,y
@@ -599,6 +600,7 @@ class BeeTemporaryLayerStatePIL(BeeLayerState):
 
 	# composite image onto layer from corner coord
 	def compositeFromCorner(self,image,x,y,compmode,clippath=None,lock=None,refreshimage=True,opacity=1):
+		""" Method of BeeTemporaryLayerStatePIL """
 		x=int(x)
 		y=int(y)
 
