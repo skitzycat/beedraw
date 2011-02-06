@@ -287,7 +287,7 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
 			scene.addItem(self)
 
 		# setting the parent here instead of in the constructor seems to fix an occational error down in Qt about a pure virtual method being called
-		self.setParentItem(parent)
+		#self.setParentItem(parent)
 
 	def removeFromScene(self):
 		if self.scene():
@@ -720,7 +720,6 @@ class BeeTemporaryLayer(BeeGuiLayer):
 	def __init__(self,parent,opacity,compmode):
 		win=parent.getWindow()
 		BeeGuiLayer.__init__(self,parent.windowid,LayerTypes.temporary,win.nextFloatingLayerKey(),opacity=opacity,parent=parent,compmode=compmode)
-		#self.moveToThread(parent.thread())
 
 		# put at same z value as parent so it will be just above it
 		self.setZValue(parent.zValue()+.1)
