@@ -1281,5 +1281,6 @@ class NetworkClientDrawingWindow(BeeDrawingWindow):
 		self.remotecommandstacks=None
 		self.socket.disconnect()
 		self.socket=None
-		#self.listenerthread.terminate()
+		self.listenerthread.terminate()
 		#self.listenerthread.wait(10000)
+		#self.listenerthread=None

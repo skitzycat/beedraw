@@ -584,12 +584,8 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 
 	# connect to host and authticate
 	def getServerConnection(self,username,password,host,port):
-		#if os.name=="posix":
-		#	 qt sockets are giving me trouble under linux, but work fine under windows
-		#	socket=BeeSocket(BeeSocketTypes.python,pysocket())
-		#else:
-
-		socket=BeeSocket(BeeSocketTypes.qt,qtnet.QTcpSocket())
+		#socket=BeeSocket(BeeSocketTypes.qt,qtnet.QTcpSocket())
+		socket=BeeSocket(BeeSocketTypes.python,pysocket())
 
 		print_debug("waiting for socket connection:")
 		connected=socket.connect(host,port)

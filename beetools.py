@@ -245,12 +245,18 @@ class DrawingTool(AbstractTool):
 			self.logtype=ToolLogTypes.unlogable
 
 		else:
+			# this must be done here because adding items to the graphics scene must be performed in the GUI thread
 			self.parentlayer=self.window.getLayerForKey(self.layerkey)
 
-			if self.brushimageformat==BrushImageFormats.qt:
-				self.layer=self.parentlayer.getTmpLayer(self.options["opacity"]/100.,self.compmode)
+			if self.parentlayer:
+
+				if self.brushimageformat==BrushImageFormats.qt:
+					self.layer=self.parentlayer.getTmpLayer(self.options["opacity"]/100.,self.compmode)
+				else:
+					self.layer=self.parentlayer.getTmpLayerPIL(self.options["opacity"]/100.,self.compmode,self.clippath)
+
 			else:
-				self.layer=self.parentlayer.getTmpLayerPIL(self.options["opacity"]/100.,self.compmode,self.clippath)
+				self.logtype=ToolLogTypes.unlogable
 
 	def calculateCloseEdgePoint(self,p1,p2):
 		""" Stub for now, eventually I'd like this algorithm to take over if the other one encounters data that looks bad """
@@ -692,6 +698,15 @@ class DrawingTool(AbstractTool):
 		self.lastpoint=(path[-1][0],path[-1][1])
 
 	def addImageToLayer(self,image,left,top,refresh=True):
+		# this should only happen if we are in a server drawing thread
+		if not self.layer:
+			self.parentlayer=self.window.getLayerForKey(self.layerkey)
+
+			if self.brushimageformat==BrushImageFormats.qt:
+				self.layer=self.parentlayer.getTmpLayer(self.options["opacity"]/100.,self.compmode)
+			else:
+				self.layer=self.parentlayer.getTmpLayerPIL(self.options["opacity"]/100.,self.compmode,self.clippath)
+
 		self.layer.compositeFromCorner(image,left,top,self.stampmode,self.clippath, refreshimage=refresh)
  
 	def startLine(self,x,y,pressure):
@@ -1372,24 +1387,29 @@ class PaintBucketOptionsWidget(qtgui.QWidget):
 
 # paint bucket tool
 class PaintBucketTool(AbstractTool):
-	logtype=ToolLogTypes.raw
 	def __init__(self,options,window):
 		AbstractTool.__init__(self,options,window)
-		self.pointshistory=[]
 		self.newpath=None
+		self.logtype=ToolLogTypes.raw
 
 	def guiLevelPenDown(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
+		layer=self.window.getLayerForKey(self.layerkey)
+		if not layer:
+			self.logtype=ToolLogTypes.unlogable
+			return
+
 		if self.options['bucketfilltype']==BucketFillTypes.image:
 			image=self.window.scene.getImageCopy()
 			self.newpath=getSimilarColorPath(image,x,y,self.options['similarity'])
 
 		elif self.options['bucketfilltype']==BucketFillTypes.layer:
-			layer=self.window.getLayerForKey(self.layerkey)
 			image=layer.getImageCopy()
 			self.newpath=getSimilarColorPath(image,x,y,self.options['similarity'])
 
 	def penDown(self,x,y,pressure):
-		self.pointshistory=[(x,y,pressure)]
+		if self.logtype==ToolLogTypes.unlogable:
+			return
+
 		layer=self.window.getLayerForKey(self.layerkey)
 		if not layer:
 			return
