@@ -64,10 +64,12 @@ class SketchLogWriter:
 		if subtype==HistoryCommandTypes.undo:
 			self.log.writeStartElement('undo')
 			self.log.writeAttribute('owner',str(command[2]))
+			self.log.writeEndElement()
 
 		elif subtype==HistoryCommandTypes.redo:
 			self.log.writeStartElement('redo')
 			self.log.writeAttribute('owner',str(command[2]))
+			self.log.writeEndElement()
 
 	def logLayerCommand(self,command):
 		subtype=command[1]

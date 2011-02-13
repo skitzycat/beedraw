@@ -809,7 +809,7 @@ class DrawingTool(AbstractTool):
  
 		command=DrawingCommand(self.layerkey,oldimage,dirtyrect)
 
-		self.window.addCommandToHistory(command,self.layer.owner)
+		self.window.addCommandToHistory(command,self.parentlayer.owner)
  
 		BeeApp().master.refreshLayerThumb(self.window.id,self.layerkey)
  

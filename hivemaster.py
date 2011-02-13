@@ -350,7 +350,7 @@ class HiveRoutingThread(qtcore.QThread):
 	def run(self):
 		while 1:
 			data=self.queue.get()
-			print_debug("routing info recieved: %s" % str(data))
+			#print_debug("routing info recieved: %s" % str(data))
 			(command,owner)=data
 			# a negative number is a flag that we only send it to one client
 			if owner<0:
@@ -364,15 +364,15 @@ class HiveRoutingThread(qtcore.QThread):
 	def sendToAllClients(self,command):
 		lock=qtcore.QReadLocker(self.master.clientslistmutex)
 		for id in self.master.clientwriterqueues.keys():
-			print_debug("sending to client: %d, command: %s" % (id, str(command)))
+			#print_debug("sending to client: %d, command: %s" % (id, str(command)))
 			self.master.clientwriterqueues[id].put(command)
 
 	def sendToAllButOwner(self,source,command):
 		lock=qtcore.QReadLocker(self.master.clientslistmutex)
-		print_debug("sending command to all, but the owner: %s" % str(command))
+		#print_debug("sending command to all, but the owner: %s" % str(command))
 		for id in self.master.clientwriterqueues.keys():
 			if source!=id:
-				print_debug("sending to client: %d" % id)
+				#print_debug("sending to client: %d" % id)
 				self.master.clientwriterqueues[id].put(command)
 
 	def sendToSingleClient(self,id,command):
