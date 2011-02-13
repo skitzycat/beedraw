@@ -34,6 +34,7 @@ class BeeSessionState:
 	"""
 	def __init__(self,master,width,height,type):
 		# save passed values
+		self.networkhistorysize=0
 		self.docwidth=width
 		self.docheight=height
 		self.type=type
@@ -496,7 +497,11 @@ class BeeSessionState:
 				return
 			self.master.routinginput.put((command,layer.owner))
 
+	def getNetworkHistorySize(self):
+		return self.networkhistorysize
+
 	def setNetworkHistorySize(self,newsize):
+		self.networkhistorysize=newsize
 		self.localcommandstack.setNetworkHistorySize(newsize)
 		for key in self.remotecommandstacks.keys():
 			self.remotecommandstacks[key].setHistorySize()

@@ -376,14 +376,14 @@ class NetworkListenerThread (qtcore.QThread):
 
 		# enter read loop, read till socket closes
 		while 1:
-			print_debug("Ready to read from server")
+			#print_debug("Ready to read from server")
 			data=self.socket.read(1024)
 
 			if not data:
 				window.setDisconnectMessage("Server has closed connection")
 				break
 
-			print_debug("got animation data from socket: %s" % data)
+			#print_debug("got animation data from socket: %s" % data)
 
 			self.parser.xml.addData(data)
 			error=self.parser.read()

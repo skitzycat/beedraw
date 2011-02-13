@@ -1273,7 +1273,7 @@ class NetworkClientDrawingWindow(BeeDrawingWindow):
 		elif source in self.remotecommandstacks:
 			self.remotecommandstacks[source].add(command)
 		else:
-			self.remotecommandstacks[source]=CommandStack(self,0,CommandStackTypes.remoteonly)
+			self.remotecommandstacks[source]=CommandStack(self,CommandStackTypes.remoteonly,maxundo=self.getNetworkHistorySize())
 			self.remotecommandstacks[source].add(command)
 
 	def cleanUp(self):

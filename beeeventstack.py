@@ -36,8 +36,7 @@ class CommandStack:
 		if self.maxundo<0:
 			self.maxundo=0
 
-		# start this at 0, it will get reset shortly with data from server if this is a network session
-		self.networkmaxundo=0
+		self.networkmaxundo=maxundo
 
 		self.networkinhist=0
 
@@ -129,6 +128,7 @@ class CommandStack:
 
 	def undo(self):
 		if self.index<=0:
+			print_debug("unable to execute undo command because history is empty")
 			return UndoCommandTypes.none
 
 		command=self.commandstack[self.index-1]
@@ -144,6 +144,7 @@ class CommandStack:
 
 	def redo(self):
 		if self.index>=len(self.commandstack):
+			print_debug("unable to execute redo command because history is at present")
 			return UndoCommandTypes.none
 
 		command=self.commandstack[self.index]
@@ -180,7 +181,7 @@ class DrawingCommand(AbstractCommand):
 		self.location=location
 
 	def undo(self,win):
-		print_debug("running undo in drawing command")
+		#print_debug("running undo in drawing command")
 		layer=win.getLayerForKey(self.layerkey)
 		if layer:
 			self.redoimage=layer.image.copy(self.location)
@@ -188,7 +189,7 @@ class DrawingCommand(AbstractCommand):
 			win.requestLayerListRefresh()
 
 	def redo(self,win):
-		print_debug("running redo in drawing command")
+		#print_debug("running redo in drawing command")
 		layer=win.getLayerForKey(self.layerkey)
 		if layer:
 			layer.compositeFromCorner(self.redoimage,self.location.x(),self.location.y(),qtgui.QPainter.CompositionMode_Source)
