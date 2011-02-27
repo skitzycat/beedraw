@@ -234,13 +234,25 @@ class BeeSessionState:
 		""" start logging the session, starting with a base image of it in it's current state, if no file name is provided use make a name up based on current time
 		"""
 		if not filename:
+			# make sure directory exists
+			if not os.path.isdir('logs'):
+				try:
+					os.mkdir('logs')
+				except:
+					requestDisplayMessage(BeeDisplayMessageTypes.error,"Unable to create log directory","Will not be logging due to inability to to create log file directory: " + os.path.abspath('logs'),self.master)
+					return
+
 			filename=os.path.join('logs',getTimeString() + '.slg')
 
 		locks=[]
 		self.filename=filename
 
 		logfile=qtcore.QFile(self.filename)
-		logfile.open(qtcore.QIODevice.WriteOnly)
+
+		if not logfile.open(qtcore.QIODevice.WriteOnly):
+			requestDisplayMessage(BeeDisplayMessageTypes.error,"Unable to open log file","Will not be logging due to inability to open file: " + os.path.abspath("%s" % self.filename),self)
+			return
+
 		log=SketchLogWriter(logfile)
 
 		# lock for reading the size of the document
@@ -251,7 +263,6 @@ class BeeSessionState:
 		for layer in self.layers:
 			locks.append(qtcore.QWriteLocker(layer.imagelock))
 			log.logLayerAdd(pos,layer.key, layer.image)
-			#log.logRawEvent(0,0,layer.key,layer.image)
 			pos+=1
 
 		if endlog:

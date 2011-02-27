@@ -50,7 +50,7 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 	""" Represents a window that the user can draw in
 	"""
 	def __init__(self,master,width=600,height=400,startlayer=True,type=WindowTypes.singleuser,maxundo=40):
-
+		self.logaction=None
 		BeeSessionState.__init__(self,master,width,height,type)
 		qtgui.QWidget.__init__(self)
 
@@ -145,8 +145,10 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 
 		curaction=filemenu.addAction("Log (Ctrl+L)")
 		curaction.setCheckable(True)
-		qtcore.QObject.connect(curaction,qtcore.SIGNAL("toggled(bool)"),self.on_action_File_Log_toggled)
+		qtcore.QObject.connect(curaction,qtcore.SIGNAL("triggered(bool)"),self.on_action_File_Log_toggled)
 		self.logaction=curaction
+		if self.log:
+			self.logaction.setChecked(True)
 
 		curaction=filemenu.addAction("Close",self.on_action_File_Close_triggered)
 
@@ -265,6 +267,16 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 			self.scene.addItem(overlay)
 			self.tooloverlay=overlay
 			self.resetLayerZValues(lock)
+
+	def startLog(self,filename=None,endlog=False):
+		BeeSessionState.startLog(self,filename,endlog)
+		if self.log:
+			# make sure menu item is checked
+			if self.logaction:
+				self.logaction.setChecked(True)
+		else:
+			if self.logaction:
+				self.logaction.setChecked(False)
 
 	def saveFile(self,filename):
 		""" save current state of session to file
