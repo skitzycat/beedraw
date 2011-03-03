@@ -307,14 +307,13 @@ class BeeCanvasScene(qtgui.QGraphicsScene):
 		drawrect=rect
 		painter.setClipPath(clippath)
 		painter.fillRect(drawrect,self.framecolor)
+		self.locker=None
 
 	def drawBackground(self,painter,rect):
 		# unfortunately we can't just draw onto the standard painter because it does not support all blending modes
 		# instead we draw onto a temporary image which does support all blending modes and then paint that onto the final painter
 		self.tmppainter=qtgui.QPainter()
 
-		# for some reason this locker variable isn't always reset, however since this can only be done from the gui thread I think it's safe to reset it if it gets stuck
-		self.locker=None
 		self.locker=qtcore.QWriteLocker(self.imagelock)
 		self.tmppainter.begin(self.image)
 
