@@ -243,7 +243,8 @@ class BeeCanvasScene(qtgui.QGraphicsScene):
 
 	def getImageCopy(self):
 		lock=qtcore.QReadLocker(self.imagelock)
-		return self.image.copy()
+		copy=self.image.copy()
+		return copy
 
 	def getPixelColor(self,x,y,size=1):
 		lock=qtcore.QReadLocker(self.imagelock)
@@ -291,7 +292,8 @@ class BeeCanvasScene(qtgui.QGraphicsScene):
 			rect=rect.toAlignedRect()
 			painter.setCompositionMode(qtgui.QPainter.CompositionMode_Source)
 			painter.drawImage(rect,self.image,rect)
-			self.locker=None
+
+		self.locker=None
 
 	def drawForeground(self,painter,rect):
 		rectpath=qtgui.QPainterPath()
@@ -310,6 +312,9 @@ class BeeCanvasScene(qtgui.QGraphicsScene):
 		# unfortunately we can't just draw onto the standard painter because it does not support all blending modes
 		# instead we draw onto a temporary image which does support all blending modes and then paint that onto the final painter
 		self.tmppainter=qtgui.QPainter()
+
+		# for some reason this locker variable isn't always reset, however since this can only be done from the gui thread I think it's safe to reset it if it gets stuck
+		self.locker=None
 		self.locker=qtcore.QWriteLocker(self.imagelock)
 		self.tmppainter.begin(self.image)
 
