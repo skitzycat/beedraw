@@ -663,7 +663,7 @@ class BeeTemporaryLayerPIL(BeeGuiLayer):
 		drawrect=options.exposedRect
 		drawrect=drawrect.toAlignedRect()
 
-		qimage=PILtoQImage(self.pilimage,(drawrect.x(),drawrect.y(),drawrect.x()+drawrect.width(),drawrect.y()+drawrect.height()))
+		qimage=PilToQImage(self.pilimage,(drawrect.x(),drawrect.y(),drawrect.x()+drawrect.width(),drawrect.y()+drawrect.height()))
 
 		localpainter.translate(self.pos())
 		#localpainter.setCompositionMode(self.compmode)

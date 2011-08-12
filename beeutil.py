@@ -316,19 +316,27 @@ def print_debug(s):
 		print s
 
 # convert from PIL to QImage, optional argument for the area to convert as 4-tuple of sides, by default do the whole image
-def PILtoQImage(im,rect=None):
+def PilToQImage(im,rect=None):
   if rect:
     return ImageQt.ImageQt(im.crop(rect))
   else:
 	  return ImageQt.ImageQt(im)
 
+def QImageToPil(im):
+	bytes=im.bits().asstring(im.numBytes())
+	pilimg = Image.frombuffer("RGBA",(im.width(),im.height()),bytes,'raw', "RGBA", 0, 1)
+	return pilimg
+
+def printMonochromePIL(im):
+	pix=im.load()
+	for i in range(im.size[0]):
+		for j in range(im.size[1]):
+			print "%3d" % pix[i,j],
+
+		print
+
 def printPILImage(im):
-	printImage(PILtoQImage(im))
-	#pix=im.load()
-	#for i in range(im.size[0]):
-	#	for j in range(im.size[1]):
-	#		print pix[i,j],
-	#	print
+	printImage(PilToQImage(im))
 
 def scaleClosestPIL(im,xscale,yscale):
 	newsizex=int(math.ceil(im.size[0]*xscale))
@@ -557,3 +565,33 @@ class ThreadNotifierQueue(Queue,qtcore.QObject):
 #			self.scene.addItem(i)
 #	def render(self,rect):
 #		self.scene.tmppainter
+
+# interpolate between two images of a given size with given bias for the first or second
+def interpolate(image1,image2,t):
+	if not ( image1.size[0] == image2.size[0] and image1.size[1] == image2.size[1] ):
+		print_debug("Error: interploate function passed non compatable images")
+		return image1
+
+	if t < 0:
+		print_debug("Error: interploate function passed bad t value: %f" % t)
+		return image2
+	elif t > 1:
+		print_debug("Error: interploate function passed bad t value: %f" % t)
+		return image1
+
+	#print "t value:", t
+	#if t>.5:
+	# print "result should look more like image 1"
+	#else:
+	# print "result should look more like image 2"
+
+	#print "blending image:"
+	#printPILImage(image1)
+	#print "and image:"
+	#printPILImage(image2)
+	im=Image.blend(image1,image2,t)
+	#print "to produce"
+	#printPILImage(im)
+	#print
+	return im
+

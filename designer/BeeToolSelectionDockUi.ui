@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>136</width>
+    <width>162</width>
     <height>126</height>
    </rect>
   </property>
@@ -209,6 +209,23 @@
         <property name="icon">
          <iconset>
           <normaloff>icons/featherselect.png</normaloff>icons/featherselect.png</iconset>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <property name="autoExclusive">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="4">
+       <widget class="QToolButton" name="smudge_button">
+        <property name="text">
+         <string>...</string>
+        </property>
+        <property name="icon">
+         <iconset>
+          <normaloff>icons/smudge.png</normaloff>icons/smudge.png</iconset>
         </property>
         <property name="checkable">
          <bool>true</bool>

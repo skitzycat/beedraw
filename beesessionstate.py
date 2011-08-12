@@ -492,6 +492,8 @@ class BeeSessionState:
 			else:
 				print_debug("Warning: could not log tool as raw event, proper tool variables not set")
 				return
+		else:
+			return
 
 		# if there is a local text log, then log it there
 		if self.log:
