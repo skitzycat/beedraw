@@ -235,7 +235,6 @@ class BeeCanvasScene(qtgui.QGraphicsScene):
 
 	def addItem(self,item):
 		if qtcore.QThread.currentThread()==self.thread():
-			print "adding item to scene"
 			qtgui.QGraphicsScene.addItem(self,item)
 			BeeApp().master.requestLayerListRefresh()
 		else:

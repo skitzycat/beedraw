@@ -172,13 +172,13 @@ class BeeLayerState:
 		""" Method of BeeLayerState """
 		x=int(x)
 		y=int(y)
-		print "calling compositeFromCorner with args:",x,y
+		#print "calling compositeFromCorner with args:",x,y
 
 		if not lock:
 			lock=qtcore.QWriteLocker(self.imagelock)
 
-		print "incomming image format:", image.format()
-		print "layer image format:", self.image.format()
+		#print "incomming image format:", image.format()
+		#print "layer image format:", self.image.format()
 
 		width=image.size().width()
 		height=image.size().height()
