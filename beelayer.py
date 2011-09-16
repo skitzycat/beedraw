@@ -172,24 +172,30 @@ class BeeLayerState:
 		""" Method of BeeLayerState """
 		x=int(x)
 		y=int(y)
-		#print "calling compositeFromCorner with args:",x,y
+		print "calling compositeFromCorner with args:",x,y
 
 		if not lock:
 			lock=qtcore.QWriteLocker(self.imagelock)
 
+		print "incomming image format:", image.format()
+		print "layer image format:", self.image.format()
+
 		width=image.size().width()
 		height=image.size().height()
 		rect=qtcore.QRect(x,y,width,height)
+		#printImage(image)
 		painter=qtgui.QPainter()
 		painter.begin(self.image)
 		if clippath:
 			painter.setClipPath(clippath)
-		#print "inside compositeFromCorner"
 		painter.setCompositionMode(compmode)
 		painter.setOpacity(opacity)
 		#painter.setRenderHint(qtgui.QPainter.HighQualityAntialiasing)
 		painter.drawImage(rect,image)
 		painter.end()
+
+		#print "after image on layer:"
+		#printImage(self.getImageCopy(lock=lock,subregion=rect))
 
 		dirtyregion=qtgui.QRegion(rect)
 		win=BeeApp().master.getWindowById(self.windowid)
@@ -448,9 +454,18 @@ class BeeGuiLayer(BeeLayerState,qtgui.QGraphicsItem):
 
 		# finish drawing previous layer
 		if scene and scene.tmppainter and scene.curlayerim:
+			#print
+			#print "scene looked like:"
+			#printImage(scene.image)
+
 			scene.tmppainter.setCompositionMode(scene.curlayercompmode)
 			scene.tmppainter.setOpacity(scene.curlayeropacity)
 			scene.tmppainter.drawImage(drawrect,scene.curlayerim,drawrect)
+
+			#print "drawing layer on to tmp image"
+			#printImage(scene.curlayerim)
+			#print "scene image now looks like:"
+			#printImage(scene.image)
 
 		lock=qtcore.QReadLocker(self.imagelock)
 		scene.curlayerim=self.getImageCopy(lock=lock)
@@ -486,11 +501,27 @@ class LayerFinisher(qtgui.QGraphicsItem):
 
 		# finish drawing last layer
 		if scene and scene.tmppainter and scene.curlayerim:
+			#print "scene image looked like before:"
+			#printImage(scene.image)
+			#print "scene image format:", scene.image.format()
+
 			drawrect=options.exposedRect
 			drawrect=drawrect.toAlignedRect()
 			scene.tmppainter.setCompositionMode(scene.curlayercompmode)
 			scene.tmppainter.setOpacity(scene.curlayeropacity)
 			scene.tmppainter.drawImage(drawrect,scene.curlayerim,drawrect)
+
+			#print "painted with options"
+			#print "composition mode:", scene.curlayercompmode
+			#print "opacity", scene.curlayeropacity
+			#print "drawing area", rectToTuple(drawrect)
+
+			#print "curlayer image format:", scene.curlayerim.format()
+
+			#print "drawing final layer on to tmp image"
+			#printImage(scene.curlayerim)
+			#print "scene image now looks like:"
+			#printImage(scene.image)
 
 		scene.stopTmpPainter(painter,options.exposedRect)
 
@@ -684,6 +715,7 @@ class BeeTemporaryLayerPIL(BeeGuiLayer):
 
 	# composite image onto layer from corner coord
 	def compositeFromCorner(self,image,x,y,compmode,clippath=None,lock=None,refreshimage=True,opacity=1):
+		""" Method of BeeTemporaryLayerPIL """
 		x=int(x)
 		y=int(y)
 

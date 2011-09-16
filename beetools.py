@@ -703,6 +703,8 @@ class DrawingTool(AbstractTool):
 		if not stampmode:
 			stampmode=self.stampmode
 
+		#print "compositing image into layer:"
+		#printImage(image)
 		self.layer.compositeFromCorner(image,left,top,stampmode,self.clippath, refreshimage=refresh)
  
 	def startLine(self,x,y,pressure):
@@ -1888,6 +1890,10 @@ class SmudgeToolDesc(SketchToolDesc):
 		self.fadedbrush = Image.blend(tmpimage,self.fullsizedbrush,self.options["smudge rate"]/255.)
 		#printMonochromePIL(self.fadedbrush)
 
+# the smudge tool is on hold for now, until PIL gets better support
+#   for premultiplied RGBA support.  The problem is that the smudge dirt
+#   calculations must be done in premultiplied RGBA, but when merging the
+#   channels back to one image premultiplied RGBA is not supported.
 class SmudgeTool(SketchTool):
 	def __init__(self,options,window,fullsizedbrush):
 		SketchTool.__init__(self,options,window)
@@ -1898,12 +1904,23 @@ class SmudgeTool(SketchTool):
 		self.xradius=self.brushwidth/2
 		self.yradius=self.brushheight/2
 
+		self.brushblendexpression = "convert(((float(a)*.8)+(float(b)*.2))+.5,'L')"
+		self.dirtblendexpression = "(float(a)*.8)+(float(b)*.2)"
+
 	def startLine(self,x,y,pressure):
 		self.layer=self.window.getLayerForKey(self.layerkey)
 		
 		# start with the brush looking like what is immediately under it
 		brushrect = qtcore.QRect(x-self.xradius,y-self.yradius,self.brushwidth,self.brushheight)
-		self.brushdirt = QImageToPil(self.layer.getImageCopy(subregion=brushrect))
+		qdirt = self.layer.getImageCopy(subregion=brushrect)
+		#qdirtconv = qdirt.convertToFormat(qtgui.QImage.Format_ARGB32)
+		brushdirt = QImageToPil(qdirt)
+		print "starting brush dirt:"
+		printPILImage(brushdirt)
+		self.dirtbands = list(brushdirt.split())
+		for i in range(4):
+			print "band", i
+			printPILImage(self.dirtbands[i])
 
 		if self.pointshistory:
 			self.prevpointshistory.append(self.pointshistory)
@@ -1919,19 +1936,31 @@ class SmudgeTool(SketchTool):
 		pass
 
 	def updateBrushWithDirt(self,pressure,dirtypickup):
-		print
-		print "picked up colors:"
-		printPILImage(dirtypickup)
+		pickupbands = dirtypickup.split()
+		brushimagebands = [None,None,None,None]
+		#print
+		#print "picked up colors:"
+		#printPILImage(dirtypickup)
 
-		self.brushimage = Image.blend(dirtypickup,self.brushdirt,self.smudgerate)
+		#self.brushimage = Image.blend(dirtypickup,self.brushdirt,self.smudgerate)
+		for i in range(4):
+			#print "old dirty pickup", i
+			#printPILImage(self.dirtbands[i])
+			brushimagebands[i]=ImageMath.eval(self.brushblendexpression,a=pickupbands[i],b=self.dirtbands[i])
+			self.dirtbands[i] = ImageMath.eval(self.dirtblendexpression,a=self.dirtbands[i],b=pickupbands[i])
+			#print "brushimagebands ", i
+			#printPILImage(brushimagebands[i])
+			#print "pickupbands:"
+			#printPILImage(pickupbands[i])
 
-		self.brushdirt = Image.blend(dirtypickup,self.brushdirt,1-self.smudgerate)
-
-		print "new brush"
-		printPILImage(self.brushimage)
-
-		print "new dirt"
-		printPILImage(self.brushdirt)
+		#mergedimage=Image.merge("RGBA",(brushimagebands[2],brushimagebands[1],brushimagebands[0],brushimagebands[3]))
+		#mergedstring = mergedimage.tostring()
+		#correctformatimage = Image.fromstring("RGBa",mergedimage.size,mergedstring)
+		#brushimage = correctformatimage.convert("RGBA")
+		self.brushimage = Image.merge("RGBA",(brushimagebands[2],brushimagebands[1],brushimagebands[0],brushimagebands[3]))
+		
+		#print "final brush image"
+		#printPILImage(self.brushimage)
 
 	def cleanupTmpLayer(self):
 		pass
@@ -1992,9 +2021,14 @@ class SmudgeTool(SketchTool):
 
 			self.updateBrushWithDirt(pressure,dirtypickup)
 
-			self.addImageToLayer(PilToQImage(self.brushimage),stampx,stampy,refresh=False,stampmode=qtgui.QPainter.CompositionMode_Source)
-			#print "adding image to layer"
-			#printPILImage(self.brushimage)
+			print "final brush image"
+			printPILImage(self.brushimage)
+
+			qbrushimage = PilToQImage(self.brushimage)
+			print "converted to qimage in format:", qbrushimage.format()
+			printImage(qbrushimage)
+
+			self.addImageToLayer(qbrushimage,stampx,stampy,refresh=False,stampmode=qtgui.QPainter.CompositionMode_Source)
 
 		refresharea=qtcore.QRectF(left,top,width,height)
 		self.layer.updateScene(refresharea)
@@ -2003,10 +2037,8 @@ class SmudgeTool(SketchTool):
 
 	# make full sized brush shape
 	def makeFullSizedBrush(self):
-		print "calling make ellipse brush"
 		self.fullsizedbrush=self.makeEllipseBrush(self.options["maxdiameter"],self.options["maxdiameter"])
 		self.fullsizedbrush = PilToQImage(self.fullsizedbrush)
-		print "done creating brush"
 
 	def movedFarEnough(self,x,y):
 		return DrawingTool.movedFarEnough(self,x,y)

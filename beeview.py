@@ -235,6 +235,7 @@ class BeeCanvasScene(qtgui.QGraphicsScene):
 
 	def addItem(self,item):
 		if qtcore.QThread.currentThread()==self.thread():
+			print "adding item to scene"
 			qtgui.QGraphicsScene.addItem(self,item)
 			BeeApp().master.requestLayerListRefresh()
 		else:
@@ -293,9 +294,14 @@ class BeeCanvasScene(qtgui.QGraphicsScene):
 			painter.setCompositionMode(qtgui.QPainter.CompositionMode_Source)
 			painter.drawImage(rect,self.image,rect)
 
+			#print "finishing up all layers and pasting image to view"
+			#printImage(self.image)
+
 		self.locker=None
 
 	def drawForeground(self,painter,rect):
+		#print
+		#print "finishing up by drawing foreground"
 		rectpath=qtgui.QPainterPath()
 		rectpath.addRect(rect)
 

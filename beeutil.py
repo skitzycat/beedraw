@@ -22,6 +22,7 @@ import PyQt4.QtNetwork as qtnet
 from Queue import Queue
 
 import ImageChops
+import ImageMath
 
 from beeapp import BeeApp
 from beetypes import *
@@ -317,10 +318,12 @@ def print_debug(s):
 
 # convert from PIL to QImage, optional argument for the area to convert as 4-tuple of sides, by default do the whole image
 def PilToQImage(im,rect=None):
-  if rect:
-    return ImageQt.ImageQt(im.crop(rect))
-  else:
-	  return ImageQt.ImageQt(im)
+	if rect:
+		image = ImageQt.ImageQt(im.crop(rect))
+	else:
+		image = ImageQt.ImageQt(im)
+
+	return image
 
 def QImageToPil(im):
 	bytes=im.bits().asstring(im.numBytes())
@@ -336,7 +339,35 @@ def printMonochromePIL(im):
 		print
 
 def printPILImage(im):
-	printImage(PilToQImage(im))
+	if(im.mode == "I"):
+		pix = im.load()
+		for i in range(im.size[0]):
+			for j in range(im.size[1]):
+				print "%08x" % pix[i,j],
+			print
+	elif(im.mode == "L"):
+		pix = im.load()
+		for i in range(im.size[0]):
+			for j in range(im.size[1]):
+				print "%02x" % pix[i,j],
+			print
+
+	elif(im.mode == "F"):
+		pix = im.load()
+		for i in range(im.size[0]):
+			for j in range(im.size[1]):
+				print "%f" % pix[i,j],
+			print
+
+	elif(im.mode == "RGBA" or im.mode=="RGBa"):
+		pix = im.load()
+		for j in range(im.size[1]):
+			for i in range(im.size[0]):
+				print "%02x%02x%02x%02x" % pix[i,j],
+			print
+
+	else:
+		printImage(PilToQImage(im))
 
 def scaleClosestPIL(im,xscale,yscale):
 	newsizex=int(math.ceil(im.size[0]*xscale))
@@ -595,3 +626,19 @@ def interpolate(image1,image2,t):
 	#print
 	return im
 
+def pilRgbaInvert(image):
+	bands = image.split()
+	outbands = []
+	for band in bands:
+		outbands.append(ImageMath.eval("convert(abs(~(254-a)),'L')",a=band))
+	outimage = Image.merge("RGBA",outbands)
+	return outimage
+
+def pilRgbaTwoImageMath(image1,image2,expression):
+	bands1 = image1.split()
+	bands2 = image1.split()
+	outbands = []
+	for band in range(4):
+		outbands.append(ImageMath.eval(expression,a=bands1[band],b=bands2[band]))
+	outimage = Image.merge("RGBA",outbands)
+	return outimage
