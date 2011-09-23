@@ -1876,7 +1876,6 @@ class SmudgeToolDesc(SketchToolDesc):
 		tool=SmudgeTool(self.options,window,self.fullsizedbrush)
 		tool.name=self.name
 		tool.smudgerate = self.options["smudge rate"]/255.
-
 		tool.layerkey=layerkey
  
 		# if there is a selection get a copy of it
@@ -1892,8 +1891,10 @@ class SmudgeToolDesc(SketchToolDesc):
 
 	# make full sized brush shape
 	def makeFullSizedBrush(self):
-		self.fullsizedbrush=self.makeEllipseBrush(self.options["maxdiameter"],self.options["maxdiameter"])
-		self.fullsizedbrush = PilToQImage(self.fullsizedbrush)
+		monocolorbrush=self.makeEllipseBrush(self.options["maxdiameter"],self.options["maxdiameter"])
+		fullsizedbrush = monocolorbrush.convert("RGBA")
+		fullsizedbrush.putalpha(monocolorbrush)
+		self.fullsizedbrush = PilToQImage(fullsizedbrush)
 
 	def updateBrush(self):
 		SketchToolDesc.updateBrush(self)
@@ -1909,6 +1910,7 @@ class SmudgeTool(SketchTool):
 		self.brushimageformat=BrushImageFormats.qt
 		self.brushwidth = fullsizedbrush.width()
 		self.brushheight = fullsizedbrush.height()
+		self.fullsizedbrush = fullsizedbrush
 		self.xradius=self.brushwidth/2
 		self.yradius=self.brushheight/2
 
@@ -1950,6 +1952,18 @@ class SmudgeTool(SketchTool):
 		self.brusharr[:]=(((self.dirtarr*.2) + (pickuparr *.8)).round())[:]
 
 		self.dirtarr = (self.dirtarr * .8) + (pickuparr *.2)
+
+		painter = qtgui.QPainter()
+		painter.begin(self.brushimage)
+		painter.setCompositionMode(qtgui.QPainter.CompositionMode_DestinationIn)
+		painter.drawImage(qtcore.QPoint(0,0),self.fullsizedbrush)
+		painter.end()
+
+		#print "fullsized brush:"
+		#printImage(self.fullsizedbrush)
+
+		#print "brush now looks like:"
+		#printImage(self.brushimage)
 
 	def cleanupTmpLayer(self):
 		pass
@@ -2013,7 +2027,8 @@ class SmudgeTool(SketchTool):
 			#print "final brush image"
 			#printImage(self.brushimage)
 
-			self.addImageToLayer(self.brushimage,stampx,stampy,refresh=False,stampmode=qtgui.QPainter.CompositionMode_Source)
+			self.addImageToLayer(self.fullsizedbrush,stampx,stampy,refresh=False,stampmode=qtgui.QPainter.CompositionMode_DestinationOut)
+			self.addImageToLayer(self.brushimage,stampx,stampy,refresh=False,stampmode=qtgui.QPainter.CompositionMode_Plus)
 
 		refresharea=qtcore.QRectF(left,top,width,height)
 		self.layer.updateScene(refresharea)
@@ -2047,7 +2062,7 @@ class BlurToolDesc(PencilToolDesc):
 		BeeApp().master.toolselectwindow.ui.blur_button.setChecked(True)
  
 	def setupTool(self,window,layerkey):
-		tool=SmudgeTool(self.options,window,self.fullsizedbrush)
+		tool=BlurTool(self.options,window,self.fullsizedbrush)
 		tool.name=self.name
 		tool.fadedbrush = self.fadedbrush
 		tool.smudgerate = self.options["smudge rate"]/255.
