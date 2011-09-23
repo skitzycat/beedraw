@@ -1,12 +1,13 @@
 Bee Draw beta development version installation
 
-Dependencies:
+Dependencies for running from source:
 python 2.4 or higher
-Qt (version 4.6 or higner)
-pyqt (version 4.7 or higher)
+Qt version 4.6 or higher
+pyqt version 4.7 or higher
 pyuic4 (part of the pyqt development tools)
 numpy
 python imaging library
+qimage2ndarray 1.0 (http://kogs-www.informatik.uni-hamburg.de/~meine/software/qimage2ndarray/)
 make
 
 Running the program:

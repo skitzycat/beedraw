@@ -20,6 +20,8 @@ import PyQt4.QtCore as qtcore
 import math
 import sys
 import ImageChops
+import numpy
+import qimage2ndarray
 from beeutil import *
 from beetypes import *
 from beeeventstack import *
@@ -61,6 +63,8 @@ class BeeToolBox:
 		self.toolslist.append(PaintBucketToolDesc())
 		self.toolslist.append(MoveSelectionToolDesc())
 		self.toolslist.append(SmudgeToolDesc())
+		self.toolslist.append(SmearToolDesc())
+		self.toolslist.append(BlurToolDesc())
  
 	def getCurToolDesc(self):
 		return self.toolslist[self.curtoolindex]
@@ -1715,7 +1719,10 @@ class SketchTool(DrawingTool):
 
 		for i in range(brushwidth):
 			for j in range(brushheight):
-				curfade=self.ellipseBrushFadeAt(i,j,radius,brushwidth,brushheight,0)
+				#curfade=self.ellipseBrushFadeAt(i,j,radius,brushwidth,brushheight,0)
+				curfade=radius*2
+				if curfade>1:
+					curfade=0
 				pix[i,j]=(int(round(curfade*255)))
 
 		return scaleShiftPIL(brushimage,subpixelx,subpixely,5,5,1,1)
@@ -1868,7 +1875,6 @@ class SmudgeToolDesc(SketchToolDesc):
 	def setupTool(self,window,layerkey):
 		tool=SmudgeTool(self.options,window,self.fullsizedbrush)
 		tool.name=self.name
-		tool.fadedbrush = self.fadedbrush
 		tool.smudgerate = self.options["smudge rate"]/255.
 
 		tool.layerkey=layerkey
@@ -1884,11 +1890,13 @@ class SmudgeToolDesc(SketchToolDesc):
 			self.optionswidget.updateDisplayFromOptions()
 		return self.optionswidget
 
+	# make full sized brush shape
+	def makeFullSizedBrush(self):
+		self.fullsizedbrush=self.makeEllipseBrush(self.options["maxdiameter"],self.options["maxdiameter"])
+		self.fullsizedbrush = PilToQImage(self.fullsizedbrush)
+
 	def updateBrush(self):
 		SketchToolDesc.updateBrush(self)
-		tmpimage = Image.new("L",self.fullsizedbrush.size,0)
-		self.fadedbrush = Image.blend(tmpimage,self.fullsizedbrush,self.options["smudge rate"]/255.)
-		#printMonochromePIL(self.fadedbrush)
 
 # the smudge tool is on hold for now, until PIL gets better support
 #   for premultiplied RGBA support.  The problem is that the smudge dirt
@@ -1898,29 +1906,30 @@ class SmudgeTool(SketchTool):
 	def __init__(self,options,window,fullsizedbrush):
 		SketchTool.__init__(self,options,window)
 		self.name="smudge"
-		self.brushimageformat=BrushImageFormats.pil
-		self.brushwidth = fullsizedbrush.size[0]
-		self.brushheight = fullsizedbrush.size[1]
+		self.brushimageformat=BrushImageFormats.qt
+		self.brushwidth = fullsizedbrush.width()
+		self.brushheight = fullsizedbrush.height()
 		self.xradius=self.brushwidth/2
 		self.yradius=self.brushheight/2
 
 		self.brushblendexpression = "convert(((float(a)*.8)+(float(b)*.2))+.5,'L')"
 		self.dirtblendexpression = "(float(a)*.8)+(float(b)*.2)"
 
+		self.brushimage = qtgui.QImage(self.brushwidth,self.brushheight,qtgui.QImage.Format_ARGB32_Premultiplied)
+		self.brusharr = qimage2ndarray.byte_view(self.brushimage)
+
 	def startLine(self,x,y,pressure):
 		self.layer=self.window.getLayerForKey(self.layerkey)
 		
 		# start with the brush looking like what is immediately under it
 		brushrect = qtcore.QRect(x-self.xradius,y-self.yradius,self.brushwidth,self.brushheight)
-		qdirt = self.layer.getImageCopy(subregion=brushrect)
-		#qdirtconv = qdirt.convertToFormat(qtgui.QImage.Format_ARGB32)
-		brushdirt = QImageToPil(qdirt)
-		print "starting brush dirt:"
-		printPILImage(brushdirt)
-		self.dirtbands = list(brushdirt.split())
-		for i in range(4):
-			print "band", i
-			printPILImage(self.dirtbands[i])
+		dirt = self.layer.getImageCopy(subregion=brushrect)
+
+		#brushdirt = QImageToPil(qdirt)
+
+		self.dirtarr = numpy.array(qimage2ndarray.byte_view(dirt),dtype=numpy.float32)
+		#print "starting brush dirt:"
+		#print self.dirtarr
 
 		if self.pointshistory:
 			self.prevpointshistory.append(self.pointshistory)
@@ -1936,31 +1945,11 @@ class SmudgeTool(SketchTool):
 		pass
 
 	def updateBrushWithDirt(self,pressure,dirtypickup):
-		pickupbands = dirtypickup.split()
-		brushimagebands = [None,None,None,None]
-		#print
-		#print "picked up colors:"
-		#printPILImage(dirtypickup)
+		pickuparr = qimage2ndarray.byte_view(dirtypickup)
 
-		#self.brushimage = Image.blend(dirtypickup,self.brushdirt,self.smudgerate)
-		for i in range(4):
-			#print "old dirty pickup", i
-			#printPILImage(self.dirtbands[i])
-			brushimagebands[i]=ImageMath.eval(self.brushblendexpression,a=pickupbands[i],b=self.dirtbands[i])
-			self.dirtbands[i] = ImageMath.eval(self.dirtblendexpression,a=self.dirtbands[i],b=pickupbands[i])
-			#print "brushimagebands ", i
-			#printPILImage(brushimagebands[i])
-			#print "pickupbands:"
-			#printPILImage(pickupbands[i])
+		self.brusharr[:]=(((self.dirtarr*.2) + (pickuparr *.8)).round())[:]
 
-		#mergedimage=Image.merge("RGBA",(brushimagebands[2],brushimagebands[1],brushimagebands[0],brushimagebands[3]))
-		#mergedstring = mergedimage.tostring()
-		#correctformatimage = Image.fromstring("RGBa",mergedimage.size,mergedstring)
-		#brushimage = correctformatimage.convert("RGBA")
-		self.brushimage = Image.merge("RGBA",(brushimagebands[2],brushimagebands[1],brushimagebands[0],brushimagebands[3]))
-		
-		#print "final brush image"
-		#printPILImage(self.brushimage)
+		self.dirtarr = (self.dirtarr * .8) + (pickuparr *.2)
 
 	def cleanupTmpLayer(self):
 		pass
@@ -2017,31 +2006,166 @@ class SmudgeTool(SketchTool):
 			stampy = point[1]-self.yradius
 
 			brushrect = qtcore.QRect(stampx,stampy,self.brushwidth,self.brushheight)
-			dirtypickup = QImageToPil(self.layer.getImageCopy(subregion=brushrect))
+			dirtypickup = self.layer.getImageCopy(subregion=brushrect)
 
 			self.updateBrushWithDirt(pressure,dirtypickup)
 
-			print "final brush image"
-			printPILImage(self.brushimage)
+			#print "final brush image"
+			#printImage(self.brushimage)
 
-			qbrushimage = PilToQImage(self.brushimage)
-			print "converted to qimage in format:", qbrushimage.format()
-			printImage(qbrushimage)
-
-			self.addImageToLayer(qbrushimage,stampx,stampy,refresh=False,stampmode=qtgui.QPainter.CompositionMode_Source)
+			self.addImageToLayer(self.brushimage,stampx,stampy,refresh=False,stampmode=qtgui.QPainter.CompositionMode_Source)
 
 		refresharea=qtcore.QRectF(left,top,width,height)
 		self.layer.updateScene(refresharea)
 
 		self.lastpoint=(path[-1][0],path[-1][1])
 
-	# make full sized brush shape
-	def makeFullSizedBrush(self):
-		self.fullsizedbrush=self.makeEllipseBrush(self.options["maxdiameter"],self.options["maxdiameter"])
-		self.fullsizedbrush = PilToQImage(self.fullsizedbrush)
-
 	def movedFarEnough(self,x,y):
 		return DrawingTool.movedFarEnough(self,x,y)
 
 	def getFullSizedBrushWidth(self):
 		return self.brushwidth
+
+class BlurToolDesc(PencilToolDesc):
+	def __init__(self):
+		PencilToolDesc.__init__(self)
+		self.displayname="Blur"
+		self.name="blur"
+ 
+	def getCursor(self):
+		return qtcore.Qt.CrossCursor
+ 
+	def getDownCursor(self):
+		return getBlankCursor()
+ 
+	def setDefaultOptions(self):
+		self.options["step"]=1
+		self.options["pressuresize"]=1
+		self.options["maxdiameter"]=4
+
+	def pressToolButton(self):
+		BeeApp().master.toolselectwindow.ui.blur_button.setChecked(True)
+ 
+	def setupTool(self,window,layerkey):
+		tool=SmudgeTool(self.options,window,self.fullsizedbrush)
+		tool.name=self.name
+		tool.fadedbrush = self.fadedbrush
+		tool.smudgerate = self.options["smudge rate"]/255.
+
+		tool.layerkey=layerkey
+ 
+		# if there is a selection get a copy of it
+		tool.clippath=window.getClipPathCopy()
+ 
+		return tool
+ 
+	def getOptionsWidget(self,parent):
+		if not self.optionswidget:
+			self.optionswidget=BlurToolOptionsWidget(parent,self)
+			self.optionswidget.updateDisplayFromOptions()
+		return self.optionswidget
+
+class BlurTool(DrawingTool):
+	def __init__(self,options,window):
+		DrawingTool.__init__(self,options,window)
+		self.brushshape=BrushShapes.ellipse
+
+	def startLine(self,x,y,pressure):
+		pass
+
+	def continueLine(self,x,y,pressure):
+		pass
+
+class SmearToolDesc(SketchToolDesc):
+	def __init__(self):
+		SketchToolDesc.__init__(self)
+		self.displayname="Smear"
+		self.name="smear"
+		self.brushshape=BrushShapes.ellipse
+ 
+	def getCursor(self):
+		return qtcore.Qt.CrossCursor
+ 
+	def getDownCursor(self):
+		return getBlankCursor()
+ 
+	def setDefaultOptions(self):
+		self.options["step"]=1
+		self.options["maxdiameter"]=12
+		self.options["fade percent"]=0
+
+	def pressToolButton(self):
+		BeeApp().master.toolselectwindow.ui.smear_button.setChecked(True)
+ 
+	def setupTool(self,window,layerkey):
+		tool=SmearTool(self.options,window,self.fullsizedbrush)
+		tool.name=self.name
+		tool.layerkey = layerkey
+		tool.layer=window.getLayerForKey(layerkey)
+
+		# if there is a selection get a copy of it
+		tool.clippath=window.getClipPathCopy()
+ 
+		return tool
+
+	def makeFullSizedBrush(self):
+		# only support one brush shape right now
+		if self.brushshape==BrushShapes.ellipse:
+			self.fullsizedbrush=self.makeEllipseBrush(self.options["maxdiameter"],self.options["maxdiameter"])
+ 
+	def getOptionsWidget(self,parent):
+		if not self.optionswidget:
+			self.optionswidget=DrawingToolOptionsWidget(parent,self)
+			self.optionswidget.updateDisplayFromOptions()
+		return self.optionswidget
+
+class SmearTool(SketchTool):
+	def __init__(self,options,window,fullsizedbrush):
+		SketchTool.__init__(self,options,window)
+		self.brushimageformat=BrushImageFormats.qt
+		self.fullsizedbrush = PilToQImage(fullsizedbrush)
+		self.brushwidth = self.fullsizedbrush.width()
+		self.brushheight = self.fullsizedbrush.height()
+
+	def guiLevelPenDown(self,x,y,pressure,modkeys=qtcore.Qt.NoModifier):
+		pass
+
+	def penDown(self,x,y,pressure):
+		SketchTool.penDown(self,x,y,pressure)
+
+	def startLine(self,x,y,pressure):
+		if self.pointshistory:
+			self.prevpointshistory.append(self.pointshistory)
+
+		self.oldlayerimage=self.layer.getImageCopy()
+
+		self.pointshistory=[(x,y,pressure)]
+		self.lastpoint=(x,y)
+		self.captureBrushImage(int(x),int(y),pressure)
+
+	def captureBrushImage(self,x,y,pressure):
+		rect = qtcore.QRect(x-(self.brushwidth/2),y-(self.brushheight/2),self.brushwidth,self.brushheight)
+		brushimage = self.layer.getImageCopy(subregion=rect)
+
+		painter = qtgui.QPainter()
+		painter.begin(brushimage)
+		painter.setCompositionMode(qtgui.QPainter.CompositionMode_DestinationIn)
+		painter.drawImage(qtcore.QPoint(0,0),self.fullsizedbrush)
+		painter.end()
+
+		self.brushimage = PilToQImage(ScaleClosestPil(QImageToPil(brushimage),.8,.8))
+
+	def updateBrushForPressure(self,pressure,x,y):
+		self.captureBrushImage(int(x),int(y),pressure)
+
+	def getFullSizedBrushWidth(self):
+		return self.brushwidth
+
+	def movedFarEnough(self,x,y):
+		return DrawingTool.movedFarEnough(self,x,y)
+
+	def cleanupTmpLayer(self):
+		pass
+
+	def getOwner(self):
+		return self.layer.owner

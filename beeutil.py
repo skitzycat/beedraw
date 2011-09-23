@@ -369,7 +369,8 @@ def printPILImage(im):
 	else:
 		printImage(PilToQImage(im))
 
-def scaleClosestPIL(im,xscale,yscale):
+# scales image down and keeps the center in the same spot
+def ScaleClosestPil(im,xscale,yscale):
 	newsizex=int(math.ceil(im.size[0]*xscale))
 	if newsizex%2==0:
 		newsizex+=1
@@ -377,6 +378,9 @@ def scaleClosestPIL(im,xscale,yscale):
 	newsizey=int(math.ceil(im.size[1]*yscale))
 	if newsizey%2==0:
 		newsizey+=1
+
+	print "scaling down image:"
+	printPILImage(im)
 
 	# this will center the image even if it doesn't snap to exactly a pixel boundary
 
@@ -407,10 +411,10 @@ def scaleClosestPIL(im,xscale,yscale):
 
 	#print "transform:", trans
 
-	newim=im.transform((newsizex,newsizey),Image.AFFINE,trans)
+	newim=im.transform((newsizex,newsizey),Image.AFFINE,trans,Image.BILINEAR)
 
-	#print "producing image:"
-	#printPILImage(newim)
+	print "producing image:"
+	printPILImage(newim)
 	return newim
 
 # scale a PIL image, the dx and dy values should only be between 0 and 1

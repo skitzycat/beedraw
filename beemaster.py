@@ -334,6 +334,8 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 			self.curtoolname=name
 			self.tooloptionswindow.updateCurrentTool()
 			self.toolbox.getCurToolDesc().pressToolButton()
+		else:
+			print_debug("Unknown tool name: %s" % name)
 
 	def newModKeys(self,modkeys):
 		tooldesc=self.toolbox.getCurToolDesc()
@@ -349,39 +351,6 @@ class BeeMasterWindow(qtgui.QMainWindow,object,AbstractBeeMaster):
 				self.changeCurToolByName(self.pointertoolmap[pointertype])
 
 			self.curpointertype=pointertype
-
-	# connect signals for tool buttons
-	def on_pencil_button_clicked(self,accept=False):
-		if accept:
-			self.changeCurToolByName("pencil")
-
-	def on_brush_button_clicked(self,accept=False):
-		if accept:
-			self.changeCurToolByName("brush")
-
-	def on_eraser_button_clicked(self,accept=False):
-		if accept:
-			self.changeCurToolByName("eraser")
-
-	def on_paint_bucket_button_clicked(self,accept=False):
-		if accept:
-			self.changeCurToolByName("bucket")
-
-	def on_eye_dropper_button_clicked(self,accept=False):
-		if accept:
-			self.changeCurToolByName("eyedropper")
-
-	def on_move_selection_button_clicked(self,accept=False):
-		if accept:
-			self.changeCurToolByName("move selection")
-
-	def on_rectangle_select_button_clicked(self,accept=False):
-		if accept:
-			self.changeCurToolByName("rectselect")
-
-	def on_feather_select_button_clicked(self,accept=False):
-		if accept:
-			self.changeCurToolByName("featherselect")
 
 	def on_tool_changed(self,index):
 		self.toolbox.setCurToolIndex(index)

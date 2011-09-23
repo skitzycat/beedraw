@@ -86,6 +86,11 @@ class ToolSelectionWindow(AbstractBeeDockWindow):
 		if accept:
 			self.master.changeCurToolByName("smudge")
 
+	def on_smear_button_clicked(self,accept=False):
+		if accept:
+			self.master.changeCurToolByName("smear")
+
+
 	def hideEvent(self,event):
 		if not self.isMinimized():
 			self.master.uncheckWindowToolSelectBox()
