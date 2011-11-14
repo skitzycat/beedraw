@@ -259,6 +259,7 @@ class BeeSessionState:
 		sizelocker=qtcore.QReadLocker(self.docsizelock)
 		log.logResyncStart(self.docwidth,self.docheight,0)
 		# log everything to get upto this point
+		layerslistlocker = qtcore.QReadLocker(self.layerslistlock)
 		pos=0
 		for layer in self.layers:
 			locks.append(qtcore.QWriteLocker(layer.imagelock))
@@ -482,9 +483,9 @@ class BeeSessionState:
 
 		layer=self.getLayerForKey(tool.layerkey)
 
-		if tool.logtype==ToolLogTypes.regular:
-			command=(DrawingCommandTypes.layer,LayerCommandTypes.tool,tool.layerkey,tool)
-		elif tool.logtype==ToolLogTypes.raw:
+		#if tool.logtype==ToolLogTypes.regular:
+		#	command=(DrawingCommandTypes.layer,LayerCommandTypes.tool,tool.layerkey,tool)
+		if tool.logtype==ToolLogTypes.raw or tool.logtype==ToolLogTypes.regular:
 			if tool.changedarea:
 				imlock=qtcore.QReadLocker(layer.imagelock)
 				stamp=layer.image.copy(tool.changedarea)

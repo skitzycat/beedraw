@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>162</width>
-    <height>126</height>
+    <width>174</width>
+    <height>121</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -205,14 +205,17 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="4">
-       <widget class="QToolButton" name="smear_button">
+      <item row="1" column="4">
+       <widget class="QToolButton" name="smudge_button">
+        <property name="toolTip">
+         <string>Smudge Tool</string>
+        </property>
         <property name="text">
          <string>...</string>
         </property>
         <property name="icon">
          <iconset>
-          <normaloff>icons/smear.png</normaloff>icons/smear.png</iconset>
+          <normaloff>icons/smudge.png</normaloff>icons/smudge.png</iconset>
         </property>
         <property name="checkable">
          <bool>true</bool>
@@ -222,14 +225,17 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="4">
-       <widget class="QToolButton" name="smudge_button">
+      <item row="0" column="4">
+       <widget class="QToolButton" name="blur_button">
+        <property name="toolTip">
+         <string>Gaussian Blur</string>
+        </property>
         <property name="text">
          <string>...</string>
         </property>
         <property name="icon">
          <iconset>
-          <normaloff>icons/smudge.png</normaloff>icons/smudge.png</iconset>
+          <normaloff>icons/blur.png</normaloff>icons/blur.png</iconset>
         </property>
         <property name="checkable">
          <bool>true</bool>

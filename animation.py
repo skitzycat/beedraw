@@ -55,6 +55,7 @@ class XmlToQueueEventsConverter:
 		self.keymap={}
 		self.imagestarted=False
 		self.imagedata=None
+		self.image=None
 
 		if type==ThreadTypes.animation:
 			self.layertype=LayerTypes.animation
@@ -111,7 +112,7 @@ class XmlToQueueEventsConverter:
 
 			(pos,ok)=attrs.value("position").toString().toInt()
 
-			# if this is the server don't trust the client to give the right ID, insthead pull it from the ID given to this thread
+			# if this is the server don't trust the client to give the right ID, instead pull it from the ID given to this thread
 			if self.type==ThreadTypes.server:
 				owner=self.id
 			# otherwise trust the ID in the message

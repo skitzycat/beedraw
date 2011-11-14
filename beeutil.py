@@ -326,8 +326,11 @@ def PilToQImage(im,rect=None):
 	return image
 
 def QImageToPil(im):
+	if(im.format()==qtgui.QImage.Format_ARGB32_Premultiplied):
+		im = im.convertToFormat(qtgui.QImage.Format_ARGB32)
+
 	bytes=im.bits().asstring(im.numBytes())
-	pilimg = Image.frombuffer("RGBA",(im.width(),im.height()),bytes,'raw', "RGBA", 0, 1)
+	pilimg = Image.frombuffer("RGBA",(im.width(),im.height()),bytes,'raw', "BGRA", 0, 1)
 	return pilimg
 
 def printMonochromePIL(im):
@@ -363,7 +366,7 @@ def printPILImage(im):
 		pix = im.load()
 		for j in range(im.size[1]):
 			for i in range(im.size[0]):
-				print "%02x%02x%02x%02x" % pix[i,j],
+				print "%02x%02x%02x%02x" % (pix[i,j][3],pix[i,j][0],pix[i,j][1],pix[i,j][2]),
 			print
 
 	else:

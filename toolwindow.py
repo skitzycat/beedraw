@@ -90,6 +90,9 @@ class ToolSelectionWindow(AbstractBeeDockWindow):
 		if accept:
 			self.master.changeCurToolByName("smear")
 
+	def on_blur_button_clicked(self,accept=False):
+		if accept:
+			self.master.changeCurToolByName("blur")
 
 	def hideEvent(self,event):
 		if not self.isMinimized():

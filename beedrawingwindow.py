@@ -113,7 +113,10 @@ class BeeDrawingWindow(qtgui.QWidget,BeeSessionState):
 		# don't go through the queue for this layer add because we need it to
 		# be done before the next step
 		if startlayer:
-			self.insertLayer(self.nextLayerKey(),0,history=False)
+			layerkey=self.nextLayerKey()
+			self.insertLayer(layerkey,0,history=False)
+			if self.log:
+				self.log.logLayerAdd(0,layerkey)
 
 		# have window get destroyed when it gets a close event
 		self.setAttribute(qtcore.Qt.WA_DeleteOnClose)

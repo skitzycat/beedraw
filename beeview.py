@@ -154,8 +154,6 @@ class BeeCanvasView(qtgui.QGraphicsView):
 
 	# these are called regardless of if a mouse or tablet event was used
 	def cursorPressEvent(self,x,y,modkeys,pointertype=4,pressure=1,subx=0,suby=0):
-		#print "cursorPressEvent:(x,y,pressure)",x,y,pressure
-
 		window=BeeApp().master.getWindowById(self.windowid)
 
 		# if the window has no layers in it's layers list then just return
@@ -171,10 +169,10 @@ class BeeCanvasView(qtgui.QGraphicsView):
 
 	def cursorMoveEvent(self,x,y,modkeys,pointertype=4,pressure=1,subx=0,suby=0):
 		window=BeeApp().master.getWindowById(self.windowid)
-		#print "cursorMoveEvent (x,y,pressure):",x,y,pressure
 		x=x+subx
 		y=y+suby
 		x,y=self.viewCoordsToImage(x,y)
+		#print "cursor move with pressure:", pressure
 		#print "translates to image coords:",x,y
 
 		window.penMotion(x,y,pressure,modkeys)

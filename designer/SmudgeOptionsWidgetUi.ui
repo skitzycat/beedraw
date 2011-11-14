@@ -1,72 +1,54 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>PencilOptionsWidget</class>
- <widget class="QWidget" name="PencilOptionsWidget">
+ <class>SmudgeOptionsWidget</class>
+ <widget class="QWidget" name="SmudgeOptionsWidget">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>286</width>
-    <height>240</height>
+    <width>335</width>
+    <height>190</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QVBoxLayout">
-   <item>
-    <widget class="QLabel" name="label_4">
-     <property name="text">
-      <string>Hold ctrl and click to set color as foreground</string>
-     </property>
-     <property name="wordWrap">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
+  <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <layout class="QGridLayout">
-     <item row="0" column="0">
+     <item row="1" column="0">
       <widget class="QLabel" name="label">
        <property name="text">
-        <string>Max Diameter:</string>
+        <string>Max Pickup Rate</string>
        </property>
       </widget>
      </item>
-     <item row="0" column="1">
-      <widget class="QLabel" name="brushradiusdisplay">
+     <item row="1" column="1">
+      <widget class="QLabel" name="pickupdisplay">
        <property name="text">
         <string>10</string>
        </property>
       </widget>
      </item>
-     <item row="0" column="2">
-      <widget class="QSlider" name="brushdiameter">
+     <item row="1" column="2">
+      <widget class="QSlider" name="pickupslider">
        <property name="minimum">
         <number>1</number>
        </property>
+       <property name="maximum">
+        <number>99</number>
+       </property>
        <property name="singleStep">
-        <number>2</number>
+        <number>1</number>
+       </property>
+       <property name="pageStep">
+        <number>10</number>
        </property>
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
        </property>
        <property name="tickPosition">
         <enum>QSlider::TicksAbove</enum>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="0">
-      <widget class="QLabel" name="label_5">
-       <property name="text">
-        <string>Min Diameter:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="1">
-      <widget class="QLabel" name="minbrushradiusdisplay">
-       <property name="text">
-        <string>0</string>
        </property>
       </widget>
      </item>
@@ -97,43 +79,27 @@
        </property>
       </widget>
      </item>
-     <item row="3" column="1">
-      <widget class="QLabel" name="opacitydisplay">
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_2">
        <property name="text">
-        <string>100</string>
+        <string>Diameter</string>
        </property>
       </widget>
      </item>
-     <item row="3" column="2">
-      <widget class="QSlider" name="opacity">
+     <item row="0" column="1">
+      <widget class="QLabel" name="brushsizedisplay">
+       <property name="text">
+        <string>10</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="2">
+      <widget class="QSlider" name="brushsizeslider">
        <property name="minimum">
         <number>1</number>
        </property>
-       <property name="maximum">
-        <number>100</number>
-       </property>
-       <property name="sliderPosition">
-        <number>100</number>
-       </property>
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="tickPosition">
-        <enum>QSlider::TicksAbove</enum>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="0">
-      <widget class="QLabel" name="label_6">
-       <property name="text">
-        <string>Opacity:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="2">
-      <widget class="QSlider" name="horizontalSlider">
-       <property name="enabled">
-        <bool>false</bool>
+       <property name="singleStep">
+        <number>2</number>
        </property>
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
@@ -146,9 +112,23 @@
     </layout>
    </item>
    <item>
-    <widget class="QLabel" name="label_2">
+    <widget class="QCheckBox" name="pressure_pickup_box">
      <property name="text">
-      <string>Brush Preview:</string>
+      <string>Pressure changes pickup rate</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="dirty_start_box">
+     <property name="text">
+      <string>Start with dirty brush</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="label_4">
+     <property name="text">
+      <string>Brush Shape/Size Preview:</string>
      </property>
     </widget>
    </item>
@@ -160,9 +140,9 @@
  <resources/>
  <connections>
   <connection>
-   <sender>brushdiameter</sender>
+   <sender>pickupslider</sender>
    <signal>valueChanged(int)</signal>
-   <receiver>brushradiusdisplay</receiver>
+   <receiver>pickupdisplay</receiver>
    <slot>setNum(int)</slot>
    <hints>
     <hint type="sourcelabel">
@@ -192,18 +172,18 @@
    </hints>
   </connection>
   <connection>
-   <sender>opacity</sender>
+   <sender>brushsizeslider</sender>
    <signal>valueChanged(int)</signal>
-   <receiver>opacitydisplay</receiver>
+   <receiver>brushsizedisplay</receiver>
    <slot>setNum(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>317</x>
-     <y>154</y>
+     <x>226</x>
+     <y>28</y>
     </hint>
     <hint type="destinationlabel">
-     <x>198</x>
-     <y>154</y>
+     <x>111</x>
+     <y>28</y>
     </hint>
    </hints>
   </connection>
