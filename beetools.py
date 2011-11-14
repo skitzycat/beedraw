@@ -1502,7 +1502,8 @@ class SketchToolDesc(PencilToolDesc):
 		imgwidth=int(math.ceil(width))
 		imgheight=int(math.ceil(height))
 
-		fadepercent=self.options["fade percent"]
+		fadepercent=self.options["fade start"]/100.
+		#fadepercent=.4
 
 		# use a greyscale image here to reduce number of calculations
 		brushimage=Image.new("L",(imgwidth,imgheight),0)
@@ -1519,25 +1520,29 @@ class SketchToolDesc(PencilToolDesc):
 		return brushimage
 
 	def ellipseBrushFadeAt(self,x,y,radius,imgwidth,imgheight,fadepercent):
+		radius += .5
+
 		centerx=math.ceil(imgwidth)/2.
 		centery=math.ceil(imgheight)/2.
 
 		distance=math.sqrt(((x+.5-centerx)**2)+((y+.5-centery)**2))
 
 		# if the distance is over .5 past the radius then it's past the bounds of the brush
-		if distance>=radius+.5:
+		if distance>=radius:
 			return 0
 
 		# special case for the center pixel
 		elif distance==0:
-			if radius<.5:
-				return radius*2
 			return 1
 
-		elif distance<=radius-.5:
-			return 1
+		#elif distance <= radius*fadepercent:
+		#	return 1
 
-		return (radius+.5)-distance
+		fade = ((radius-distance)/radius)/fadepercent
+		if fade>1:
+			fade = 1
+
+		return fade
 
 	# make list of pre-scaled brushes
 	def makeScaledBrushes(self):
@@ -1583,7 +1588,7 @@ class SketchToolDesc(PencilToolDesc):
 		self.options["step"]=1
 		self.options["blur"]=50
 		self.options["pressurebalance"]=100
-		self.options["fade percent"]=0
+		self.options["fade start"]=50
 		self.options["opacity"]=100
 		self.options["pressuresize"]=1
 		self.options["pressureopacity"]=0
@@ -1636,7 +1641,7 @@ class BrushOptionsWidget(qtgui.QWidget):
 		self.ui.brushdiameter.setValue(self.tooldesc.options["maxdiameter"])
 		self.ui.stepsize.setValue(self.tooldesc.options["step"])
 		self.ui.opacity_slider.setValue(self.tooldesc.options["opacity"])
-		self.ui.blur_slider.setValue(self.tooldesc.options["blur"])
+		self.ui.fadestartslider.setValue(self.tooldesc.options["fade start"])
 
 		if self.tooldesc.options["pressuresize"]:
 			self.ui.pressure_size_box.setChecked(True)
@@ -1655,8 +1660,8 @@ class BrushOptionsWidget(qtgui.QWidget):
 	def on_stepsize_valueChanged(self,value):
 		self.tooldesc.options["step"]=value
 
-	def on_blurslider_valueChanged(self,value):
-		self.tooldesc.options["blur"]=value
+	def on_fadestartslider_valueChanged(self,value):
+		self.tooldesc.options["fade start"]=value
 		self.tooldesc.updateBrush()
 
 	def on_opacity_slider_valueChanged(self,value):
@@ -1774,7 +1779,6 @@ class SketchTool(DrawingTool):
 
 		for i in range(brushwidth):
 			for j in range(brushheight):
-				#curfade=self.ellipseBrushFadeAt(i,j,radius,brushwidth,brushheight,0)
 				curfade=radius*2
 				if curfade>1:
 					curfade=0
@@ -1920,7 +1924,7 @@ class SmudgeToolDesc(SketchToolDesc):
 		self.options["pressure pickup"]=1
 		self.options["maxdiameter"]=8
 		self.options["cleanstart"]=1
-		self.options["fade percent"]=0
+		self.options["fade start"]=50
 		self.options["pickup rate"]=25
 		self.options["dirty start"]=0
 
@@ -2166,7 +2170,7 @@ class BlurToolDesc(SketchToolDesc):
 		self.options["pressure"]=1
 		self.options["pressureopacity"]=0
 		self.options["maxdiameter"]=9
-		self.options["fade percent"]=0
+		self.options["fade start"]=50
 		self.options["opacity"]=100
 		self.options["maxblur"]=10
 
@@ -2378,7 +2382,7 @@ class SmearToolDesc(SketchToolDesc):
 	def setDefaultOptions(self):
 		self.options["step"]=1
 		self.options["maxdiameter"]=12
-		self.options["fade percent"]=0
+		self.options["fade start"]=50
 
 	def pressToolButton(self):
 		BeeApp().master.toolselectwindow.ui.smear_button.setChecked(True)
