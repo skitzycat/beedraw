@@ -6,6 +6,7 @@ Qt version 4.6 or higher
 pyqt version 4.7 or higher
 pyuic4 (part of the pyqt development tools)
 numpy
+scipy
 python imaging library
 qimage2ndarray 1.0 (http://kogs-www.informatik.uni-hamburg.de/~meine/software/qimage2ndarray/)
 make
