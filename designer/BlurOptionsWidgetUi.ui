@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>368</width>
-    <height>184</height>
+    <height>240</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -95,12 +95,12 @@
       </widget>
      </item>
      <item row="3" column="2">
-      <widget class="QSlider" name="maxblurslider">
+      <widget class="QSlider" name="blurslider">
        <property name="minimum">
         <number>1</number>
        </property>
        <property name="maximum">
-        <number>500</number>
+        <number>100</number>
        </property>
        <property name="singleStep">
         <number>2</number>
@@ -139,17 +139,33 @@
        </property>
       </widget>
      </item>
+     <item row="4" column="1">
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeType">
+        <enum>QSizePolicy::Fixed</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>30</width>
+         <height>0</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
     </layout>
    </item>
    <item>
-    <widget class="QCheckBox" name="checkBox">
+    <widget class="QCheckBox" name="pressure_blur_box">
      <property name="text">
       <string>Pressure changes blur ammount</string>
      </property>
     </widget>
    </item>
    <item>
-    <widget class="QCheckBox" name="checkBox_2">
+    <widget class="QCheckBox" name="pressure_size_box">
      <property name="text">
       <string>Pressure changes brush size</string>
      </property>
@@ -202,7 +218,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>maxblurslider</sender>
+   <sender>blurslider</sender>
    <signal>valueChanged(int)</signal>
    <receiver>stddevdisplay</receiver>
    <slot>setNum(int)</slot>

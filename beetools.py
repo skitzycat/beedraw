@@ -2167,7 +2167,7 @@ class BlurToolDesc(SketchToolDesc):
 	def setDefaultOptions(self):
 		self.options["step"]=1
 		self.options["pressuresize"]=1
-		self.options["pressure"]=1
+		self.options["pressureblur"]=1
 		self.options["pressureopacity"]=0
 		self.options["maxdiameter"]=9
 		self.options["fade start"]=50
@@ -2184,7 +2184,8 @@ class BlurToolDesc(SketchToolDesc):
 		brushimage=Image.new("RGBA",self.fullsizedbrush.size,(0,0,0,0))
 		brushimage.paste((0,0,0),box=(0,0),mask=self.fullsizedbrush)
 
-		tool.fullsizedbrush = PilToQImage(brushimage)
+		tool.fullsizedbrush = brushimage
+		tool.scaledbrushes = self.scaledbrushes
 
 		tool.layerkey=layerkey
  
@@ -2213,7 +2214,18 @@ class BlurToolOptionsWidget(qtgui.QWidget):
 	def updateDisplayFromOptions(self):
 		self.ui.brushdiameter.setValue(self.tooldesc.options["maxdiameter"])
 		self.ui.stepsize.setValue(self.tooldesc.options["step"])
-		self.ui.maxblurslider.setValue(self.tooldesc.options["maxblur"])
+		self.ui.blurslider.setValue(self.tooldesc.options["maxblur"])
+
+		if self.tooldesc.options["pressuresize"]==1:
+			self.ui.pressure_size_box.setChecked(True)
+		else:
+			self.ui.pressure_size_box.setChecked(False)
+
+		if self.tooldesc.options["pressureblur"]==1:
+			self.ui.pressure_blur_box.setChecked(True)
+		else:
+			self.ui.pressure_blur_box.setChecked(False)
+			
 
 	def on_brushdiameter_valueChanged(self,value):
 		self.tooldesc.options["maxdiameter"]=value
@@ -2233,9 +2245,9 @@ class BlurToolOptionsWidget(qtgui.QWidget):
 
 	def on_pressure_blur_box_stateChanged(self,value):
 		if value:
-			self.tooldesc.options["pressurblur"]=1
+			self.tooldesc.options["pressureblur"]=1
 		else:
-			self.tooldesc.options["pressurblur"]=0
+			self.tooldesc.options["pressureblur"]=0
  
 class BlurTool(SketchTool):
 	def __init__(self,options,window,fullsizedbrush):
@@ -2261,6 +2273,8 @@ class BlurTool(SketchTool):
 
 		self.oldlayerimage = self.layer.getImageCopy()
 
+		self.updateBrushForPressure(pressure)
+
 		self.filterAtPoint(x,y,pressure)
 
 		if self.pointshistory:
@@ -2273,6 +2287,10 @@ class BlurTool(SketchTool):
 		self.layer.updateScene(refresharea)
 
 		self.lastpressure=pressure
+
+	def updateBrushForPressure(self,pressure):
+		SketchTool.updateBrushForPressure(self,pressure)
+		self.brushimage=PilToQImage(self.brushimage)
 
 	def continueLine(self,x,y,pressure):
 		x=int(x)
@@ -2317,6 +2335,7 @@ class BlurTool(SketchTool):
 		height=bottom-top
  
 		for point in path:
+			self.updateBrushForPressure(point[2])
 			self.filterAtPoint(point[0],point[1],point[2])
 
 		refresharea=qtcore.QRectF(left,top,width,height)
@@ -2334,30 +2353,34 @@ class BlurTool(SketchTool):
 		if pressure <= 0:
 			return
 
-		stddev = pressure * 6
+		stddev = (self.options["maxblur"]+9)/50.
+		if self.options["pressureblur"]:
+			stddev = pressure * stddev
 
-		stampx = x-self.xradius
-		stampy = y-self.yradius
+		curbrushwidth = self.brushimage.width()
+		curbrushheight = self.brushimage.height()
 
-		im = self.layer.getImageCopy(subregion=qtcore.QRect(stampx,stampy,self.brushwidth,self.brushheight))
+		stampx = x-(curbrushwidth/2)
+		stampy = y-(curbrushheight/2)
+
+		im = self.layer.getImageCopy(subregion=qtcore.QRect(stampx,stampy,curbrushwidth,curbrushheight))
 
 		imarr = qimage2ndarray.byte_view(im)
 
-		brushimage = qtgui.QImage(self.brushwidth,self.brushheight,qtgui.QImage.Format_ARGB32_Premultiplied)
+		brushimage = qtgui.QImage(curbrushwidth,curbrushheight,qtgui.QImage.Format_ARGB32_Premultiplied)
 
 		brusharr = qimage2ndarray.byte_view(brushimage)
 
-		#gaussian_filter1d(imarr,stddev,axis=0,output=brusharr,mode='nearest')
 		gaussian_filter(imarr,(stddev,stddev,0),output=brusharr,mode='nearest')
 
 		# make brush a circular shape with a faded edge
 		painter = qtgui.QPainter()
 		painter.begin(brushimage)
 		painter.setCompositionMode(qtgui.QPainter.CompositionMode_DestinationIn)
-		painter.drawImage(qtcore.QPoint(0,0),self.fullsizedbrush)
+		painter.drawImage(qtcore.QPoint(0,0),self.brushimage)
 		painter.end()
 
-		self.addImageToLayer(self.fullsizedbrush,stampx,stampy,refresh=False,stampmode=qtgui.QPainter.CompositionMode_DestinationOut)
+		self.addImageToLayer(self.brushimage,stampx,stampy,refresh=False,stampmode=qtgui.QPainter.CompositionMode_DestinationOut)
 		self.addImageToLayer(brushimage,stampx,stampy,refresh=False,stampmode=qtgui.QPainter.CompositionMode_Plus)
 
 	def getFullSizedBrushWidth(self):
