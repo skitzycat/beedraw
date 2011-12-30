@@ -474,7 +474,7 @@ class DrawingTool(AbstractTool):
 
 		# make sure brush isn't blank by pasting the brush color onto the center pixel
 		center=int(self.diameter/2)
-		self.brushimage.setPixel(center,center,self.getColor().rgba())
+		self.brushimage.setPixel(center,center,self.fgcolor)
  
 	def penDown(self,x,y,pressure):
 		""" penDown method of DrawingTool """
@@ -497,18 +497,11 @@ class DrawingTool(AbstractTool):
 	# return how much to scale down the brush for the current pressure
 	def scaleForPressure(self,pressure):
 		""" method of DrawingTool """
-		return pressure
 		minsize=self.options["mindiameter"]
 		maxsize=self.options["maxdiameter"]
 		sizediff=maxsize-minsize
 
-		#unroundedscale=(((maxsize-minsize)/maxsize)*pressure) + ((minsize/maxsize) * pressure)
-		unroundedscale=((sizediff/maxsize)*pressure) + (minsize/maxsize)
-		#unroundedscale=pressure
-		#iscale=int(unroundedscale*BRUSH_SIZE_GRANULARITY)
-		#scale=float(iscale)/BRUSH_SIZE_GRANULARITY
-		scale=unroundedscale
-
+		scale=((sizediff*pressure) + minsize)/maxsize
 		return scale
 
 	def getFullSizedBrushWidth(self):
@@ -582,11 +575,7 @@ class DrawingTool(AbstractTool):
 		if len(path)==0:
 			return
 
-		# figure out the maximum pressure we will encounter for this motion
-		maxpressure=max(self.lastpressure,pressure)
-
 		# figure out the maximum radius the brush will have
-		maxscale=self.scaleForPressure(maxpressure)
 		maxradius=int(math.ceil(self.getFullSizedBrushWidth()/2.0))
 
 		#print "maxradius:", maxradius
@@ -823,8 +812,8 @@ class PencilToolDesc(AbstractToolDesc):
 		return getBlankCursor()
  
 	def setDefaultOptions(self):
-		self.options["mindiameter"]=0
 		self.options["maxdiameter"]=21
+		self.options["mindiameter"]=0
 		self.options["step"]=1
 		self.options["pressuresize"]=1
 		self.options["pressurebalance"]=100
@@ -849,6 +838,7 @@ class PencilToolDesc(AbstractToolDesc):
 		painter.end()
 		tool.fullsizedbrush=coloredfullbrush
 
+		tool.fgcolor=BeeApp().master.getFGColor().rgba()
 		tool.layerkey=layerkey
  
 		# if there is a selection get a copy of it
@@ -902,11 +892,16 @@ class DrawingToolOptionsWidget(qtgui.QWidget):
 
 	def updateDisplayFromOptions(self):
 		self.ui.brushdiameter.setValue(self.tooldesc.options["maxdiameter"])
+		self.ui.brushmindiameter.setValue(self.tooldesc.options["mindiameter"])
 		self.ui.stepsize.setValue(self.tooldesc.options["step"])
+		self.ui.opacity.setValue(self.tooldesc.options["opacity"])
 
 	def on_brushdiameter_valueChanged(self,value):
 		self.tooldesc.options["maxdiameter"]=value
 		self.tooldesc.updateBrush()
+
+	def on_brushmindiameter_valueChanged(self,value):
+		self.tooldesc.options["mindiameter"]=value
 
 	def on_stepsize_valueChanged(self,value):
 		self.tooldesc.options["step"]=value
@@ -921,9 +916,7 @@ class EraserToolDesc(PencilToolDesc):
 		def __init__(self,options,window):
 			DrawingTool.__init__(self,options,window)
 			self.compmode=qtgui.QPainter.CompositionMode_DestinationOut
- 
-		def getColor(self):
-			return qtgui.QColor()
+			self.fgcolor=0
  
 	# back to description stuff
 	def __init__(self):
@@ -936,6 +929,7 @@ class EraserToolDesc(PencilToolDesc):
  
 	def setDefaultOptions(self):
 		self.options["maxdiameter"]=21
+		self.options["mindiameter"]=0
 		self.options["step"]=1
 		self.options["pressuresize"]=1
 		self.options["pressurebalance"]=100
@@ -981,11 +975,15 @@ class EraserOptionsWidget(qtgui.QWidget):
 
 	def updateDisplayFromOptions(self):
 		self.ui.eraserdiameter.setValue(self.tooldesc.options["maxdiameter"])
+		self.ui.mindiameter.setValue(self.tooldesc.options["mindiameter"])
 		self.ui.stepsize.setValue(self.tooldesc.options["step"])
 
 	def on_eraserdiameter_valueChanged(self,value):
 		self.tooldesc.options["maxdiameter"]=value
 		self.tooldesc.updateBrush()
+
+	def on_mindiameter_valueChanged(self,value):
+		self.tooldesc.options["mindiameter"]=value
 
 	def on_stepsize_valueChanged(self,value):
 		self.tooldesc.options["step"]=value
@@ -1583,8 +1581,8 @@ class SketchToolDesc(PencilToolDesc):
  
 	def setDefaultOptions(self):
 		PencilToolDesc.setDefaultOptions(self)
-		self.options["mindiameter"]=0
 		self.options["maxdiameter"]=7
+		self.options["mindiameter"]=0
 		self.options["step"]=1
 		self.options["blur"]=50
 		self.options["pressurebalance"]=100
@@ -1639,6 +1637,7 @@ class BrushOptionsWidget(qtgui.QWidget):
 
 	def updateDisplayFromOptions(self):
 		self.ui.brushdiameter.setValue(self.tooldesc.options["maxdiameter"])
+		self.ui.brushmindiameter.setValue(self.tooldesc.options["mindiameter"])
 		self.ui.stepsize.setValue(self.tooldesc.options["step"])
 		self.ui.opacity_slider.setValue(self.tooldesc.options["opacity"])
 		self.ui.fadestartslider.setValue(self.tooldesc.options["fade start"])
@@ -1656,6 +1655,9 @@ class BrushOptionsWidget(qtgui.QWidget):
 	def on_brushdiameter_valueChanged(self,value):
 		self.tooldesc.options["maxdiameter"]=value
 		self.tooldesc.updateBrush()
+
+	def on_brushmindiameter_valueChanged(self,value):
+		self.tooldesc.options["mindiameter"]=value
 
 	def on_stepsize_valueChanged(self,value):
 		self.tooldesc.options["step"]=value
@@ -1923,6 +1925,7 @@ class SmudgeToolDesc(SketchToolDesc):
 		self.options["step"]=1
 		self.options["pressure pickup"]=1
 		self.options["maxdiameter"]=8
+		self.options["mindiameter"]=0
 		self.options["cleanstart"]=1
 		self.options["fade start"]=50
 		self.options["pickup rate"]=25
@@ -2170,6 +2173,7 @@ class BlurToolDesc(SketchToolDesc):
 		self.options["pressureblur"]=1
 		self.options["pressureopacity"]=0
 		self.options["maxdiameter"]=9
+		self.options["mindiameter"]=0
 		self.options["fade start"]=50
 		self.options["opacity"]=100
 		self.options["maxblur"]=10
@@ -2405,6 +2409,7 @@ class SmearToolDesc(SketchToolDesc):
 	def setDefaultOptions(self):
 		self.options["step"]=1
 		self.options["maxdiameter"]=12
+		self.options["mindiameter"]=12
 		self.options["fade start"]=50
 
 	def pressToolButton(self):

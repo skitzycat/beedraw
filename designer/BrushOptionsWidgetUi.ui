@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>264</width>
-    <height>294</height>
+    <height>310</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -56,21 +56,21 @@
        </property>
       </widget>
      </item>
-     <item row="1" column="0">
+     <item row="2" column="0">
       <widget class="QLabel" name="label_3">
        <property name="text">
         <string>Step Size:</string>
        </property>
       </widget>
      </item>
-     <item row="1" column="1">
+     <item row="2" column="1">
       <widget class="QLabel" name="stepsizedisplay">
        <property name="text">
         <string>1</string>
        </property>
       </widget>
      </item>
-     <item row="1" column="2">
+     <item row="2" column="2">
       <widget class="QSlider" name="stepsize">
        <property name="minimum">
         <number>1</number>
@@ -83,21 +83,21 @@
        </property>
       </widget>
      </item>
-     <item row="2" column="0">
+     <item row="3" column="0">
       <widget class="QLabel" name="label_4">
        <property name="text">
         <string>Edge Fade Start</string>
        </property>
       </widget>
      </item>
-     <item row="2" column="1">
+     <item row="3" column="1">
       <widget class="QLabel" name="fadestartdisplay">
        <property name="text">
         <string>50</string>
        </property>
       </widget>
      </item>
-     <item row="2" column="2">
+     <item row="3" column="2">
       <widget class="QSlider" name="fadestartslider">
        <property name="enabled">
         <bool>true</bool>
@@ -119,21 +119,21 @@
        </property>
       </widget>
      </item>
-     <item row="3" column="0">
+     <item row="4" column="0">
       <widget class="QLabel" name="label_6">
        <property name="text">
         <string>Opacity %:</string>
        </property>
       </widget>
      </item>
-     <item row="3" column="1">
+     <item row="4" column="1">
       <widget class="QLabel" name="opacity_display">
        <property name="text">
         <string>100</string>
        </property>
       </widget>
      </item>
-     <item row="3" column="2">
+     <item row="4" column="2">
       <widget class="QSlider" name="opacity_slider">
        <property name="minimum">
         <number>1</number>
@@ -152,7 +152,7 @@
        </property>
       </widget>
      </item>
-     <item row="4" column="1">
+     <item row="6" column="1">
       <spacer name="horizontalSpacer">
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
@@ -167,6 +167,46 @@
         </size>
        </property>
       </spacer>
+     </item>
+     <item row="5" column="1">
+      <spacer name="horizontalSpacer_2">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeType">
+        <enum>QSizePolicy::Fixed</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>30</width>
+         <height>0</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="label_7">
+       <property name="text">
+        <string>Min Diameter</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="2">
+      <widget class="QSlider" name="brushmindiameter">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="tickPosition">
+        <enum>QSlider::TicksAbove</enum>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QLabel" name="mindiameterdisplay">
+       <property name="text">
+        <string>0</string>
+       </property>
+      </widget>
      </item>
     </layout>
    </item>
@@ -271,6 +311,22 @@
     <hint type="destinationlabel">
      <x>115</x>
      <y>105</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>brushmindiameter</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>mindiameterdisplay</receiver>
+   <slot>setNum(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>195</x>
+     <y>64</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>112</x>
+     <y>64</y>
     </hint>
    </hints>
   </connection>

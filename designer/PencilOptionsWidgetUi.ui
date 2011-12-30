@@ -64,7 +64,7 @@
       </widget>
      </item>
      <item row="1" column="1">
-      <widget class="QLabel" name="minbrushradiusdisplay">
+      <widget class="QLabel" name="minbrushdiameterdisplay">
        <property name="text">
         <string>0</string>
        </property>
@@ -131,9 +131,9 @@
       </widget>
      </item>
      <item row="1" column="2">
-      <widget class="QSlider" name="horizontalSlider">
+      <widget class="QSlider" name="brushmindiameter">
        <property name="enabled">
-        <bool>false</bool>
+        <bool>true</bool>
        </property>
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
@@ -142,6 +142,22 @@
         <enum>QSlider::TicksAbove</enum>
        </property>
       </widget>
+     </item>
+     <item row="4" column="1">
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeType">
+        <enum>QSizePolicy::Fixed</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>30</width>
+         <height>0</height>
+        </size>
+       </property>
+      </spacer>
      </item>
     </layout>
    </item>
@@ -204,6 +220,22 @@
     <hint type="destinationlabel">
      <x>198</x>
      <y>154</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>brushmindiameter</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>minbrushdiameterdisplay</receiver>
+   <slot>setNum(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>200</x>
+     <y>84</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>101</x>
+     <y>84</y>
     </hint>
    </hints>
   </connection>
