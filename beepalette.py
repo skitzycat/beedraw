@@ -24,6 +24,9 @@ class BeeSwatchScrollArea(qtgui.QScrollArea):
 		self.master=master
 
 		self.swatchsize=swatchsize
+		if len(colors)==0 or len(colors[0])==0 :
+			colors = self.getBlankColors()
+
 		self.rows=len(colors)
 		self.cols=len(colors[0])
 
@@ -47,6 +50,17 @@ class BeeSwatchScrollArea(qtgui.QScrollArea):
 			colors.append(currow)
 
 		return colors
+
+	def getBlankColors(self):
+		colors=[]
+		for i in range(20):
+			tmplist = []
+			for j in range(8):
+				tmplist.append((255,255,255))
+			colors.append(tmplist)
+
+		return colors
+				
 
 	def setupSwatches(self,colors):
 		layout=self.widget().layout()
@@ -116,6 +130,7 @@ class PaletteWindow(AbstractBeeDockWindow):
 			swatchsize=reader.swatchsize
 		else:
 			colors=[]
+			swatchsize=15
 
 		self.setColors(colors,swatchsize)
 
