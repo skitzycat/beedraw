@@ -898,10 +898,14 @@ class DrawingToolOptionsWidget(qtgui.QWidget):
 
 	def on_brushdiameter_valueChanged(self,value):
 		self.tooldesc.options["maxdiameter"]=value
+		if(self.tooldesc.options["mindiameter"] > self.tooldesc.options["maxdiameter"]):
+			self.ui.brushmindiameter.setValue(self.tooldesc.options["maxdiameter"])
 		self.tooldesc.updateBrush()
 
 	def on_brushmindiameter_valueChanged(self,value):
 		self.tooldesc.options["mindiameter"]=value
+		if(self.tooldesc.options["mindiameter"] > self.tooldesc.options["maxdiameter"]):
+			self.ui.brushdiameter.setValue(self.tooldesc.options["mindiameter"])
 
 	def on_stepsize_valueChanged(self,value):
 		self.tooldesc.options["step"]=value
@@ -980,10 +984,14 @@ class EraserOptionsWidget(qtgui.QWidget):
 
 	def on_eraserdiameter_valueChanged(self,value):
 		self.tooldesc.options["maxdiameter"]=value
+		if(self.tooldesc.options["mindiameter"] > self.tooldesc.options["maxdiameter"]):
+			self.ui.mindiameter.setValue(self.tooldesc.options["maxdiameter"])
 		self.tooldesc.updateBrush()
 
 	def on_mindiameter_valueChanged(self,value):
 		self.tooldesc.options["mindiameter"]=value
+		if(self.tooldesc.options["mindiameter"] > self.tooldesc.options["maxdiameter"]):
+			self.ui.eraserdiameter.setValue(self.tooldesc.options["mindiameter"])
 
 	def on_stepsize_valueChanged(self,value):
 		self.tooldesc.options["step"]=value
@@ -1654,10 +1662,14 @@ class BrushOptionsWidget(qtgui.QWidget):
 
 	def on_brushdiameter_valueChanged(self,value):
 		self.tooldesc.options["maxdiameter"]=value
+		if(self.tooldesc.options["mindiameter"] > self.tooldesc.options["maxdiameter"]):
+			self.ui.brushmindiameter.setValue(self.tooldesc.options["maxdiameter"])
 		self.tooldesc.updateBrush()
 
 	def on_brushmindiameter_valueChanged(self,value):
 		self.tooldesc.options["mindiameter"]=value
+		if(self.tooldesc.options["mindiameter"] > self.tooldesc.options["maxdiameter"]):
+			self.ui.brushdiameter.setValue(self.tooldesc.options["mindiameter"])
 
 	def on_stepsize_valueChanged(self,value):
 		self.tooldesc.options["step"]=value
@@ -2293,7 +2305,7 @@ class BlurTool(SketchTool):
 		self.lastpressure=pressure
 
 	def updateBrushForPressure(self,pressure):
-		SketchTool.updateBrushForPressure(self,pressure)
+		SketchTool.updateBrushForPressure(self,pressure,.5,.5)
 		self.brushimage=PilToQImage(self.brushimage)
 
 	def continueLine(self,x,y,pressure):
@@ -2369,13 +2381,13 @@ class BlurTool(SketchTool):
 
 		im = self.layer.getImageCopy(subregion=qtcore.QRect(stampx,stampy,curbrushwidth,curbrushheight))
 
-		imarr = qimage2ndarray.byte_view(im)
+		floatinarr = numpy.array(qimage2ndarray.byte_view(im),dtype=numpy.float32)
 
 		brushimage = qtgui.QImage(curbrushwidth,curbrushheight,qtgui.QImage.Format_ARGB32_Premultiplied)
 
 		brusharr = qimage2ndarray.byte_view(brushimage)
 
-		gaussian_filter(imarr,(stddev,stddev,0),output=brusharr,mode='nearest')
+		brusharr[:] = (gaussian_filter(floatinarr,(stddev,stddev,0),mode='nearest').round())[:]
 
 		# make brush a circular shape with a faded edge
 		painter = qtgui.QPainter()
