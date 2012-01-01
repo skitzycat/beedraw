@@ -481,6 +481,9 @@ class DrawingTool(AbstractTool):
 		if self.logtype==ToolLogTypes.unlogable:
 			return
 
+		#print "========================================"
+		#print "penDown:",x,y,pressure
+
 		self.returning=False
 		self.inside=True
 		self.pendown=True
@@ -1519,36 +1522,11 @@ class SketchToolDesc(PencilToolDesc):
 
 		for i in range(width):
 			for j in range(height):
-				v=self.ellipseBrushFadeAt(i,j,radius,width,height,fadepercent)
+				v=ellipseBrushFadeAt(i,j,radius,width,height,fadepercent)
 				if v>0:
 					pix[i,j]=(int(round(255*v)))
 
 		return brushimage
-
-	def ellipseBrushFadeAt(self,x,y,radius,imgwidth,imgheight,fadepercent):
-		radius += .5
-
-		centerx=math.ceil(imgwidth)/2.
-		centery=math.ceil(imgheight)/2.
-
-		distance=math.sqrt(((x+.5-centerx)**2)+((y+.5-centery)**2))
-
-		# if the distance is over .5 past the radius then it's past the bounds of the brush
-		if distance>=radius:
-			return 0
-
-		# special case for the center pixel
-		elif distance==0:
-			return 1
-
-		#elif distance <= radius*fadepercent:
-		#	return 1
-
-		fade = ((radius-distance)/radius)/fadepercent
-		if fade>1:
-			fade = 1
-
-		return fade
 
 	# make list of pre-scaled brushes
 	def makeScaledBrushes(self):
@@ -1712,6 +1690,8 @@ class SketchTool(DrawingTool):
 
 	def updateBrushForPressure(self,pressure,pixelx=0,pixely=0):
 		self.updateBrushSizeAndShiftForPressure(pressure,pixelx%1,pixely%1)
+		#print "result:"
+		#printPILImage(self.brushimage)
 
 		if self.options["pressureopacity"]:
 			self.updateBrushOpacityForPressure(pressure)
@@ -1752,6 +1732,7 @@ class SketchTool(DrawingTool):
 
 			# if the scale is so small it should be at one pixel
 			else:
+				#print "scaling as extra small brush"
 				#s = scale * self.fullsizedbrush.size[0]
 				outputimage = self.scaleSmallBrush(scale, subpixelx-.5, subpixely-.5)
 
@@ -1783,6 +1764,8 @@ class SketchTool(DrawingTool):
 			print "WARNING: small brush called on brush with radius:", radius
 			radius=1.5
 
+		fadepercent=self.options["fade start"]/100.
+
 		#print "radius:", radius
 
 		brushwidth=3
@@ -1793,10 +1776,11 @@ class SketchTool(DrawingTool):
 
 		for i in range(brushwidth):
 			for j in range(brushheight):
-				curfade=radius*2
-				if curfade>1:
-					curfade=0
-				pix[i,j]=(int(round(curfade*255)))
+				curfade = ellipseBrushFadeAt(i,j,radius,3,3,fadepercent)
+				#curfade=radius*2
+				#if curfade>1:
+				#	curfade=0
+				pix[i,j]=(int(round(curfade*255.)))
 
 		return scaleShiftPIL(brushimage,subpixelx,subpixely,5,5,1,1)
 

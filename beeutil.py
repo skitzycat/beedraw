@@ -649,3 +649,29 @@ def pilRgbaTwoImageMath(image1,image2,expression):
 		outbands.append(ImageMath.eval(expression,a=bands1[band],b=bands2[band]))
 	outimage = Image.merge("RGBA",outbands)
 	return outimage
+
+def ellipseBrushFadeAt(x,y,radius,imgwidth,imgheight,fadepercent):
+	radius += .5
+
+	centerx=math.ceil(imgwidth)/2.
+	centery=math.ceil(imgheight)/2.
+
+	distance=math.sqrt(((x+.5-centerx)**2)+((y+.5-centery)**2))
+
+	# if the distance is over .5 past the radius then it's past the bounds of the brush
+	if distance>=radius:
+		return 0
+
+	# special case for the center pixel
+	#elif distance==0:
+	#	return 1
+
+	#elif distance <= radius*fadepercent:
+	#	return 1
+
+	fade = ((radius-distance)/radius)/fadepercent
+	if fade>1:
+		fade = 1
+
+	return fade
+
