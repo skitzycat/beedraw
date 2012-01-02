@@ -60,6 +60,7 @@ class HiveMasterWindow(qtgui.QMainWindow, AbstractBeeMaster):
 		self.config["height"],ok=settings.value("height",400).toInt()
 		self.config["networkhistorysize"],ok=settings.value("networkhistorysize",20).toInt()
 		self.config["password"]=settings.value("password").toString()
+		self.config["autolog"]=False
 
 		# Initialize values
 		self.nextclientid=1

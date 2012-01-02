@@ -45,13 +45,10 @@ class PyServerEventHandler(SocketServer.BaseRequestHandler):
 		newsock=BeeSocket(BeeSocketTypes.python,self.request,True)
 		# start the listener, that will authenticate client and finish setup
 
-		curthread=qtcore.QThread.currentThread()
-		threadparent=curthread.parent()
-
 		newlistener=HiveClientListener(self.server,newsock,self.master,self.clientid)
-		newlistener.start()
+		newlistener.run()
 
-class customPyServer(SocketServer.TCPServer,qtcore.QObject):
+class customPyServer(SocketServer.ThreadingMixIn,SocketServer.TCPServer,qtcore.QObject):
 	def __init__(self,hostport,master,parentthread):
 		qtcore.QObject.__init__(self)
 		SocketServer.TCPServer.__init__(self,hostport,PyServerEventHandler)
