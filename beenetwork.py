@@ -33,8 +33,9 @@ from sketchlog import SketchLogWriter
 from beetypes import *
 from beeutil import *
  
-class PyServerEventHandler(SocketServer.BaseRequestHandler):
+class PyServerEventHandler(SocketServer.BaseRequestHandler,qtcore.QObject):
 	def __init__(self,request,client_address,server,master,parentthread,id):
+		qtcore.QObject.__init__(self)
 		self.master=master
 		self.parentthread=parentthread
 		self.clientid=id
@@ -45,7 +46,7 @@ class PyServerEventHandler(SocketServer.BaseRequestHandler):
 		newsock=BeeSocket(BeeSocketTypes.python,self.request,True)
 		# start the listener, that will authenticate client and finish setup
 
-		newlistener=HiveClientListener(self.server,newsock,self.master,self.clientid)
+		newlistener=HiveClientListener(self,newsock,self.master,self.clientid)
 		newlistener.run()
 
 class customPyServer(SocketServer.ThreadingMixIn,SocketServer.TCPServer,qtcore.QObject):
